@@ -39,6 +39,7 @@ namespace VCL {
 
       UnsupportedFormat,
       UnsupportedOperation,
+      UnsupportedIndex,
 
       ObjectNotFound,
       OpenFailed,

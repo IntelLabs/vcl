@@ -1,5 +1,5 @@
 /**
- * @file   VCL.h
+ * @file   helpers.h
  *
  * @section LICENSE
  *
@@ -8,7 +8,8 @@
  * @copyright Copyright (c) 2017 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
+ * of this software and associated documentation files
+ * (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
@@ -21,16 +22,31 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- *
- * @section DESCRIPTION
  *
  */
 
 #pragma once
 
-#include "Exception.h"
-#include "Image.h"
-#include "DescriptorSet.h"
+#include <cstdio>
+#include <cstdlib>
+#include <list>
+
+#include "VCL.h"
+
+void generate_desc_linear_increase(int d, int nb, float* xb, float init = 0);
+
+float* generate_desc_linear_increase(int d, int nb, float init = 0);
+
+void check_arrays_float(float* a, float* b, int d);
+
+std::map<long, std::string> animals_map();
+
+std::vector<long> classes_increasing_offset(unsigned nb, unsigned offset);
+
+std::vector<VCL::DescriptorSetEngine> get_engines();
+
+std::list<int> get_dimensions_list();
