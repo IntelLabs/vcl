@@ -1,0 +1,6 @@
+*.swp
+.sconsign.dblite
+test/image_results/
+test/tdb/
+documentation/html/
+documentation/latex/

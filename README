@@ -1,0 +1,7 @@
+This code requires OpenCV 3.3 and TileDB 0.6.1, as well as gtest for the unit test code. 
+
+Compile the code by running scons in the main folder. 
+
+To run the unit tests, create a folder in test called image_results. Then run ./unit_test to make sure things are working as they should be. Right now, three tests may fail (TDBImageTest.CopyConstructor, TDBImageTest.DeleteImage, ImageDataTest.DeleteTDB), this is a known issue with the 0.6.1 version of TileDB. 
+
+More information can be found by running doxygen to get the full API of the code, or by looking at the wiki on github.com/IntelLabs/vcl 
