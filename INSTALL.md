@@ -1,14 +1,15 @@
 Currently the VCL works on Ubuntu Linux (v16.04) with OpenCV (v3.3) and TileDB (v0.6.1), but it should work on any recent version of Ubuntu. It's also been tested with g++ v5.4.0. If you're having issues, check your Ubuntu and g++ versions first. 
 
 ## Basic Dependencies
+    sudo apt-get install git wget
+
 If your system does not have [scons](http://scons.org/) installed, run the following:
 
- `sudo apt-get install scons`
+    sudo apt-get install scons
 
 [Google Test](https://github.com/google/googletest) is used for the unit tests included in the test folder. To install:
 
-    sudo apt-get install cmake
-    sudo apt-get install libgtest-dev
+    sudo apt-get install cmake libgtest-dev
 
 Unfortunately this doesn't actually install gtest; you need to do the following steps to get it to work correctly:
 
@@ -19,7 +20,7 @@ Unfortunately this doesn't actually install gtest; you need to do the following 
 
 [Doxygen](http://www.stack.nl/~dimitri/doxygen/) is used to create the API documentation. To install: 
 
-`sudo apt-get install doxygen`
+    sudo apt-get install doxygen
 
 ## [OpenCV](https://opencv.org/)
 The VCL may be fine with newer versions of OpenCV, but below are instructions for installing OpenCV v3.3
@@ -37,9 +38,7 @@ Download [OpenCV 3.3.1](https://github.com/opencv/opencv/archive/3.3.1.zip)
 ## [TileDB](https://tiledb.io/)
 Currently the VCL works with TileDB v0.6.1. Since it is an older version, please follow the installation instructions below. 
 ### Dependencies
-    sudo apt-get install zlib1g-dev
-    sudo apt-get install libssl-dev
-    sudo apt-get install liblz4-dev
+    sudo apt-get install zlib1g-dev libssl-dev liblz4-dev libbz2-dev
 
 ### Install Blosc
     git clone https://github.com/Blosc/c-blosc.git`
@@ -49,12 +48,12 @@ Currently the VCL works with TileDB v0.6.1. Since it is an older version, please
     cmake -DCMAKE_INSTALL_PREFIX='/usr' ..
     cmake --build .
     ctest
-    sudo cmake --build . -- target install
+    sudo cmake --build . --target install
 
 ### Install ZStandard
     wget https://github.com/facebook/zstd/archive/v1.1.0.tar.gz
     tar xf v1.1.0.tar.gz
-    cd zstd-1.0.0
+    cd zstd-1.1.0
     sudo make install PREFIX='/usr'
 
 ### Build TileDB
