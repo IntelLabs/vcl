@@ -38,7 +38,7 @@
 #include <vector>
 #include <stdlib.h>
 
-#include <tiledb.h>
+#include <tiledb/tiledb.h>
 #include "Exception.h"
 #include "utils.h"
 
@@ -48,10 +48,16 @@ namespace VCL {
     /*          MACRO           */
     /*  *********************** */
     #define Error_Check(answer, ...) { TDBAssert(answer, ##__VA_ARGS__, __FILE__, __LINE__); }
-    inline void TDBAssert(int tdb_return, std::string message, const char* file, int line)
+    inline void TDBAssert(int tdb_return, tiledb_ctx_t* ctx, std::string message, const char* file, int line)
     {
         if (tdb_return == TILEDB_ERR) {
-            throw VCLException(TileDBError, message);
+            tiledb_error_t* err = NULL;
+            tiledb_ctx_get_last_error(ctx, &err);
+            const char* msg;
+            tiledb_error_message(err, &msg);
+            // printf("%s\n", msg);
+            std::string full_err_msg = message + "\n" + std::string(msg);
+            throw VCLException(TileDBError, full_err_msg);
         }
     }
 
@@ -62,27 +68,26 @@ namespace VCL {
     /*  *********************** */
     protected:
         // Path variables
-        std::string _workspace;
         std::string _group;
         std::string _name;
 
         // Dimensions (defines the type of TDBObject, should be set in inherited class)
         int _num_dimensions;
         std::vector<std::string> _dimension_names;
-        std::vector<int> _dimension_values;
+        std::vector<uint64_t> _dimension_values;
 
         // Attributes (number of values in a cell)
         int _num_attributes;
-        std::vector<std::string> _attributes;
+        std::vector<const char*> _attributes;
 
         // Compression type
         CompressionType _compressed;
         int _min_tile_dimension;
 
         // TileDB variables
-        std::vector<int> _array_dimension;
-        std::vector<int> _tile_dimension;
-        TileDB_CTX* _ctx;
+        std::vector<uint64_t> _array_dimension;
+        std::vector<uint64_t> _tile_dimension;
+        tiledb_ctx_t* _ctx;
 
     public:
 
@@ -116,6 +121,9 @@ namespace VCL {
          */
         TDBObject& operator=(const TDBObject &tdb);
 
+        /**
+         *  TDBObject destructor
+         */
         ~TDBObject();
 
 
@@ -127,7 +135,7 @@ namespace VCL {
          *
          *  @return The string containing the full path to the TDBObject
          */
-        std::string get_image_id() const;
+        std::string get_object_id() const;
 
 
     /*  *********************** */
@@ -157,7 +165,7 @@ namespace VCL {
          *  @param dimensions  A vector of integers that define the
          *    value of each dimension
          */
-        void set_dimension_values(std::vector<int> dimensions);
+        void set_dimension_values(std::vector<uint64_t> dimensions);
 
         /**
          *  Sets the minimum tile dimension
@@ -242,16 +250,6 @@ namespace VCL {
         size_t get_path_delimiter(const std::string &object_id) const;
 
         /**
-         *  Gets the grandparent directory of a file (the TileDB workspace)
-         *    and tries to create the directory if it does not exist
-         *
-         *  @param  filename  The full path of the file
-         *  @param  pos  The location of the last / in the filename
-         *  @return The name of the TileDB workspace
-         */
-        std::string get_workspace(const std::string &filename, size_t pos) const;
-
-        /**
          *  Gets the parent directory of a file (the TileDB group)
          *    and tries to create the directory if it does not exist
          *
@@ -281,21 +279,31 @@ namespace VCL {
          *    variables equal to
          */
         void set_equal(const TDBObject &tdb);
+
         /**
          *  Determines the TileDB schema variables and sets the
-         *    schema for writing the TileDB file
+         *    schema for writing a dense TileDB array
          *
          *  @param  cell_val_num  The number of values per cell in the array
          *  @param  object_id  The full path to the TileDB array
          */
-        void set_schema(int cell_val_num, const std::string &object_id);
+        void set_schema_dense(int cell_val_num, const std::string &object_id);
+        
+        /**
+         *  Determines the TileDB schema variables and sets the
+         *    schema for writing a sparse TileDB array
+         *
+         *  @param  cell_val_num  The number of values per cell in the array
+         *  @param  object_id  The full path to the TileDB array
+         */
+        void set_schema_sparse(int cell_val_num, const std::string &object_id);
+        
         /**
          *  Sets the TDBObject values from an array schema
          *
-         *  @param  tiledb_array  An existing TileDB array
+         *  @param  object_id  The full path to the TileDB array
          */
-        void set_from_schema(TileDB_Array* tiledb_array);
-
+        void set_from_schema(const std::string &object_id);
 
     /*  *********************** */
     /*   METADATA INTERACTION   */
@@ -304,27 +312,17 @@ namespace VCL {
          *  Writes the TDBObject metadata
          *
          *  @param  metadata  The full path to the TileDB array metadata
-         *  @param  buffer  A buffer containing the metadata values
-         *  @param  buffer_var_keys  A buffer containing the metadata keys
-         *  @param  buffer_keys  A buffer containing the offset values to the metadata keys
-         *  @param  var_keys_size  The size of the metadata keys buffer
+         *  @param  keys  A vector containing the metadata keys
+         *  @param  values  A vector containing the metadata values
          */
-        void write_metadata(const std::string &metadata, int64_t* buffer, char* buffer_var_keys,
-            size_t* buffer_keys, size_t var_keys_size);
+        void write_metadata(const std::string &metadata, std::vector<std::string> keys, 
+            std::vector<uint64_t> values);
 
         /**
          *  Implemented by the specific TDBObject class, reads the
          *    metadata associated with the TDBObject
          */
         virtual void read_metadata() = 0;
-
-        /**
-         *  Determines the size of the TDBObject array as well as
-         *    the size of the tiles. Currently tiles have the same
-         *    length in all dimensions, and the minimum number of
-         *    tiles is 100
-         */
-        void find_tile_extents();
 
     private:
         /**
@@ -347,8 +345,44 @@ namespace VCL {
 
         /**
          *  Resets the arrays that are members of this class
-         *
          */
         void reset_arrays();
+
+        /**
+         *  Sets the TileDB schema dimensions to the appropriate values
+         *
+         *  @param array_schema  The TileDB array schema
+         */
+        void set_schema_dimensions(tiledb_array_schema_t* array_schema);
+
+        /**
+         *  Sets the TileDB schema attributes to the appropriate values
+         *
+         *  @param array_schema  The TileDB array schema
+         *  @param cell_val_num  The number of values per cell
+         */
+        void set_schema_attributes(tiledb_array_schema_t* array_schema, int cell_val_num);
+
+        /**
+         *  Sets the TileDB schema 
+         *
+         *  @param cell_val_num  The number of values per cell
+         *  @param object_id  The full path to the TileDB array
+         *  @param array_schema  The TileDB array schema
+         */
+        void set_schema(int cell_val_num, const std::string &object_id, tiledb_array_schema_t* array_schema);
+
+        /**
+         *  Converts the VCL CompressionType to TileDB compression
+         */
+        tiledb_compressor_t convert_to_tiledb();
+
+        /**
+         *  Determines the size of the TDBObject array as well as
+         *    the size of the tiles. Currently tiles have the same
+         *    length in all dimensions, and the minimum number of
+         *    tiles is 100
+         */
+        void find_tile_extents();
     };
 };

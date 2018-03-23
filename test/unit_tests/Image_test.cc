@@ -43,7 +43,7 @@ class ImageTest : public ::testing::Test {
  protected:
     virtual void SetUp() {
         img_ = "images/large1.jpg";
-        tdb_img_ = "tdb/images/test_image.tdb";
+        tdb_img_ = "tdb/test_image.tdb";
         cv_img_ = cv::imread(img_, -1);
 
         size_ = cv_img_.rows * cv_img_.cols * cv_img_.channels();
@@ -340,9 +340,9 @@ TEST_F(ImageTest, GetRectangleFromMat)
 TEST_F(ImageTest, WriteMatToJPG)
 {
     VCL::Image img(cv_img_);
-    img.store("image_results/test_image", VCL::JPG);
+    img.store("images/test_image", VCL::JPG);
 
-    cv::Mat test = cv::imread("image_results/test_image.jpg");
+    cv::Mat test = cv::imread("images/test_image.jpg");
 
     EXPECT_FALSE( test.empty() );
 }
@@ -350,13 +350,13 @@ TEST_F(ImageTest, WriteMatToJPG)
 TEST_F(ImageTest, WriteMatToTDB)
 {
     VCL::Image img(cv_img_);
-    img.store("tdb/images/mat_to_tdb", VCL::TDB);
+    img.store("tdb/mat_to_tdb", VCL::TDB);
 }
 
 TEST_F(ImageTest, WriteStringToTDB)
 {
     VCL::Image img(img_);
-    img.store("tdb/images/png_to_tdb.png", VCL::TDB);
+    img.store("tdb/png_to_tdb.png", VCL::TDB);
 }
 
 TEST_F(ImageTest, ResizeMat)
@@ -436,14 +436,14 @@ TEST_F(ImageTest, TDBToPNG)
 {
     VCL::Image img(tdb_img_);
 
-    img.store("image_results/tdb_to_png", VCL::PNG);
+    img.store("images/tdb_to_png", VCL::PNG);
 }
 
 TEST_F(ImageTest, TDBToJPG)
 {
     VCL::Image img(tdb_img_);
 
-    img.store("image_results/tdb_to_jpg", VCL::JPG);
+    img.store("images/tdb_to_jpg", VCL::JPG);
 }
 
 TEST_F(ImageTest, EncodedImage)
@@ -461,7 +461,7 @@ TEST_F(ImageTest, CreateName)
     VCL::Image img(cv_img_);
 
     for ( int i = 0; i < 10; ++i ) {
-        std::string name = img.create_unique("tdb/images/", VCL::TDB);
+        std::string name = img.create_unique("tdb/", VCL::TDB);
         img.store(name, VCL::TDB);
     }
 }
@@ -469,7 +469,7 @@ TEST_F(ImageTest, CreateName)
 TEST_F(ImageTest, NoMetadata){
     VCL::Image img(cv_img_);
 
-    std::string name = img.create_unique("tdb/images/", VCL::TDB);
+    std::string name = img.create_unique("tdb/", VCL::TDB);
     img.store(name, VCL::TDB, false);
 
     cv::Size dims = img.get_dimensions();
