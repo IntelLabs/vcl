@@ -157,7 +157,7 @@ namespace VCL {
          *  @param dimensions  A vector of strings that define the
          *    names of the dimensions
          */
-        void set_dimensions(std::vector<std::string> dimensions);
+        void set_dimensions(const std::vector<std::string> &dimensions);
 
         /**
          *  Sets the values of the dimensions in the TDBObject
@@ -165,7 +165,7 @@ namespace VCL {
          *  @param dimensions  A vector of integers that define the
          *    value of each dimension
          */
-        void set_dimension_values(std::vector<uint64_t> dimensions);
+        void set_dimension_values(const std::vector<uint64_t> &dimensions);
 
         /**
          *  Sets the minimum tile dimension
@@ -193,7 +193,7 @@ namespace VCL {
          *  @param attributes  A vector of strings that define the
          *    names of the attributes
          */
-        void set_attributes(std::vector<std::string> attributes);
+        void set_attributes(const std::vector<std::string> &attributes);
 
         /**
          *  Implemented by the specific TDBObject classes, sets
@@ -315,8 +315,8 @@ namespace VCL {
          *  @param  keys  A vector containing the metadata keys
          *  @param  values  A vector containing the metadata values
          */
-        void write_metadata(const std::string &metadata, std::vector<std::string> keys, 
-            std::vector<uint64_t> values);
+        void write_metadata(const std::string &metadata, const std::vector<std::string> &keys, 
+            const std::vector<uint64_t> &values);
 
         /**
          *  Implemented by the specific TDBObject class, reads the

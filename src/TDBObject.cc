@@ -183,7 +183,7 @@ void TDBObject::set_num_dimensions(int num)
     _num_dimensions = num;
 }
 
-void TDBObject::set_dimensions(std::vector<std::string> dimensions)
+void TDBObject::set_dimensions(const std::vector<std::string> &dimensions)
 {
     _dimension_names.clear();
 
@@ -192,7 +192,7 @@ void TDBObject::set_dimensions(std::vector<std::string> dimensions)
     }
 }
 
-void TDBObject::set_dimension_values(std::vector<uint64_t> dimensions)
+void TDBObject::set_dimension_values(const std::vector<uint64_t> &dimensions)
 {
     _dimension_values.clear();
 
@@ -212,7 +212,7 @@ void TDBObject::set_num_attributes(int num)
     set_default_attributes();
 }
 
-void TDBObject::set_attributes(std::vector<std::string> attributes)
+void TDBObject::set_attributes(const std::vector<std::string> &attributes)
 {
     _attributes.clear();
 
@@ -478,8 +478,8 @@ void TDBObject::set_from_schema(const std::string &object_id)
     /*   METADATA INTERACTION   */
     /*  *********************** */
 
-void TDBObject::write_metadata(const std::string &metadata, std::vector<std::string> keys, 
-            std::vector<uint64_t> values)
+void TDBObject::write_metadata(const std::string &metadata, const std::vector<std::string> &keys, 
+            const std::vector<uint64_t> &values)
 {
     tiledb_kv_schema_t* kv_schema;
     Error_Check(
