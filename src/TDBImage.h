@@ -34,7 +34,7 @@
 
 #include <opencv2/core.hpp>
 
-#include <tiledb.h>
+#include <tiledb/tiledb.h>
 #include "Exception.h"
 #include "TDBObject.h"
 
@@ -54,8 +54,8 @@ namespace VCL {
     /*  *********************** */
     private:
         // Image dimensions
-        int _img_height, _img_width, _img_channels;
-        int _img_size;
+        uint64_t _img_height, _img_width, _img_channels;
+        uint64_t _img_size;
 
         // threshold value
         int _threshold;
@@ -248,13 +248,6 @@ namespace VCL {
     /*  *********************** */
     /*        GET FUNCTIONS     */
     /*  *********************** */
-        /**
-         *  Gets the parent directory of a filename
-         *
-         *  @param  filename  The full path of a file
-         *  @return  The parent directory of the file
-         */
-        std::string get_parent_dir(const std::string &filename) const;
 
         /**
          *  Gets the coordinates in an array given the current tile
@@ -339,24 +332,23 @@ namespace VCL {
     /*      TDBIMAGE SETUP      */
     /*  *********************** */
         /**
-         *  Determines the TileDB workspace, group, and array name
+         *  Determines the TileDB group and array name
          *    from the image id
          *
          *  @param  image_id  The full path of the image or the full path of
          *    where to store the image
          *  @return  The name of the TileDB array
          */
-        std::string workspace_setup(const std::string &image_id);
+        std::string namespace_setup(const std::string &image_id);
 
         /**
          *  Sets the schema and writes the metadata of the TDBImage
          *
-         *  @param  image_id  The name of the TileDB array
          *  @param  metadata  A flag indicating whether the metadata
          *    should be stored in TileDB or not
          *  @return  The number of values per cell in the array
          */
-        int array_setup(const std::string &image_id, bool metadata);
+        void array_setup(bool metadata);
 
 
     /*  *********************** */

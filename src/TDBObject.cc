@@ -28,16 +28,12 @@
  */
 
 #include <stddef.h>
-#include <string>
-
-#include <iostream>
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
+#include <cstring>
 
-#include <tiledb.h>
 #include "TDBObject.h"
 #include "Exception.h"
 
@@ -50,16 +46,16 @@ using namespace VCL;
 TDBObject::TDBObject()
 {
     Error_Check(
-        tiledb_ctx_init(&_ctx, NULL),
+        tiledb_ctx_create(&_ctx, NULL), _ctx,
         "TileDB context initialization failed");
 
-    _workspace = "";
     _group = "";
     _name = "";
 
     // set default values
     _num_attributes = 1;
-    _attributes.push_back("value");
+    const char* attr = "value";
+    _attributes.push_back(attr);
     _compressed = CompressionType::LZ4;
     _min_tile_dimension = 4;
 }
@@ -67,18 +63,18 @@ TDBObject::TDBObject()
 TDBObject::TDBObject(const std::string &image_id)
 {
     Error_Check(
-        tiledb_ctx_init(&_ctx, NULL),
+        tiledb_ctx_create(&_ctx, NULL), _ctx,
         "TileDB context initialization failed");
 
     size_t pos = get_path_delimiter(image_id);
 
-    _workspace = get_workspace(image_id, pos);
     _group = get_group(image_id, pos);
     _name = get_name(image_id, pos);
 
     // set default values
     _num_attributes = 1;
-    _attributes.push_back("value");
+    const char* attr = "value";
+    _attributes.push_back(attr);
     _compressed = CompressionType::LZ4;
     _min_tile_dimension = 4;
 }
@@ -86,7 +82,7 @@ TDBObject::TDBObject(const std::string &image_id)
 TDBObject::TDBObject(const TDBObject &tdb)
 {
     Error_Check(
-        tiledb_ctx_init(&_ctx, NULL),
+        tiledb_ctx_create(&_ctx, NULL), _ctx,
         "TileDB context initialization failed");
 
     set_equal(tdb);
@@ -96,10 +92,10 @@ TDBObject::TDBObject(const TDBObject &tdb)
 TDBObject& TDBObject::operator=(const TDBObject &tdb)
 {
     Error_Check(
-        tiledb_ctx_finalize(_ctx),
+        tiledb_ctx_free(&_ctx), _ctx,
         "TileDB context finalization failed");
     Error_Check(
-        tiledb_ctx_init(&_ctx, NULL),
+        tiledb_ctx_create(&_ctx, NULL), _ctx,
         "TileDB context initialization failed");
 
     reset_arrays();
@@ -111,7 +107,6 @@ TDBObject& TDBObject::operator=(const TDBObject &tdb)
 
 void TDBObject::set_equal(const TDBObject &tdb)
 {
-    _workspace = tdb._workspace;
     _group = tdb._group;
 
     _num_attributes = tdb._num_attributes;
@@ -137,7 +132,7 @@ TDBObject::~TDBObject()
 {
     reset_arrays();
     Error_Check(
-        tiledb_ctx_finalize(_ctx),
+        tiledb_ctx_free(&_ctx), _ctx,
         "TileDB context finalization failed");
 }
 
@@ -154,16 +149,26 @@ void TDBObject::reset_arrays()
 void TDBObject::delete_object()
 {
     std::string object_id = _group + _name;
+    std::string md_id = _group + _name + "/metadata";
+    tiledb_object_t type;
+    tiledb_object_type(_ctx, md_id.c_str(), &type);
+    if (type == TILEDB_KEY_VALUE) {
+        Error_Check(
+            tiledb_object_remove(_ctx, md_id.c_str()),
+            _ctx,
+            "TileDB failed to delete metadata for " + object_id);
+    }
     Error_Check(
-        tiledb_delete(_ctx, object_id.c_str()),
-        "TileDB delete failed");
+        tiledb_object_remove(_ctx, object_id.c_str()),
+        _ctx,
+        "TileDB failed to delete " + object_id);
 }
 
     /*  *********************** */
     /*        GET FUNCTIONS     */
     /*  *********************** */
 
-std::string TDBObject::get_image_id() const
+std::string TDBObject::get_object_id() const
 {
     return _group + _name;
 }
@@ -178,7 +183,7 @@ void TDBObject::set_num_dimensions(int num)
     _num_dimensions = num;
 }
 
-void TDBObject::set_dimensions(std::vector<std::string> dimensions)
+void TDBObject::set_dimensions(const std::vector<std::string> &dimensions)
 {
     _dimension_names.clear();
 
@@ -187,7 +192,7 @@ void TDBObject::set_dimensions(std::vector<std::string> dimensions)
     }
 }
 
-void TDBObject::set_dimension_values(std::vector<int> dimensions)
+void TDBObject::set_dimension_values(const std::vector<uint64_t> &dimensions)
 {
     _dimension_values.clear();
 
@@ -198,7 +203,6 @@ void TDBObject::set_dimension_values(std::vector<int> dimensions)
 
 void TDBObject::set_minimum(int dimension)
 {
-    std::cout << dimension << std::endl;
     _min_tile_dimension = dimension;
 }
 
@@ -208,12 +212,12 @@ void TDBObject::set_num_attributes(int num)
     set_default_attributes();
 }
 
-void TDBObject::set_attributes(std::vector<std::string> attributes)
+void TDBObject::set_attributes(const std::vector<std::string> &attributes)
 {
     _attributes.clear();
 
     for ( int x = 0; x < attributes.size(); ++x ){
-        _attributes.push_back(attributes[x]);
+        _attributes.push_back(const_cast<char*>(attributes[x].c_str()));
     }
 }
 
@@ -242,32 +246,21 @@ size_t TDBObject::get_path_delimiter( const std::string &filename ) const
     return pos;
 }
 
-std::string TDBObject::get_workspace(const std::string &filename, size_t pos) const
-{
-    std::string substring = filename.substr(0, pos);
-    size_t loc = substring.rfind("/");
-
-    std::string workspace = substring.substr(0, loc + 1);
-
-    if ( tiledb_dir_type(_ctx, workspace.c_str()) != TILEDB_WORKSPACE ) {
-        Error_Check(
-            tiledb_workspace_create(_ctx, workspace.c_str()),
-            "Cannot create the TileDB workspace " + workspace + "; directory may \
-            already exist or parent is another TileDB directory");
-    }
-
-    return workspace;
-}
-
 std::string TDBObject::get_group(const std::string &filename, size_t pos) const
 {
     std::string group = filename.substr(0, pos + 1);
 
-    if ( tiledb_dir_type(_ctx, group.c_str()) != TILEDB_GROUP ) {
+    tiledb_object_t type;
+    Error_Check(
+        tiledb_object_type(_ctx, group.c_str(), &type), 
+        _ctx,
+        "Type check of " + group + " failed in TileDB");
+    if ( type != TILEDB_GROUP ) {
         Error_Check(
             tiledb_group_create(_ctx, group.c_str()),
-            "Cannot create the TileDB group " + group + "; directory may \
-            already exist or parent directory is not a TileDB directory");
+            _ctx,
+            "Cannot create the TileDB group " + group +
+            "; directory may already exist or parent directory is not a TileDB directory");
     }
     return group;
 }
@@ -283,109 +276,200 @@ std::string TDBObject::get_name(const std::string &filename, size_t pos) const
     /*  *********************** */
     /*  PROTECTED SET FUNCTIONS */
     /*  *********************** */
-
-void TDBObject::set_schema(int cell_val_num_, const std::string &object_file)
+void TDBObject::set_schema_attributes(tiledb_array_schema_t* array_schema, int cell_val_num)
 {
-    TileDB_ArraySchema array_schema;
-
-    const char* array_name = object_file.c_str();
-    const char* attributes[_num_attributes];
-    int cell_val_num[_num_attributes];
-
     for (int x = 0; x < _attributes.size(); ++x) {
-        attributes[x] = _attributes[x].c_str();
+        tiledb_attribute_t* attr;
+        Error_Check(
+            tiledb_attribute_create(_ctx, &attr, _attributes[x], TILEDB_CHAR), 
+            _ctx,
+            "TileDB failed to create attribute");
+        tiledb_compressor_t compressor = convert_to_tiledb();
+        Error_Check(
+            tiledb_attribute_set_compressor(_ctx, attr, compressor, -1), 
+            _ctx,
+            "TileDB failed to set attribute information");
+        Error_Check(
+            tiledb_attribute_set_cell_val_num(_ctx, attr, cell_val_num),
+            _ctx,
+            "TileDB failed to set attribute information");
+
+        Error_Check(
+            tiledb_array_schema_add_attribute(_ctx, array_schema, attr),
+            _ctx,
+            "TileDB failed to add attribute to schema");
+        Error_Check(
+            tiledb_attribute_free(_ctx, &attr), _ctx,
+            "TileDB failed to free attribute object");
     }
+}
 
-    for ( int i = 0; i < _num_attributes; ++i ) {
-        cell_val_num[i] = cell_val_num_;
-    }
+void TDBObject::set_schema_dimensions(tiledb_array_schema_t* array_schema)
+{
+    tiledb_domain_t* domain;
+    Error_Check(
+        tiledb_domain_create(_ctx, &domain), _ctx,
+        "TileDB failed to create domain object");
 
-    int cell_order = TILEDB_ROW_MAJOR;
-
-    int compression[_num_attributes + 1];
-    for ( int i = 0; i < _num_attributes; ++i ){
-        compression[i] = int(_compressed);
-    }
-    compression[_num_attributes] = TILEDB_NO_COMPRESSION;
-
-    // determine array dimensions and tile sizes
     find_tile_extents();
 
-    int dense = 1;
-    const char* dimensions[_num_dimensions];
-    uint64_t domain[_num_dimensions*2];
-
-    for (int x = 0; x < _dimension_names.size(); ++x) {
-        dimensions[x] = _dimension_names[x].c_str();
-    }
-
+    uint64_t domains[_num_dimensions][2];
     int y = 0;
-    for (int x = 0; x < _num_dimensions*2; x+=2) {
-        domain[x] = 0;
-        domain[x+1] = _array_dimension[y] - 1;
+    for (int x = 0; x < _num_dimensions; ++x) {
+        domains[x][0] = 0;
+        domains[x][1] = _array_dimension[y] - 1;
         ++y;
     }
 
-    size_t domain_len = (_num_dimensions * 2) * sizeof(uint64_t);
-
-    uint64_t tile_extents[_num_dimensions];
-    int64_t capacity = 0;
     for (int x = 0; x < _num_dimensions; ++x) {
-        tile_extents[x] = uint64_t(_tile_dimension[x]);
-        if ( capacity == 0 )
-            capacity += _tile_dimension[x];
-        else
-            capacity *= _tile_dimension[x];
+        uint64_t cur_domain[] = {domains[x][0], domains[x][1]};
+        tiledb_dimension_t* dim;
+
+        Error_Check(
+            tiledb_dimension_create(_ctx, &dim, _dimension_names[x].c_str(), 
+                TILEDB_UINT64, cur_domain, &_tile_dimension[x]),
+            _ctx,
+            "TileDB failed to create dimension " + _dimension_names[x]);
+
+        Error_Check(
+            tiledb_domain_add_dimension(_ctx, domain, dim), _ctx,
+            "TileDB failed to add dimension " + _dimension_names[x]);
+        Error_Check(
+            tiledb_dimension_free(_ctx, &dim), _ctx,
+            "TileDB failed to create dimension " + _dimension_names[x]);
     }
 
-    size_t tile_extents_len = 2*sizeof(uint64_t);
-    int tile_order = TILEDB_ROW_MAJOR;
+    Error_Check(
+        tiledb_array_schema_set_domain(_ctx, array_schema, domain),
+        _ctx,
+        "TileDB failed to set domain");
+    Error_Check(
+        tiledb_domain_free(_ctx, &domain), _ctx,
+        "TileDB failed to free domain object");
+}
 
-    int types[_num_attributes + 1];
-    set_types(types);
+void TDBObject::set_schema_dense(int cell_val_num, const std::string& object_id)
+{
+    tiledb_array_schema_t* array_schema;
+    Error_Check(
+        tiledb_array_schema_create(_ctx, &array_schema, TILEDB_DENSE),
+        _ctx,
+        "TileDB failed to create array schema for " + object_id);
+    set_schema(cell_val_num, object_id, array_schema);
+}
 
-    types[_num_attributes] = TILEDB_INT64;
+void TDBObject::set_schema_sparse(int cell_val_num, const std::string& object_id)
+{
+    tiledb_array_schema_t* array_schema;
+    Error_Check(
+        tiledb_array_schema_create(_ctx, &array_schema, TILEDB_SPARSE),
+        _ctx,
+        "TileDB failed to create array schema for " + object_id);
+    set_schema(cell_val_num, object_id, array_schema);
+}
+
+void TDBObject::set_schema(int cell_val_num, const std::string& object_id, tiledb_array_schema_t* array_schema)
+{
+    Error_Check(
+        tiledb_array_schema_set_cell_order(_ctx, array_schema, TILEDB_ROW_MAJOR),
+        _ctx,
+        "TileDB failed to set array schema information for " + object_id);
+    Error_Check(
+        tiledb_array_schema_set_tile_order(_ctx, array_schema, TILEDB_ROW_MAJOR),
+        _ctx,
+        "TileDB failed to set array schema information for " + object_id);
+
+    set_schema_attributes(array_schema, cell_val_num);
+    set_schema_dimensions(array_schema);
 
     Error_Check(
-        tiledb_array_set_schema(&array_schema, array_name, attributes,
-            _num_attributes, capacity, cell_order, cell_val_num,
-            compression, dense, dimensions, _num_dimensions, domain, domain_len,
-            tile_extents, tile_extents_len, tile_order, types),
+        tiledb_array_schema_check(_ctx, array_schema),
+        _ctx,
         "TileDB schema setup failed");
 
-    if ( tiledb_dir_type(_ctx, object_file.c_str()) != TILEDB_ARRAY ){
+    tiledb_object_t type;
+    Error_Check(
+        tiledb_object_type(_ctx, object_id.c_str(), &type),
+        _ctx,
+        "TileDB object check of " + object_id + " failed");
+    if ( type != TILEDB_ARRAY ){
         Error_Check(
-            tiledb_array_create(_ctx, &array_schema),
-            "Cannot create the TileDB directory " + object_file + "; \
-            directory may already exist or parent directory is not a TileDB directory");
+            tiledb_array_create(_ctx, object_id.c_str(), array_schema),
+            _ctx,
+            "Cannot create the TileDB array " + object_id + 
+            "; array may already exist or parent directory is not a TileDB directory");
         }
 
     Error_Check(
-        tiledb_array_free_schema(&array_schema),
+        tiledb_array_schema_free(_ctx, &array_schema),
+        _ctx,
         "TileDB schema failed to be freed");
 }
 
 
-void TDBObject::set_from_schema(TileDB_Array* tiledb_array)
+void TDBObject::set_from_schema(const std::string &object_id)
 {
-    TileDB_ArraySchema schema;
+    tiledb_array_schema_t* array_schema;
     Error_Check(
-        tiledb_array_get_schema(tiledb_array, &schema),
+        tiledb_array_schema_load(_ctx, &array_schema, object_id.c_str()),
+        _ctx,
         "TileDB schema retrieval failed");
 
-    _num_attributes = schema.attribute_num_;
-    _num_dimensions = schema.dim_num_;
+    unsigned attr_num;
+    Error_Check(
+        tiledb_array_schema_get_attribute_num(_ctx, array_schema, &attr_num),
+        _ctx,
+        "TileDB failed to retrieve attribute from schema");
+    _num_attributes = attr_num;
 
-    int64_t* tiles = (int64_t*) schema.tile_extents_;
-    int64_t* domain = (int64_t*) schema.domain_;
+    tiledb_domain_t* domain;
+    Error_Check(
+        tiledb_array_schema_get_domain(_ctx, array_schema, &domain),
+        _ctx,
+        "TileDB failed to retrieve domain from schema");
+    unsigned dim_num;
+    Error_Check(
+        tiledb_domain_get_rank(_ctx, domain, &dim_num),
+        _ctx,
+        "TileDB failed to get dimension number from domain");
+    _num_dimensions = dim_num;
 
-    for (int i = 0; i < _num_dimensions; ++i)
-        _tile_dimension.push_back(tiles[i]);
-    for (int i = 0; i < _num_dimensions*2; i+=2)
-        _array_dimension.push_back(domain[i + 1] + 1);
+    for (int i = 0; i < _num_dimensions; ++i) {
+        tiledb_dimension_t* dim;
+        Error_Check(
+            tiledb_domain_get_dimension_from_index(_ctx, domain, i, &dim),
+            _ctx,
+            "TileDB failed to retrieve dimension object");
+
+        void* tile_ext;
+        Error_Check(
+            tiledb_dimension_get_tile_extent(_ctx, dim, &tile_ext),
+            _ctx,
+            "TileDB failed to retrieve tile extent from dimension object");
+        uint64_t* tui64 = static_cast<uint64_t*>(tile_ext);
+        _tile_dimension.push_back(*tui64);
+
+
+        void* domainptr;
+        Error_Check(
+            tiledb_dimension_get_domain(_ctx, dim, &domainptr),
+            _ctx,
+            "TileDB failed to retrieve domain values from dimension object");
+        uint64_t* dom_tui64 = static_cast<uint64_t*>(domainptr);
+        _array_dimension.push_back(dom_tui64[1] + 1);
+
+        Error_Check(
+            tiledb_dimension_free(_ctx, &dim), _ctx,
+            "TileDB failed to free dimension object");
+    }
 
     Error_Check(
-        tiledb_array_free_schema(&schema),
+        tiledb_domain_free(_ctx, &domain), _ctx,
+        "TileDB failed to free domain object");
+
+    Error_Check(
+        tiledb_array_schema_free(_ctx, &array_schema),
+        _ctx,
         "TileDB schema failed to be freed");
 }
 
@@ -394,52 +478,96 @@ void TDBObject::set_from_schema(TileDB_Array* tiledb_array)
     /*   METADATA INTERACTION   */
     /*  *********************** */
 
-void TDBObject::write_metadata(const std::string &metadata, int64_t *buffer,
-    char* buffer_var_keys, size_t* buffer_keys, size_t var_keys_size)
+void TDBObject::write_metadata(const std::string &metadata, const std::vector<std::string> &keys, 
+            const std::vector<uint64_t> &values)
 {
-    const char* metadata_name = metadata.c_str();
-    const char* attributes[] = { "dimensions" };
-    const int capacity = 4;
-    const int cell_val_num[] = { 1 };
-
-    const int compression[] = {int(_compressed), TILEDB_NO_COMPRESSION};
-    const int types[] = { TILEDB_INT64 };
-
-    TileDB_MetadataSchema metadata_schema;
+    tiledb_kv_schema_t* kv_schema;
     Error_Check(
-        tiledb_metadata_set_schema(&metadata_schema, metadata_name,
-            attributes, 1, capacity, cell_val_num, compression, types),
-        "TileDB metadata schema setup failed");
-    if ( tiledb_dir_type(_ctx, metadata_name) != TILEDB_METADATA ) {
+        tiledb_kv_schema_create(_ctx, &kv_schema),
+        _ctx,
+        "TileDB failed to create metadata schema");
+
+    for (int i = 0; i < keys.size(); ++i) {
+        tiledb_attribute_t* attr;
         Error_Check(
-            tiledb_metadata_create(_ctx, &metadata_schema),
-            "Cannot create the TileDB directory " + metadata + "; directory may \
-            already exist or parent directory is not a TileDB directory");
+            tiledb_attribute_create(_ctx, &attr, keys[i].c_str(), TILEDB_UINT64),
+            _ctx,
+            "TileDB failed to create metadata attribute");
+        Error_Check(
+            tiledb_attribute_set_cell_val_num(_ctx, attr, 1),
+            _ctx,
+            "TileDB failed set metadata attribute information");
+        Error_Check(
+            tiledb_attribute_set_compressor(_ctx, attr, convert_to_tiledb(), -1),
+            _ctx,
+            "TileDB failed set metadata attribute information");
+        Error_Check(
+            tiledb_kv_schema_add_attribute(_ctx, kv_schema, attr),
+            _ctx,
+            "TileDB failed to add metadata attribute to metadata schema");
+        Error_Check(
+            tiledb_attribute_free(_ctx, &attr), _ctx,
+            "TileDB failed to free metadata attribute");
     }
+
     Error_Check(
-        tiledb_metadata_free_schema(&metadata_schema),
+        tiledb_kv_schema_check(_ctx, kv_schema), _ctx,
+        "TileDB key value schema invalid");
+
+    tiledb_object_t type;
+    Error_Check(
+        tiledb_object_type(_ctx, metadata.c_str(), &type),
+        _ctx,
+        "TileDB object check of " + metadata + " failed");
+    if ( type != TILEDB_KEY_VALUE ) {
+        Error_Check(
+            tiledb_kv_create(_ctx, metadata.c_str(), kv_schema),
+            _ctx,
+            "Cannot create the TileDB directory " + metadata +
+            "; directory may already exist or parent directory is not a TileDB directory");
+    }
+
+    Error_Check(
+        tiledb_kv_schema_free(_ctx, &kv_schema), _ctx,
         "TileDB schema failed to be freed");
 
-    TileDB_Metadata* tiledb_metadata;
+    tiledb_kv_item_t* kv_item;
+    const char* keyname = _name.c_str();
     Error_Check(
-        tiledb_metadata_init(_ctx, &tiledb_metadata, metadata_name,
-            TILEDB_METADATA_WRITE, NULL, 0),
-        "TileDB metadata initialization failed");
-
-    int size = _num_dimensions + 1;
-
-    const void* buffers[] = { buffer, buffer_keys, buffer_var_keys };
-    size_t buffer_sizes[] = { sizeof(buffer) * size,
-        sizeof(buffer_keys) * size, var_keys_size };
-
+        tiledb_kv_item_create(_ctx, &kv_item), _ctx,
+        "TileDB failed to create metadata item");
     Error_Check(
-        tiledb_metadata_write(tiledb_metadata, buffer_var_keys,
-            var_keys_size, buffers, buffer_sizes),
+        tiledb_kv_item_set_key(_ctx, kv_item, keyname, TILEDB_CHAR, std::strlen(keyname)),
+        _ctx,
+        "TileDB failed to set metadata key");
+
+    for (int i = 0; i < keys.size(); ++i) {
+        const char* key = keys[i].c_str();
+        const void* val = &(values[i]);
+        Error_Check(
+            tiledb_kv_item_set_value(_ctx, kv_item, key, val, TILEDB_UINT64, sizeof(val)),
+            _ctx,
+            "TileDB failed to set metadata value");
+    }
+    
+    tiledb_kv_t* kv;
+
+    Error_Check( 
+        tiledb_kv_open(_ctx, &kv, metadata.c_str(), NULL, 0),
+        _ctx,
+        "TileDB metadata open failed");
+
+    Error_Check( 
+        tiledb_kv_add_item(_ctx, kv, kv_item), _ctx,
         "TileDB metadata failed to write");
 
+    Error_Check( 
+        tiledb_kv_close(_ctx, &kv), _ctx,
+        "TileDB metadata failed to close");
+
     Error_Check(
-        tiledb_metadata_finalize(tiledb_metadata),
-        "TileDB metadata failed to finalize");
+        tiledb_kv_item_free(_ctx, &kv_item), _ctx,
+        "TileDB failed to free metadata item");
 }
 
 void TDBObject::find_tile_extents()
@@ -459,6 +587,40 @@ void TDBObject::find_tile_extents()
 
         _array_dimension.push_back(dimension);
         _tile_dimension.push_back(gf_dimension);
+    }
+}
+
+tiledb_compressor_t TDBObject::convert_to_tiledb()
+{
+    switch(static_cast<int>(_compressed)) {
+        case 0:
+            return TILEDB_NO_COMPRESSION;
+        case 1:
+            return TILEDB_GZIP;
+        case 2:
+            return TILEDB_ZSTD;
+        case 3:
+            return TILEDB_LZ4;
+        case 4:
+            return TILEDB_BLOSC_LZ;
+        case 5:
+            return TILEDB_BLOSC_LZ4;
+        case 6:
+            return TILEDB_BLOSC_LZ4HC;
+        case 7:
+            return TILEDB_BLOSC_SNAPPY;
+        case 8:
+            return TILEDB_BLOSC_ZLIB;
+        case 9:
+            return TILEDB_BLOSC_ZSTD;
+        case 10:
+            return TILEDB_RLE;
+        case 11:
+            return TILEDB_BZIP2;
+        case 12:
+            return TILEDB_DOUBLE_DELTA;
+        default:
+            throw VCLException(TileDBError, "Compression type not supported.\n");
     }
 }
 

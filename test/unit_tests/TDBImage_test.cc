@@ -41,8 +41,8 @@ class TDBImageTest : public ::testing::Test {
 
 protected:
     virtual void SetUp() {
-        tdb_img_ = "tdb/images/test_image.tdb";
-        tdb_test_ = "tdb/images/write_test.tdb";
+        tdb_img_ = "tdb/test_image.tdb";
+        tdb_test_ = "tdb/write_test.tdb";
         cv_img_ = cv::imread("images/large1.jpg", cv::IMREAD_ANYCOLOR);
         rect_ = VCL::Rectangle(100, 100, 100, 100);
     }
@@ -139,7 +139,7 @@ TEST_F(TDBImageTest, StringConstructor)
     ASSERT_THROW(tdb.get_image_width(), VCL::Exception);
     ASSERT_THROW(tdb.get_image_channels(), VCL::Exception);
 
-    EXPECT_EQ("tdb/images/test_image.tdb", tdb.get_image_id());
+    EXPECT_EQ("tdb/test_image.tdb", tdb.get_object_id());
 }
 
 TEST_F(TDBImageTest, BufferConstructor)
@@ -162,13 +162,13 @@ TEST_F(TDBImageTest, BufferConstructor)
 
 TEST_F(TDBImageTest, CopyConstructorNoData)
 {
-    VCL::TDBImage tdb("tdb/images/copy_construct.tdb");
+    VCL::TDBImage tdb("tdb/copy_construct.tdb");
 
     ASSERT_THROW(tdb.get_image_height(), VCL::Exception);
     ASSERT_THROW(tdb.get_image_width(), VCL::Exception);
     ASSERT_THROW(tdb.get_image_channels(), VCL::Exception);
 
-    EXPECT_EQ("tdb/images/copy_construct.tdb", tdb.get_image_id());
+    EXPECT_EQ("tdb/copy_construct.tdb", tdb.get_object_id());
 
     VCL::TDBImage imgcopy(tdb);
     ASSERT_THROW(imgcopy.get_image_height(), VCL::Exception);
@@ -179,13 +179,14 @@ TEST_F(TDBImageTest, CopyConstructorNoData)
 
 TEST_F(TDBImageTest, CopyConstructorData)
 {
-    VCL::TDBImage tdb("tdb/images/copy_construct.tdb");
+
+    VCL::TDBImage tdb("tdb/copy_construct.tdb");
 
     ASSERT_THROW(tdb.get_image_height(), VCL::Exception);
     ASSERT_THROW(tdb.get_image_width(), VCL::Exception);
     ASSERT_THROW(tdb.get_image_channels(), VCL::Exception);
 
-    EXPECT_EQ("tdb/images/copy_construct.tdb", tdb.get_image_id());
+    EXPECT_EQ("tdb/copy_construct.tdb", tdb.get_object_id());
 
     tdb.write(cv_img_);
 
@@ -209,9 +210,9 @@ TEST_F(TDBImageTest, CopyConstructorData)
 
 TEST_F(TDBImageTest, CopyConstructor)
 {
-    VCL::TDBImage tdb("tdb/images/copy_construct.tdb");
+    VCL::TDBImage tdb("tdb/copy_construct.tdb");
 
-    EXPECT_EQ("tdb/images/copy_construct.tdb", tdb.get_image_id());
+    EXPECT_EQ("tdb/copy_construct.tdb", tdb.get_object_id());
     ASSERT_FALSE(tdb.has_data());
 
     VCL::TDBImage imgcopy(tdb);
@@ -227,18 +228,18 @@ TEST_F(TDBImageTest, CopyConstructor)
 
     compare_mat_mat(copy, cv_img_);
 
-    imgcopy.write("tdb/images/copy_construct.tdb");
+    imgcopy.write("tdb/copy_construct.tdb");
 }
 
 TEST_F(TDBImageTest, OperatorEqualsNoData)
 {
-    VCL::TDBImage tdb("tdb/images/operator_equals.tdb");
+    VCL::TDBImage tdb("tdb/operator_equals.tdb");
 
     ASSERT_THROW(tdb.get_image_height(), VCL::Exception);
     ASSERT_THROW(tdb.get_image_width(), VCL::Exception);
     ASSERT_THROW(tdb.get_image_channels(), VCL::Exception);
 
-    EXPECT_EQ("tdb/images/operator_equals.tdb", tdb.get_image_id());
+    EXPECT_EQ("tdb/operator_equals.tdb", tdb.get_object_id());
 
     VCL::TDBImage imgcopy;
 
@@ -252,13 +253,13 @@ TEST_F(TDBImageTest, OperatorEqualsNoData)
 
 TEST_F(TDBImageTest, OperatorEqualsData)
 {
-    VCL::TDBImage tdb("tdb/images/operator_equals.tdb");
+    VCL::TDBImage tdb("tdb/operator_equals.tdb");
 
     ASSERT_THROW(tdb.get_image_height(), VCL::Exception);
     ASSERT_THROW(tdb.get_image_width(), VCL::Exception);
     ASSERT_THROW(tdb.get_image_channels(), VCL::Exception);
 
-    EXPECT_EQ("tdb/images/operator_equals.tdb", tdb.get_image_id());
+    EXPECT_EQ("tdb/operator_equals.tdb", tdb.get_object_id());
 
     tdb.write(cv_img_);
 
@@ -284,8 +285,8 @@ TEST_F(TDBImageTest, OperatorEqualsData)
 
 TEST_F(TDBImageTest, OperatorEquals)
 {
-    VCL::TDBImage tdb("tdb/images/operator_equals.tdb");
-    EXPECT_EQ("tdb/images/operator_equals.tdb", tdb.get_image_id());
+    VCL::TDBImage tdb("tdb/operator_equals.tdb");
+    EXPECT_EQ("tdb/operator_equals.tdb", tdb.get_object_id());
 
     EXPECT_EQ(tdb.get_image_height(), cv_img_.rows);
 
@@ -346,7 +347,7 @@ TEST_F(TDBImageTest, GetBuffer)
 
 TEST_F(TDBImageTest, SetProperties)
 {
-    VCL::TDBImage tdb("tdb/images/no_metadata.tdb");
+    VCL::TDBImage tdb("tdb/no_metadata.tdb");
     tdb.write(cv_img_, false);
 
     tdb.set_image_properties(cv_img_.rows, cv_img_.cols, cv_img_.channels());
@@ -366,7 +367,7 @@ TEST_F(TDBImageTest, WriteCVMat)
 
 TEST_F(TDBImageTest, WriteCVMatNoMetadata)
 {
-    VCL::TDBImage tdb("tdb/images/no_metadata.tdb");
+    VCL::TDBImage tdb("tdb/no_metadata.tdb");
 
     tdb.write(cv_img_, false);
 
@@ -439,7 +440,7 @@ TEST_F(TDBImageTest, Threshold)
 
 TEST_F(TDBImageTest, DeleteImage)
 {
-    VCL::TDBImage tdb("tdb/images/operator_equals.tdb");
+    VCL::TDBImage tdb("tdb/operator_equals.tdb");
 
     tdb.delete_image();
 
@@ -449,7 +450,7 @@ TEST_F(TDBImageTest, DeleteImage)
 
 TEST_F(TDBImageTest, DeleteImageAfterRead)
 {
-    VCL::TDBImage tdb("tdb/images/copy_construct.tdb");
+    VCL::TDBImage tdb("tdb/copy_construct.tdb");
 
     tdb.read();
     tdb.delete_image();

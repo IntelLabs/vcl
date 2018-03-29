@@ -41,7 +41,7 @@ class ImageDataTest : public ::testing::Test {
  protected:
     virtual void SetUp() {
         img_ = "images/large1.jpg";
-        tdb_img_ = "tdb/images/test_image.tdb";
+        tdb_img_ = "tdb/test_image.tdb";
         cv_img_ = cv::imread(img_, cv::IMREAD_ANYCOLOR);
         rect_ = VCL::Rectangle(100, 100, 100, 100);
     }
@@ -354,7 +354,7 @@ TEST_F(ImageDataTest, Write)
 {
     VCL::ImageData img_data(cv_img_);
 
-    img_data.write("tdb/images/test_image", VCL::TDB);
+    img_data.write("tdb/test_image", VCL::TDB);
 }
 
 TEST_F(ImageDataTest, Resize)
@@ -405,11 +405,11 @@ TEST_F(ImageDataTest, Threshold)
 
 TEST_F(ImageDataTest, DeleteTDB)
 {
-    VCL::ImageData img_data("tdb/images/no_metadata.tdb");
+    VCL::ImageData img_data("tdb/no_metadata.tdb");
 
     img_data.delete_object();
 
-    img_data.read("tdb/images/no_metadata.tdb");
+    img_data.read("tdb/no_metadata.tdb");
     ASSERT_THROW(img_data.perform_operations(), VCL::Exception);
 }
 
