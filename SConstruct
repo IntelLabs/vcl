@@ -10,7 +10,7 @@ source_files = ['src/Image.cc', 'src/ImageData.cc', 'src/TDBObject.cc',
 
 env.SharedLibrary('libvcl.so', source_files,
     LIBS = [ 'tiledb', 'opencv_core', 'opencv_imgproc', 'opencv_imgcodecs', 'gomp'],
-    LIBPATH = ['/usr/lib', '/usr/local/lib'])
+    LIBPATH = ['/usr/local/lib', '/usr/lib'])
 
 ## Compile and Run Tests ##
 
@@ -27,4 +27,4 @@ env.Program('test/unit_test', gtest_source,
                 , 'opencv_highgui'
                 , 'opencv_imgproc'
         ],
-        LIBPATH = ['.', '/usr/lib', '/usr/local/lib'])
+        LIBPATH = ['.', '/usr/local/lib', '/usr/lib'])
