@@ -58,15 +58,19 @@ Currently the VCL works with TileDB v1.2.2. It has not been tested with the Dock
     sudo make install PREFIX='/usr'
 
 ### Build TileDB
-Please note that if you have previously installed TileDB v0.6.1 on your machine, you will need to remove the existing header file (/usr/local/include/tiledb.h), since the newer version of TileDB installs to /usr/local/include/tiledb/.
+    
     git clone https://github.com/TileDB-Inc/TileDB
-    git checkout 1.2.2
     cd TileDB
+    git checkout 1.2.2
     mkdir build
     cd build
     ../bootstap --prefix=/usr/local/
     make -jX   # substitute X for maximum number of CPUs (or leave it off to use all available)
     sudo make install
+    
+**Note:** If you have previously installed TileDB v0.6.1 on your machine, 
+you will need to remove the existing header file (/usr/local/include/tiledb.h), 
+since the newer version of TileDB installs to /usr/local/include/tiledb/.
 
 ## Compilation
     git clone https://github.com/IntelLabs/vcl # or download a release
