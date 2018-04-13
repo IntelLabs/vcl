@@ -132,6 +132,14 @@ Image Image::get_area(const Rectangle &roi) const
     return img_copy;
 }
 
+Image Image::get_area(const std::vector<Point> &coords) const
+{
+    Image img_copy(*this);
+    *(img_copy._image) = _image->get_area(coords);
+
+    return img_copy;
+}
+
 cv::Mat Image::get_cvmat() const
 {
     cv::Mat mat = _image->get_cvmat();

@@ -60,6 +60,12 @@ namespace VCL {
      */
     typedef cv::Rect Rectangle;
 
+    /**
+     *  Uses the OpenCV Point_ template class to define a point 
+     *    (x = column, y = row)
+     */    
+    typedef cv::Point_<int> Point;
+
     class Image {
     private:
     /*  *********************** */
@@ -185,6 +191,17 @@ namespace VCL {
          */
         Image get_area(const Rectangle &roi) const;
 
+        /**
+         *  Gets a specific area of the image, indicated by a vector
+         *    of Points and returns a new Image object
+         *
+         *  @param coords  The region of interest indicated by a vector
+         *     of Points (x, y)
+         *  @return A new Image object where only the pixels within the
+         *    region of interest have values (pixels outside are set to 0)
+         */
+        Image get_area(const std::vector<Point> &coords) const;
+        
         /**
          *  Gets an OpenCV Mat that contains the image data
          *

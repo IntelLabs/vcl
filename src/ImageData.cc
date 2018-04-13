@@ -292,6 +292,31 @@ void ImageData::Crop::operator()(ImageData *img)
 }
 
     /*  *********************** */
+    /*       AREA OPERATION     */
+    /*  *********************** */
+
+void ImageData::Area::operator()(ImageData *img)
+{
+    if ( _format == VCL::TDB ) {
+        if ( img->_tdb == NULL )
+            throw VCLException(TileDBNotFound, 
+                "ImageFormat indicates image stored in TDB format, but no data was found");
+        
+        img->_tdb->area(_coords);
+        img->_height = img->_tdb->get_image_height();
+        img->_width = img->_tdb->get_image_width();
+        img->_channels = img->_tdb->get_image_channels();
+    }
+    else {
+        if ( !img->_cv_img.empty() ) {
+            throw VCLException(UnsupportedOperation, "Not currently supported on PNG/JPG");
+        }
+        else
+            throw VCLException(ObjectEmpty, "Image object is empty");
+    }
+}
+
+    /*  *********************** */
     /*    THRESHOLD OPERATION   */
     /*  *********************** */
 
@@ -629,6 +654,26 @@ ImageData ImageData::get_area(const Rectangle &roi)
 
     area._height = roi.height;
     area._width = roi.width;
+
+    return area;
+}
+
+ImageData ImageData::get_area(const std::vector<Point> &coords)
+{
+    ImageData area = *this;
+
+    if ( area._format == VCL::TDB && area._operations.size() == 1 ) {
+        if ( area._tdb == NULL )
+            throw VCLException(TileDBNotFound, "ImageFormat indicates image \
+                stored in TDB format, but no data was found");
+        area._operations.pop_back();
+    }
+
+    std::shared_ptr<Operation> op = std::make_shared<Area> (coords, area._format);
+
+    area._operations.push_back(op);
+
+    area.perform_operations();
 
     return area;
 }

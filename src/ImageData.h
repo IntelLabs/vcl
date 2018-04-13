@@ -49,7 +49,7 @@ namespace VCL {
     /*  *********************** */
     /*        OPERATION         */
     /*  *********************** */
-        enum OperationType { READ, WRITE, RESIZE, CROP, THRESHOLD };
+        enum OperationType { READ, WRITE, RESIZE, CROP, THRESHOLD, AREA };
         enum System { LOCAL, S3 };
 
         /**
@@ -240,6 +240,42 @@ namespace VCL {
 
             OperationType get_type() { return CROP; };
         };
+
+    /*  *********************** */
+    /*       AREA OPERATION     */
+    /*  *********************** */
+        /**
+         *  Extends Operation, crops the image to the specified area
+         */
+         class Area : public Operation {
+         private:
+            /** Gives the dimensions and coordinates of the desired area */
+            std::vector<Point> _coords;
+
+        public:
+            /**
+             *  Constructor, sets the area to crop to and the format
+             *
+             *  @param rect  Contains dimensions and coordinates of
+             *    desired area
+             *  @param format  The current format of the image data
+             *  @see Image.h for more details on ImageFormat and Rectangle
+             */
+            Area(const std::vector<Point> &coords, ImageFormat format)
+                : Operation(format),
+                  _coords(coords)
+            {
+            };
+
+            /**
+             *  Crops the image to the given area
+             *
+             *  @param img  A pointer to the current ImageData object
+             */
+            void operator()(ImageData *img);
+
+            OperationType get_type() { return AREA; };
+        };        
 
     /*  *********************** */
     /*    THRESHOLD OPERATION   */
@@ -433,6 +469,16 @@ namespace VCL {
          *  @see Image.h for more details about Rectangle
          */
         ImageData get_area(const Rectangle &roi);
+
+        /**
+         *  Gets a specific area of the image, indicated by a vector
+         *    of Points and returns a new Image object
+         *
+         *  @param coords  The region of interest indicated by a vector
+         *     of Points (x, y)
+         *  @return ImageData of the area
+         */
+        ImageData get_area(const std::vector<Point> &coords);      
 
         /**
          *  Gets encoded image data in a buffer

@@ -42,6 +42,228 @@
 
 using namespace VCL;
 
+void Polygon::create_edge_list(const std::vector<Point> &coords)
+{
+    float dx, dy;
+    int sign, x_val, y_min, y_max;
+
+    int size = coords.size();
+
+    for ( int x = 0; x < size; ++x ) {
+        Point cur_point, next_point;
+        PolygonEdge edge;
+
+        if ( x == 0 ) {
+            cur_point = coords[size - 1];
+            next_point = coords[x];
+        }
+        else if ( size > 2 ) {
+            cur_point = coords[x - 1];
+            next_point = coords[x];
+        }
+        else 
+            break;
+
+        dx = next_point.x - cur_point.x;
+        dy = next_point.y - cur_point.y;
+
+        if ( dy == 0 ) 
+            continue;
+
+        if ( dx < 0 || dy < 0 )
+            edge.sign = -1;
+        else
+            edge.sign = 1;
+
+        edge.dx = std::abs(dx);
+        edge.dy = std::abs(dy);
+
+        if ( cur_point.y < next_point.y ) {
+            edge.y_min = cur_point.y;
+            edge.y_max = next_point.y;
+            edge.x_val = cur_point.x;
+        }
+        else {
+            edge.y_min = next_point.y;
+            edge.y_max = cur_point.y;
+            edge.x_val = next_point.x;
+        }
+
+        edge.current_sum = 0;
+        if ( !in_edges(edge) )
+            _edges.push_back(edge);
+    }
+
+    sort_edges();
+    // set_parity(0);
+
+    // for ( int x = 0; x < _edges.size(); ++x ) {
+    //     if ( _edges[x].y_min )
+    // }
+
+    // for (auto e : _edges)
+    //     print_edge(e);
+}
+
+void Polygon::print_edge(PolygonEdge e)
+{
+    std::cout << "x_val = " << e.x_val << " y_min = " << e.y_min << " y_max = " << e.y_max;
+    std::cout << " dx = " << e.dx << " dy = " << e.dy << " sign = " << e.sign;
+    std::cout << " current sum = " << e.current_sum << std::endl;
+}
+
+bool Polygon::in_edges(PolygonEdge edge)
+{
+    for ( auto e : _edges ) {
+        if (edge.x_val == e.x_val && edge.y_min == e.y_min && edge.y_max == e.y_max 
+            && edge.dx == e.dx && edge.dy == e.dy && edge.sign == e.sign 
+            && edge.current_sum == e.current_sum)
+            return true;
+    }
+    return false;
+}
+
+void Polygon::print_edges()
+{
+    for ( auto e : _edges )
+        print_edge(e);
+}
+
+bool Polygon::active_empty()
+{
+    if (_active.size() == 0)
+        return true;
+    return false;
+}
+
+bool Polygon::has_edges()
+{
+    if ( _edges.size() == 0 )
+        return false;
+    return true;
+}
+
+
+void Polygon::manage_active(int current_y) 
+// void Polygon::manage_active(int current_y, int max_y, int max_x) 
+{
+    if ( !_active.empty() ) {
+        for ( auto it = _active.begin(); it != _active.end(); ) {
+            PolygonEdge edge = *it;
+            // std::cout << "Active edge: ";
+            // print_edge(edge);
+            if ( current_y == it->y_max ) {
+                it = _active.erase(it);
+                // _edges.erase(it);
+            }
+            else
+                ++it;
+        }
+    }
+
+    if ( !_edges.empty() ) {
+        for ( auto it = _edges.begin(); it != _edges.end(); ) {
+            PolygonEdge edge = *it;
+            if ( current_y == edge.y_min) {
+            // if ( current_y == edge.y_min && edge.y_max <= max_y && edge.x_val <= max_x) {
+                std::cout << "Moving to active: ";
+                print_edge(edge);
+                _active.push_back(edge);
+                it = _edges.erase(it);
+            }
+            else
+                ++it;
+        }
+    }
+
+    if ( !_active.empty() ) 
+        std::sort(_active.begin(), _active.end(), xMinCompare);
+}
+
+void Polygon::sort_edges()
+{
+    std::sort(_edges.begin(), _edges.end(), yMaxCompare);
+    std::sort(_edges.begin(), _edges.end(), yMinCompare);
+}
+
+bool Polygon::scanline_exists(int max_y)
+{
+    for ( auto &edge : _edges ) {
+        if ( edge.y_min <= max_y )
+            return true;
+    }
+
+    return false;
+}
+
+void Polygon::get_subarray(uint64_t *subarray)
+{
+    int index = _edges.size() - 1;
+
+    std::sort(_edges.begin(), _edges.end(), xMinCompare);
+    uint64_t start_column = _edges[0].x_val;
+    uint64_t end_column = _edges[index].x_val;
+
+    std::sort(_edges.begin(), _edges.end(), yMinCompare);
+    uint64_t start_row = _edges[0].y_min;
+    uint64_t end_row = _edges[index].y_max;
+
+    subarray[0] = start_row;
+    subarray[1] = end_row - 1;
+    subarray[2] = start_column;
+    subarray[3] = end_column - 1;
+}
+
+void Polygon::get_slope(std::vector<std::tuple<float, float, int>> &edges)
+{
+    for ( auto &edge : _edges ) {
+        if ( edge.dx > 0 )
+            edges.push_back(std::make_tuple(edge.dx, edge.dy, edge.sign));
+    }
+}
+
+void Polygon::get_active_x(std::vector<int> &x_vals)
+{
+    for ( auto &edge : _active ) {
+        x_vals.push_back(edge.x_val);
+        // print_edge(edge);
+    }
+}
+
+void Polygon::reset_edges()
+{
+    _edges.clear();
+    _active.clear();
+}
+
+void Polygon::swap_parity()
+{
+    if ( _parity == 0 ) 
+        _parity = 1;
+    else
+        _parity = 0;
+}
+
+int Polygon::get_parity() {
+    return _parity;
+}
+
+void Polygon::set_parity(int p) {
+    _parity = p;
+}
+
+void Polygon::update()
+{
+    for ( auto &edge : _active ) {
+        edge.current_sum += edge.dx;
+
+        while ( edge.current_sum >= edge.dy ) {
+            edge.current_sum -= edge.dy;
+            edge.x_val += edge.sign; 
+        }
+    }
+}
+
     /*  *********************** */
     /*        CONSTRUCTORS      */
     /*  *********************** */
@@ -246,9 +468,10 @@ cv::Mat TDBImage::get_cvmat()
         read();
 
     unsigned char* buffer = new unsigned char[_img_size];
+    uint64_t subarray[] = {0, _img_height - 1, 0, _img_width - 1};
 
     if ( _tile_order )
-        reorder_buffer(buffer);
+        reorder_buffer(buffer, subarray);
     else
         std::memcpy(buffer, _raw_data, _img_size);
 
@@ -277,8 +500,10 @@ void TDBImage::get_buffer(T* buffer, int buffer_size)
     if ( _raw_data == NULL )
         read();
 
+    uint64_t subarray[] = {0, _img_height - 1, 0, _img_width - 1};
+
     if ( _tile_order ) 
-        reorder_buffer(buffer);
+        reorder_buffer(buffer, subarray);
     else
         std::memcpy(buffer, _raw_data, buffer_size);
 }
@@ -509,12 +734,12 @@ void TDBImage::read()
         if ( _img_height == 0 )
             read_metadata();
 
-        int start_row = 0;
-        int start_column = 0;
-        int end_row = _img_height - 1;
-        int end_column = _img_width - 1;
+        uint64_t start_row = 0;
+        uint64_t start_column = 0;
+        uint64_t end_row = _img_height - 1;
+        uint64_t end_column = _img_width - 1;
 
-        int64_t subarray[] = { start_row, end_row, start_column, end_column };
+        uint64_t subarray[] = { start_row, end_row, start_column, end_column };
 
         read_from_tdb(subarray);
     }
@@ -534,12 +759,12 @@ void TDBImage::read(const Rectangle &rect)
         _img_width = rect.width;
         _img_size = _img_height * _img_width * _img_channels;
 
-        int start_row = rect.x;
-        int start_column = rect.y;
-        int end_row = start_row + rect.height - 1;
-        int end_column = start_column + rect.width - 1;
+        uint64_t start_row = rect.x;
+        uint64_t start_column = rect.y;
+        uint64_t end_row = start_row + rect.height - 1;
+        uint64_t end_column = start_column + rect.width - 1;
 
-        int64_t subarray[] = { start_row, end_row, start_column, end_column };
+        uint64_t subarray[] = { start_row, end_row, start_column, end_column };
 
         read_from_tdb(subarray);
     }
@@ -600,6 +825,108 @@ void TDBImage::threshold(int value)
     }
 }
 
+void TDBImage::area(const std::vector<Point> &coords)
+{
+    // check to see if the area is smaller than the entire image
+    
+    _poly.create_edge_list(coords);
+    _poly.set_parity(0);
+
+    uint64_t subarray[4];
+    _poly.get_subarray(subarray);
+
+    if (_raw_data == NULL) {
+
+        if ( _img_height == 0 )
+            read_metadata();
+
+        if ( _img_height < subarray[1] - subarray[0] || _img_width < subarray[3] - subarray[2] )
+            throw VCLException(SizeMismatch, "Requested area is not within the image");
+
+        read_from_tdb(subarray);
+    }
+
+    fill_ordered_polygon(subarray);
+    // _poly.reset_edges();
+    // fill_polygon(subarray, coords);
+}
+
+// // add the ability to set the background to a certain color? 
+void TDBImage::fill_ordered_polygon(uint64_t* subarray)
+{
+    int i,j;
+    std::vector<int> edges;
+    int buffer_index = 0;
+    int height = subarray[1] + 1;
+    int width = subarray[3] + 1;
+    int img_size = height * width * _img_channels;
+
+    unsigned char* buffer = new unsigned char[img_size];
+    reorder_buffer(buffer, subarray);
+
+    for ( i = 0; i < height; ++i ) { //height
+        edges.clear();
+        _poly.set_parity(0);
+        _poly.manage_active(i);
+        _poly.get_active_x(edges);
+
+        if ( edges.back() != width )
+            edges.push_back(width);
+
+        int start = 0;
+        int size = 0;
+
+        for ( int n = 0; n < edges.size(); ++n ) {
+            int parity = _poly.get_parity();
+            size = edges[n] * _img_channels - start;
+
+            if ( parity == 0 ) {
+                memset(&buffer[buffer_index], 0, size);
+            }
+
+            // if ( parity == 0 ) {
+            //     for ( int k = start; k < edges[n] * _img_channels; ++k ) {
+            //             _raw_data[k] = fill_value;
+            //     }
+            // }
+
+            buffer_index += size;
+            start = edges[n] * _img_channels;
+
+            _poly.swap_parity();
+        }
+        _poly.update();
+    }
+
+    if (_raw_data != NULL)
+        delete [] _raw_data;
+    _raw_data = new unsigned char[img_size];
+    std::memcpy(_raw_data, buffer, img_size);
+
+    delete [] buffer;
+}
+
+int TDBImage::in_vector(const std::vector<std::pair<int, int>> &vec, const std::pair<int, int> v)
+{
+    for ( int i = 0; i < vec.size(); ++i )
+        if ( vec[i].first == v.first && vec[i].second == v.second )
+            return i;
+    return -1;
+}
+
+std::pair<int, int> TDBImage::find_tile(Point p)
+{
+    int row = p.y / _tile_dimension[0];
+    if ( row > 0 )
+        row -= 1;
+
+    int col = p.x / _tile_dimension[1];
+    if ( col > 0 )
+        col -= 1;
+
+    return std::make_pair(row, col);
+}
+
 bool TDBImage::has_data()
 {
     if ( _raw_data == NULL )
@@ -618,7 +945,7 @@ void TDBImage::delete_image()
     /*  *********************** */
     /*   PRIVATE GET FUNCTIONS  */
     /*  *********************** */
-void TDBImage::get_tile_coordinates(int64_t* subarray, int current_row_tile, int current_column_tile)
+void TDBImage::get_tile_coordinates(uint64_t* subarray, int current_row_tile, int current_column_tile)
 {
     int row_start = current_row_tile * _tile_dimension[0];
     int column_start = current_column_tile * _tile_dimension[1];
@@ -856,7 +1183,7 @@ void TDBImage::read_metadata()
     /*  *********************** */
     /*     DATA MANIPULATION    */
     /*  *********************** */
-void TDBImage::read_from_tdb(int64_t* subarray)
+void TDBImage::read_from_tdb(uint64_t* subarray)
 {
     std::string array_name = _group + _name;
 
@@ -947,16 +1274,11 @@ void TDBImage::read_from_tdb(int64_t* subarray)
     }
 }
 
-
-template <class T>
-void TDBImage::reorder_buffer(T* buffer)
+std::vector<int> TDBImage::manage_tiles(int start_row, int start_column)
 {
-    int i,j;
+    std::vector<int> tiles;
     int nRows = _array_dimension[0] / float(_tile_dimension[0]);
     int nCols = _array_dimension[1] / float(_tile_dimension[1]);
-
-    int buffer_index = 0;
-    int full_row_tile = _img_width * _tile_dimension[0] * _img_channels;
 
     if ( _array_dimension[1] > _img_width ) {
         nCols = _img_width / _tile_dimension[1];
@@ -969,21 +1291,51 @@ void TDBImage::reorder_buffer(T* buffer)
             nRows += 1;
     }
 
-    for ( i = 0; i < nRows; ++i ) {
-        for ( j = 0; j < nCols; ++j ) {
-            int64_t subarray[4];
+    if ( start_row > _tile_dimension[0] ) {
+        while ( start_row > _tile_dimension[0] * nRows )
+            nRows -= 1;
+    }
+
+    if ( start_column > _tile_dimension[1] ) {
+        while ( start_column > _tile_dimension[1] * nCols )
+            nCols -= 1;
+    }
+
+    tiles.push_back(nRows);
+    tiles.push_back(nCols);
+
+    return tiles;
+}
+
+template <class T>
+void TDBImage::reorder_buffer(T* buffer, uint64_t* subarray)
+{
+    int i,j;
+
+    int current_height = subarray[1] - subarray[0] + 1;
+    int current_width = subarray[3] - subarray[2] + 1;
+
+    int buffer_index = 0;
+    int full_row_tile = current_width * _tile_dimension[0] * _img_channels;
+
+    std::vector<int> tiles = manage_tiles(subarray[0], subarray[2]);
+
+    for ( i = 0; i < tiles[0]; ++i ) {
+        for ( j = 0; j < tiles[1]; ++j ) {
+            uint64_t subarray[4];
             get_tile_coordinates(subarray, i, j);
 
             int start = i * full_row_tile + j * _tile_dimension[1] * _img_channels;
             buffer_index = reorder_tile(buffer, subarray, buffer_index, start);
         }
     }
+    _tile_order = false;
 }
 
-template void TDBImage::reorder_buffer(unsigned char* buffer);
+template void TDBImage::reorder_buffer(unsigned char* buffer, uint64_t* subarray);
 
 template <class T>
-int TDBImage::reorder_tile(T* buffer, int64_t* subarray, int buffer_index,
+int TDBImage::reorder_tile(T* buffer, uint64_t* subarray, int buffer_index,
     int start_index)
 {
     int current_tile_height = subarray[1] - subarray[0];
@@ -994,16 +1346,18 @@ int TDBImage::reorder_tile(T* buffer, int64_t* subarray, int buffer_index,
 
     for ( x = 0; x < current_tile_height; ++x ) {
         data_index = start_index + x * _img_width * _img_channels;
-        for ( y = 0; y < current_tile_width * _img_channels; ++y ) {
-            buffer[data_index] = T(_raw_data[buffer_index]);
-            ++data_index;
-            ++buffer_index;
-        }
+        memcpy(&buffer[data_index], &_raw_data[buffer_index], current_tile_width*_img_channels);
+        buffer_index += current_tile_width * _img_channels;
+        // for ( y = 0; y < current_tile_width * _img_channels; ++y ) {
+        //     buffer[data_index] = T(_raw_data[buffer_index]);
+        //     ++data_index;
+        //     ++buffer_index;
+        // }
     }
     return buffer_index;
 }
 
-template int TDBImage::reorder_tile(unsigned char* buffer, int64_t* subarray,
+template int TDBImage::reorder_tile(unsigned char* buffer, uint64_t* subarray,
         int buffer_index, int start_index);
 
 

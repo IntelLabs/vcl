@@ -47,6 +47,69 @@ namespace VCL {
      */
     typedef cv::Rect Rectangle;
 
+    /**
+     *  Uses the OpenCV Point_ template class to define a point 
+     *    (x coordinate, y coordinate)
+     */    
+    typedef cv::Point_<int> Point;
+
+
+    class Polygon {
+
+    private:
+        struct PolygonEdge {
+            int y_min;
+            int y_max;
+            int x_val;
+            float dx;
+            float dy;
+            int sign;
+            int current_sum;
+        };
+
+        std::vector<PolygonEdge> _edges;
+        std::vector<PolygonEdge> _active;
+        int _parity;
+
+        struct {
+            bool operator()(PolygonEdge a, PolygonEdge b) {
+                return a.x_val < b.x_val;
+            }
+        } xMinCompare;
+        struct {
+            bool operator()(PolygonEdge a, PolygonEdge b) {
+                return a.y_min < b.y_min;
+            }
+        } yMinCompare;
+        struct {
+            bool operator()(PolygonEdge a, PolygonEdge b) {
+                return a.y_max <= b.y_max;
+            }
+        } yMaxCompare;
+
+
+    public:
+        void create_edge_list(const std::vector<Point> &coords);
+        void print_edge(PolygonEdge e);
+        bool in_edges(PolygonEdge edge);
+        void print_edges();
+        bool active_empty();
+        bool has_edges();
+        void manage_active(int current_y);
+        // void manage_active(int current_y, int max_y, int max_x);
+        void sort_edges();
+        bool scanline_exists(int max_y);
+        void get_subarray(uint64_t *subarray);
+        void get_slope(std::vector<std::tuple<float, float, int>> &edges);
+        void reset_edges();
+        void get_active_x(std::vector<int> &edges);
+        void update();
+        void swap_parity();
+        int get_parity();
+        void set_parity(int p);
+    };
+
+
     class TDBImage : public TDBObject {
 
     /*  *********************** */
@@ -64,6 +127,9 @@ namespace VCL {
 
         // raw data of the image
         unsigned char* _raw_data;
+
+        Polygon _poly;
+
 
     public:
     /*  *********************** */
@@ -243,6 +309,16 @@ namespace VCL {
         void threshold(int value);
 
         /**
+         *  Reads a subset of the raw data from the location specified
+         *    by the existing TDBImage path variables
+         *
+         *  @param coords  A vector of Points that make up the area of
+         *    the image that is of interest
+         *  @see  Image.h for more details on Point
+         */
+        void area(const std::vector<Point> &coords);    
+
+        /**
          *  Checks to see if the TDBImage is pointing to data
          *
          *  @return True if there is data, false if there is not
@@ -270,7 +346,7 @@ namespace VCL {
          *  @param  current_column_tile  The current column tile
          *  @param  current_row_tile  The current row tile
          */
-        void get_tile_coordinates(int64_t* subarray, int current_column_tile,
+        void get_tile_coordinates(uint64_t* subarray, int current_column_tile,
             int current_row_tile);
 
        /**
@@ -385,7 +461,12 @@ namespace VCL {
          *  @param  subarray  An array of the coordinates of the subarray
          *    to read
          */
-        void read_from_tdb(int64_t* subarray);
+        void read_from_tdb(uint64_t* subarray);
+
+        std::vector<int> manage_tiles(int start_row, int start_column);
+        // void fill_tile(int buffer_index, int64_t* subarray);
+        int fill_tile(unsigned char* buffer, uint64_t* subarray, int buffer_index, int start_index);
+
 
         /**
          *  Reorders the raw data buffer into image order and
@@ -393,7 +474,7 @@ namespace VCL {
          *
          *  @param  buffer  The buffer to store the image order data in
          */
-        template <class T> void reorder_buffer(T* buffer);
+        template <class T> void reorder_buffer(T* buffer, uint64_t* subarray);
 
         /**
          *  Reorders a tile into image order and casts as the
@@ -405,8 +486,12 @@ namespace VCL {
          *  @param  start_index  The current index into the raw data buffer
          *  @return  The current index into the image order buffer
          */
-        template <class T> int reorder_tile(T* buffer, int64_t* subarray,
+        template <class T> int reorder_tile(T* buffer, uint64_t* subarray,
             int tile, int start_index);
+
+        void fill_ordered_polygon(uint64_t* subarray);
+        void fill_polygon(uint64_t* subarray, const std::vector<Point> &coords);
+        std::pair<int, int> find_tile(Point p);
 
     /*  *********************** */
     /*      MATH FUNCTIONS      */
@@ -423,5 +508,7 @@ namespace VCL {
          */
         double linear_interpolation(double x1, double val1, double x2,
             double val2, double x);
+
+        int in_vector(const std::vector<std::pair<int, int>> &vec, const std::pair<int, int> v);
     };
 };
