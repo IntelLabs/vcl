@@ -64,7 +64,7 @@ Currently the VCL works with TileDB v1.2.2. It has not been tested with the Dock
     git checkout 1.2.2
     mkdir build
     cd build
-    ../bootstap --prefix=/usr/local/
+    ../bootstrap --prefix=/usr/local/
     make -jX   # substitute X for maximum number of CPUs (or leave it off to use all available)
     sudo make install
     
