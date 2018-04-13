@@ -28,6 +28,7 @@
  */
 
 #include <stddef.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -46,8 +47,8 @@ using namespace VCL;
 TDBObject::TDBObject()
 {
     Error_Check(
-        tiledb_ctx_create(&_ctx, NULL), _ctx,
-        "TileDB context initialization failed");
+        tiledb_ctx_create(&_ctx, NULL), 
+        _ctx, "TileDB context initialization failed");
 
     _group = "";
     _name = "";
@@ -58,13 +59,42 @@ TDBObject::TDBObject()
     _attributes.push_back(attr);
     _compressed = CompressionType::LZ4;
     _min_tile_dimension = 4;
+
+    _config = NULL;
+    _error = NULL;
+    _vfs = NULL;
 }
 
 TDBObject::TDBObject(const std::string &image_id)
 {
     Error_Check(
-        tiledb_ctx_create(&_ctx, NULL), _ctx,
-        "TileDB context initialization failed");
+        tiledb_ctx_create(&_ctx, NULL), 
+        _ctx, "TileDB context initialization failed");
+
+    size_t pos = get_path_delimiter(image_id);
+
+    _group = get_group(image_id, pos);
+    _name = get_name(image_id, pos);
+
+    // set default values
+    _num_attributes = 1;
+    const char* attr = "value";
+    _attributes.push_back(attr);
+    _compressed = CompressionType::LZ4;
+    _min_tile_dimension = 4;
+
+    _config = NULL;
+    _error = NULL;
+    _vfs = NULL;
+}
+
+TDBObject::TDBObject(const std::string &image_id, RemoteConnection &connection)
+{
+    Error_Check(
+        tiledb_ctx_create(&_ctx, NULL), 
+        _ctx, "TileDB context initialization failed");
+
+    set_config(connection);
 
     size_t pos = get_path_delimiter(image_id);
 
@@ -82,8 +112,8 @@ TDBObject::TDBObject(const std::string &image_id)
 TDBObject::TDBObject(const TDBObject &tdb)
 {
     Error_Check(
-        tiledb_ctx_create(&_ctx, NULL), _ctx,
-        "TileDB context initialization failed");
+        tiledb_ctx_create(&_ctx, tdb._config), 
+        _ctx, "TileDB context initialization failed");
 
     set_equal(tdb);
 }
@@ -95,7 +125,7 @@ TDBObject& TDBObject::operator=(const TDBObject &tdb)
         tiledb_ctx_free(&_ctx), _ctx,
         "TileDB context finalization failed");
     Error_Check(
-        tiledb_ctx_create(&_ctx, NULL), _ctx,
+        tiledb_ctx_create(&_ctx, tdb._config), _ctx,
         "TileDB context initialization failed");
 
     reset_arrays();
@@ -126,14 +156,29 @@ void TDBObject::set_equal(const TDBObject &tdb)
     _min_tile_dimension = tdb._min_tile_dimension;
     _array_dimension = tdb._array_dimension;
     _tile_dimension = tdb._tile_dimension;
+
+    _config = tdb._config;
+    _error = tdb._error;
+    _vfs = tdb._vfs;
 }
 
 TDBObject::~TDBObject()
 {
     reset_arrays();
+
+    if ( _error != NULL )
+        Error_Check(
+            tiledb_error_free(&_error), 
+            _ctx, "TileDB failed to free error\n");
+
+    if ( _vfs != NULL )    
+        Error_Check(
+            tiledb_vfs_free(_ctx, &_vfs), 
+            _ctx, "TileDB failed to free VFS\n");
+
     Error_Check(
-        tiledb_ctx_free(&_ctx), _ctx,
-        "TileDB context finalization failed");
+        tiledb_ctx_free(&_ctx), 
+        _ctx, "TileDB context finalization failed\n");
 }
 
 void TDBObject::reset_arrays()
@@ -226,6 +271,45 @@ void TDBObject::set_compression(CompressionType comp)
     _compressed = comp;
 }
 
+void TDBObject::set_config(RemoteConnection &remote)
+{
+    _error = NULL;
+    Error_Check(
+        tiledb_config_create(&_config, &_error),
+        _ctx, "TileDB config creation failed\n");
+
+    #ifdef HAVE_S3
+        std::string region = remote.get_s3_region();
+        std::string connect_timeout = std::to_string(remote.get_s3_connect_timeout());
+        std::string result_timeout = std::to_string(remote.get_s3_result_timeout());
+
+        if ( setenv("AWS_ACCESS_KEY_ID", remote.get_s3_access_id().c_str(), 1) < 0 )
+            throw VCLException(IncorrectConfiguration, "Failed to set environment variable for TileDB");
+        if ( setenv("AWS_SECRET_ACCESS_KEY", remote.get_s3_secret_key().c_str(), 1) < 0 )
+            throw VCLException(IncorrectConfiguration, "Failed to set environment variable for TileDB");
+
+        Error_Check(
+            tiledb_config_set(_config, "vfs.s3.region", region.c_str(), &_error),
+            _ctx, "Setting the S3 region in the TileDB config failed\n");
+        Error_Check(
+            tiledb_config_set(_config, "vfs.s3.connect_timeout_ms", connect_timeout.c_str(), &_error),
+            _ctx, "Setting the S3 connection timeout in the TileDB config failed\n");
+        Error_Check(
+            tiledb_config_set(_config, "vfs.s3.result_timeout_ms", result_timeout.c_str(), &_error),
+            _ctx, "Setting the S3 result timeout in the TileDB config failed\n");
+    #endif
+
+    Error_Check(
+        tiledb_ctx_free(&_ctx), 
+        _ctx, "TileDB context finalization failed");
+
+    Error_Check(
+        tiledb_ctx_create(&_ctx, _config),
+        _ctx, "TileDB ctx creation failed\n");
+    Error_Check(
+        tiledb_vfs_create(_ctx, &_vfs, _config), 
+        _ctx, "TileDB VFS creation failed\n");
+}
 
 
 
@@ -255,6 +339,7 @@ std::string TDBObject::get_group(const std::string &filename, size_t pos) const
         tiledb_object_type(_ctx, group.c_str(), &type), 
         _ctx,
         "Type check of " + group + " failed in TileDB");
+
     if ( type != TILEDB_GROUP ) {
         Error_Check(
             tiledb_group_create(_ctx, group.c_str()),

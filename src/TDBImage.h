@@ -82,6 +82,14 @@ namespace VCL {
         TDBImage(const std::string &image_id);
 
         /**
+         *  Creates a TDBImage from an object id
+         *
+         *  @param image_id  The path of the TDBImage
+         *  @param connection  An initialized RemoteConnection
+         */
+        TDBImage(const std::string &image_id, RemoteConnection &connection);
+
+        /**
          *  Creates a TDBImage from a buffer of raw data
          *
          *  @param buffer  The raw pixel data
@@ -169,6 +177,12 @@ namespace VCL {
          */
         void set_image_properties(int height, int width, int channels);
 
+        /**
+         *  Sets the configuration for a remote connection
+         *
+         *  @param remote  A RemoteConnection object
+         */
+        void set_configuration(RemoteConnection &remote);
 
     /*  *********************** */
     /*    TDBIMAGE INTERACTION  */

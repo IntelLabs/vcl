@@ -28,7 +28,6 @@
  */
 
 
-#include "TDBObject.h"
 #include "TDBImage.h"
 #include "gtest/gtest.h"
 
@@ -36,6 +35,8 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <string>
+
+#include <fstream>
 
 class TDBImageTest : public ::testing::Test {
 
@@ -45,7 +46,19 @@ protected:
         tdb_test_ = "tdb/write_test.tdb";
         cv_img_ = cv::imread("images/large1.jpg", cv::IMREAD_ANYCOLOR);
         rect_ = VCL::Rectangle(100, 100, 100, 100);
+
+        // _remotepath = "s3://<path/to/your/bucket>";
+        // connection_ = new VCL::RemoteConnection();
+        // connection_->set_s3_configuration("us-west-2");
+        // connection_->set_s3_proxy(<PROXY_HOST>, <PROXY_PORT>);
+        // connection_->start();
+        // connection_->set_s3_credentials(<ACCESS_ID>, <SECRET_KEY>);
     }
+
+    // virtual void TearDown() {
+    //     connection_->end();
+    //     delete connection_;
+    // }
 
     void compare_mat_buffer(cv::Mat &img, unsigned char* buffer)
     {
@@ -117,9 +130,10 @@ protected:
     std::string tdb_test_;
     cv::Mat cv_img_;
     VCL::Rectangle rect_;
+
+    // std::string _remotepath;
+    // VCL::RemoteConnection *connection_;
 };
-
-
 
 
 TEST_F(TDBImageTest, DefaultConstructor)
@@ -463,3 +477,37 @@ TEST_F(TDBImageTest, SetMinimum)
     VCL::TDBImage tdb;
     tdb.set_minimum(3);
 }
+
+// TEST_F(TDBImageTest, WriteS3)
+// {
+//     VCL::TDBImage tdb(_remotepath + "tdb/test_image.tdb", *connection_);
+
+//     tdb.write(cv_img_);
+// }
+
+// TEST_F(TDBImageTest, ReadS3)
+// {
+//     std::string fullpath = _remotepath + "tdb/test_image.tdb";
+
+//     VCL::TDBImage tdb(fullpath, *connection_);
+
+//     int size = tdb.get_image_size();
+
+//     unsigned char* buf = new unsigned char[size];
+
+//     tdb.get_buffer(buf, size);
+
+//     compare_mat_buffer(cv_img_, buf);
+
+//     delete [] buf;
+// }
+
+// TEST_F(TDBImageTest, RemoveS3)
+// {
+//     VCL::TDBImage tdb(_remotepath + "tdb/test_image.tdb", *connection_);
+
+//     tdb.delete_image();
+
+//     ASSERT_FALSE(tdb.has_data());
+//     ASSERT_THROW(tdb.get_image_size(), VCL::Exception);
+// }

@@ -79,6 +79,25 @@ TDBImage::TDBImage(const std::string &image_id) : TDBObject(image_id)
     _tile_order = false;
 }
 
+TDBImage::TDBImage(const std::string &image_id, RemoteConnection &connection) 
+    : TDBObject(image_id, connection)
+{
+    _img_height = 0;
+    _img_width = 0;
+    _img_channels = 0;
+    _img_size = 0;
+
+    _threshold = 0;
+
+    set_num_dimensions(2);
+    set_default_attributes();
+    set_default_dimensions();
+
+    _raw_data = NULL;
+    _tile_order = false;
+}
+
+
 template <class T>
 TDBImage::TDBImage(T* buffer, int size) : TDBObject()
 {
@@ -285,6 +304,13 @@ void TDBImage::set_image_properties(int height, int width, int channels)
     _img_size = _img_height * _img_width * _img_channels;
 }
 
+void TDBImage::set_configuration(RemoteConnection &remote) 
+{
+    if ( !remote.connected() )
+        throw VCLException(SystemNotFound, "Remote Connection not initialized");
+    
+    set_config(remote);
+}
 
 
     /*  *********************** */

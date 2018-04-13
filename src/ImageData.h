@@ -39,6 +39,7 @@
 #include <memory>
 
 #include "Image.h"
+#include "Exception.h"
 #include "TDBImage.h"
 
 namespace VCL {
@@ -49,6 +50,7 @@ namespace VCL {
     /*        OPERATION         */
     /*  *********************** */
         enum OperationType { READ, WRITE, RESIZE, CROP, THRESHOLD };
+        enum System { LOCAL, S3 };
 
         /**
          *  Provides a way to keep track of what operations should
@@ -97,6 +99,8 @@ namespace VCL {
         private:
             /** The full path to the object to read */
             std::string _fullpath;
+            /** The system this image should live on */
+            System _type;
 
         public:
             /**
@@ -118,6 +122,9 @@ namespace VCL {
 
 
             OperationType get_type() { return READ; };
+
+            void set_system();
+            std::vector<char> remote_read(RemoteConnection *remote);
         };
 
     /*  *********************** */
@@ -135,6 +142,8 @@ namespace VCL {
             ImageFormat _old_format;
             /** Whether to store the metadata */
             bool _metadata;
+            /** The system this image should live on */
+            System _type;
 
         public:
             /**
@@ -156,6 +165,9 @@ namespace VCL {
             void operator()(ImageData *img);
 
             OperationType get_type() { return WRITE; };
+
+            void set_system();
+            void remote_write(RemoteConnection *remote, std::vector<unsigned char> data);
         };
 
     /*  *********************** */
@@ -279,6 +291,9 @@ namespace VCL {
         // Maintains order of operations requested
         std::vector<std::shared_ptr<Operation>> _operations;
 
+        // Remote connection (if one exists)
+        RemoteConnection *_remote;
+
         // Image format and compression type
         ImageFormat _format;
         CompressionType _compress;
@@ -313,6 +328,14 @@ namespace VCL {
          *  @param image_id  A string indicating where the image is on disk
          */
         ImageData(const std::string &image_id);
+
+        /**
+         *  Creates an ImageData object from the filename
+         *
+         *  @param image_id  A string indicating where the image lives
+         *  @param remote  RemoteConnection with an initialized remote connection
+         */
+        ImageData(const std::string &image_id, RemoteConnection &remote);
 
        /**
          *  Creates an ImageData object from the given parameters
@@ -497,7 +520,20 @@ namespace VCL {
          */
         void set_data_from_encoded(const std::vector<unsigned char> &buffer);
 
+        /**
+         *  Sets the minimum number of tiles per dimension for the TDB format
+         *
+         *  @param dimension  The minimum number of tiles
+         */
         void set_minimum(int dimension);
+
+        /**
+         *  Indicates that the data is/will be stored remotely 
+         *    Currently S3 is supported
+         *
+         *  @param remote  The RemoteConnection that has been initialized
+         */
+        void set_connection(RemoteConnection &remote);
 
     /*  *********************** */
     /*   IMAGEDATA INTERACTION  */

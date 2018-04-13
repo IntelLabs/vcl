@@ -35,7 +35,13 @@
 
 #include "ImageData.h"
 #include "TDBImage.h"
-#include "VCL.h"
+
+#ifdef HAVE_S3
+    #include <aws/core/utils/StringUtils.h>
+    #include <aws/s3/model/PutObjectRequest.h>
+    #include <aws/s3/model/GetObjectRequest.h>
+    #include <aws/s3/model/DeleteObjectRequest.h>
+#endif
 
 using namespace VCL;
 
@@ -50,14 +56,64 @@ ImageData::Read::Read(const std::string& filename, ImageFormat format)
     : Operation(format),
       _fullpath(filename)
 {
+    set_system();
+}
+
+void ImageData::Read::set_system()
+{
+    size_t pos = _fullpath.find("//");
+    if ( pos > _fullpath.size() )
+        _type = LOCAL;
+    else {
+        std:: string sys = _fullpath.substr(0, pos);
+        if ( sys == "s3:" )
+            _type = S3;
+        _fullpath = _fullpath.substr(pos + 2);
+    }
+}
+
+std::vector<char> ImageData::Read::remote_read(RemoteConnection *remote)
+{
+    if ( _type == S3 ) {
+        #ifdef HAVE_S3
+        if ( remote != NULL ) {
+            size_t pos = _fullpath.find("/");
+            Aws::String bucket_name = Aws::Utils::StringUtils::to_string(_fullpath.substr(0, pos));
+            Aws::String key_name = Aws::Utils::StringUtils::to_string(_fullpath.substr(pos + 1));
+
+            Aws::S3::S3Client s3_client = remote->create_s3_client();
+            Aws::S3::Model::GetObjectRequest object_request;
+            object_request.WithBucket(bucket_name).WithKey(key_name);
+
+            auto get_object_outcome = s3_client.GetObject(object_request);
+
+            std::stringstream stream;
+            if(get_object_outcome.IsSuccess()) {
+                stream << get_object_outcome.GetResult().GetBody().rdbuf();
+                std::string str_stream = stream.str();
+                std::vector<char> data(str_stream.begin(), str_stream.end());
+                return data;
+            }
+            else {
+                stream << get_object_outcome.GetError().GetMessage();
+                std::string err = stream.str();
+                throw VCLException(OperationFailed, err);
+            }
+        }
+        #endif
+        else 
+            throw VCLException(SystemNotFound, "An S3 path was specified but S3 is not configured");
+    }
+    else
+        throw VCLException(UnsupportedSystem, "The system specified by the path is not supported currently");
 }
 
 void ImageData::Read::operator()(ImageData *img)
 {
     if ( _format == VCL::TDB ) {
         if ( img->_tdb == NULL )
-            throw VCLException(TileDBNotFound, "ImageFormat indicates image \
-                stored in TDB format, but no data was found");
+            throw VCLException(TileDBNotFound, "ImageFormat indicates image "\
+                "stored in TDB format, but no data was found");
 
         img->_tdb->read();
         img->_height = img->_tdb->get_image_height();
@@ -65,10 +121,19 @@ void ImageData::Read::operator()(ImageData *img)
         img->_channels = img->_tdb->get_image_channels();
     }
     else {
-        img->copy_cv(cv::imread(_fullpath, cv::IMREAD_ANYCOLOR));
+        if ( _type == LOCAL )
+            img->copy_cv(cv::imread(_fullpath, cv::IMREAD_ANYCOLOR));
+        else {
+            std::vector<char> data = remote_read(img->_remote);
+            if ( !data.empty() )
+                img->copy_cv(cv::imdecode(cv::Mat(data), cv::IMREAD_ANYCOLOR));
+            else
+                throw VCLException(ObjectEmpty,  _fullpath + 
+                    " could not be read from S3");
+        }
         if ( img->_cv_img.empty() )
-            throw VCLException(ObjectEmpty, _fullpath + " could not be read, \
-                object is empty");
+            throw VCLException(ObjectEmpty,  _fullpath + 
+                " could not be read, object is empty");
     }
 }
 
@@ -82,18 +147,77 @@ ImageData::Write::Write(const std::string& filename, ImageFormat format,
       _metadata(metadata),
       _fullpath(filename)
 {
+    set_system();
+}
+
+void ImageData::Write::set_system()
+{
+    size_t pos = _fullpath.find("//");
+    if ( pos > _fullpath.size() )
+        _type = LOCAL;
+    else {
+        std::string sys = _fullpath.substr(0, pos);
+        if ( sys == "s3:" )
+            _type = S3;
+        _fullpath = _fullpath.substr(pos + 2);
+    }
+}
+
+void ImageData::Write::remote_write(RemoteConnection *remote, std::vector<unsigned char> img_data)
+{
+    if ( _type == S3 ) {
+        #ifdef HAVE_S3
+        if ( remote != NULL ) {
+            size_t pos = _fullpath.find("/");
+            Aws::String bucket_name = Aws::Utils::StringUtils::to_string(_fullpath.substr(0, pos));
+            Aws::String key_name = Aws::Utils::StringUtils::to_string(_fullpath.substr(pos + 1));
+
+            Aws::S3::S3Client s3_client = remote->create_s3_client();
+            Aws::S3::Model::PutObjectRequest object_request;
+            object_request.WithBucket(bucket_name).WithKey(key_name);
+
+            auto input_data = Aws::MakeShared<Aws::StringStream>("PutObjectInputStream");
+            input_data->write(reinterpret_cast<char*>(img_data.data()), img_data.size());
+
+            object_request.SetBody(input_data);
+
+            auto put_object_outcome = s3_client.PutObject(object_request);
+
+            if ( !put_object_outcome.IsSuccess() ) {
+                std::stringstream stream;
+                stream << put_object_outcome.GetError().GetMessage();
+                std::string err = stream.str();
+                throw VCLException(OperationFailed, err);
+            }
+        }
+        #endif
+        else 
+            throw VCLException(SystemNotFound, "An S3 path was specified but S3 is not configured");
+    }
+    else
+        throw VCLException(UnsupportedSystem, "The system specified by the path is not supported currently");
 }
 
 void ImageData::Write::operator()(ImageData *img)
 {
     if (_format == VCL::TDB) {
         if ( img->_tdb == NULL ) {
-            img->_tdb = new TDBImage(_fullpath);
+            if ( _type == LOCAL )
+                img->_tdb = new TDBImage(_fullpath);
+            else if ( _type == S3 )
+                img->_tdb = new TDBImage("s3://" + _fullpath, *(img->_remote));
+            else {
+                throw VCLException(UnsupportedSystem, 
+                    "The system specified by the path is not supported currently");
+            }
             img->_tdb->set_compression(img->_compress);
         }
 
-        if ( img->_tdb->has_data() )
+        if ( img->_tdb->has_data() ) {
+            if ( _type != LOCAL )
+                img->_tdb->set_configuration(*(img->_remote));
             img->_tdb->write(_fullpath, _metadata);
+        }
         else
             img->_tdb->write(img->_cv_img, _metadata);
     }
@@ -104,8 +228,16 @@ void ImageData::Write::operator()(ImageData *img)
         else
             cv_img = img->_cv_img;
 
-        if ( !cv_img.empty() )
-            cv::imwrite(_fullpath, cv_img);
+        if ( !cv_img.empty() ) {
+            if ( _type == LOCAL )
+                cv::imwrite(_fullpath, cv_img);
+            else {
+                std::vector<unsigned char> data;
+                std::string ext = "." + img->format_to_string(_format);
+                cv::imencode(ext, cv_img, data);
+                remote_write(img->_remote, data);
+            }
+        }
         else
             throw VCLException(ObjectEmpty, _fullpath + " could not be written \
                 object is empty");
@@ -197,6 +329,8 @@ ImageData::ImageData()
 
     _tdb = NULL;
     _image_id = "";
+
+    _remote = NULL;
 }
 
 ImageData::ImageData(const cv::Mat &cv_img)
@@ -208,6 +342,8 @@ ImageData::ImageData(const cv::Mat &cv_img)
     _image_id = "";
 
     _tdb = NULL;
+
+    _remote = NULL;
 }
 
 ImageData::ImageData(const std::string &image_id)
@@ -231,6 +367,31 @@ ImageData::ImageData(const std::string &image_id)
     else
         _tdb = NULL;
 
+    _remote = NULL;
+}
+
+ImageData::ImageData(const std::string &image_id, RemoteConnection &connection)
+{
+    _channels = 0;
+    _height = 0;
+    _width = 0;
+    _cv_type = CV_8UC3;
+
+    std::string extension = get_extension(image_id);
+    set_format(extension);
+
+    _compress = VCL::CompressionType::LZ4;
+
+    _image_id = create_fullpath(image_id, _format);
+
+    if ( _format == VCL::TDB ) {
+        _tdb = new TDBImage(_image_id, connection);
+        _tdb->set_compression(_compress);
+    }
+    else
+        _tdb = NULL;
+
+    _remote = &connection;
 }
 
 ImageData::ImageData(void* buffer, cv::Size dimensions, int cv_type)
@@ -246,6 +407,8 @@ ImageData::ImageData(void* buffer, cv::Size dimensions, int cv_type)
 
     set_data_from_raw(buffer, _height*_width*_channels);
     _tdb->set_compression(_compress);
+
+    _remote = NULL;
 }
 
 ImageData::ImageData(const ImageData &img)
@@ -275,6 +438,8 @@ ImageData::ImageData(const ImageData &img)
         for (int i = start; i < img._operations.size(); ++i)
             _operations.push_back(img._operations[i]);
     }
+
+    _remote = img._remote;
 }
 
 void ImageData::operator=(const ImageData &img)
@@ -321,6 +486,8 @@ void ImageData::operator=(const ImageData &img)
     }
 
     delete temp;
+
+    _remote = img._remote;
 }
 
 ImageData::~ImageData()
@@ -603,6 +770,17 @@ void ImageData::set_minimum(int dimension)
     }
 }
 
+void ImageData::set_connection(RemoteConnection &remote)
+{
+    if ( !remote.connected() )
+        throw VCLException(SystemNotFound, "No remote connection started");
+
+    _remote = &remote;
+
+    if ( _tdb != NULL )
+        _tdb->set_configuration(remote);
+}
+
 
     /*  *********************** */
     /*   IMAGEDATA INTERACTION  */
@@ -661,8 +839,39 @@ void ImageData::delete_object()
     if (_tdb != NULL)
         _tdb->delete_image();
 
-    if (exists(_image_id)) {
-        std::remove(_image_id.c_str());
+    else {
+        if (exists(_image_id)) {
+            std::remove(_image_id.c_str());
+        }
+        else if ( _remote != NULL ) {
+            size_t pos = _image_id.find("//");
+            std::string sys = _image_id.substr(0, pos);
+            if ( sys == "s3:" ) {
+            #ifdef HAVE_S3
+                std::string _fullpath = _image_id.substr(pos + 2);
+                size_t pos = _fullpath.find("/");
+                Aws::String bucket_name = Aws::Utils::StringUtils::to_string(_fullpath.substr(0, pos));
+                Aws::String key_name = Aws::Utils::StringUtils::to_string(_fullpath.substr(pos + 1));
+
+                Aws::S3::S3Client s3_client = _remote->create_s3_client();
+                Aws::S3::Model::DeleteObjectRequest object_request;
+                object_request.WithBucket(bucket_name).WithKey(key_name);
+
+                auto delete_object_outcome = s3_client.DeleteObject(object_request);
+                if ( !delete_object_outcome.IsSuccess() ) {
+                    std::stringstream stream;
+                    stream << delete_object_outcome.GetError().GetMessage();
+                    std::string err = stream.str();
+                    throw VCLException(OperationFailed, err);
+                }
+            #endif
+            }
+            else throw VCLException(UnsupportedSystem, "System specified by prefix " + sys +
+                " is not supported");
+        }
+        else
+            throw VCLException(ObjectNotFound, 
+                "Object does not exist in local system and no remote connection is defined");
     }
 }
 

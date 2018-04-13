@@ -39,6 +39,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 
+#include "RemoteConnection.h"
 #include "Exception.h"
 #include "utils.h"
 
@@ -55,7 +56,7 @@ namespace VCL {
 
     /**
      *  Uses the OpenCV Rect class to define an area in the image
-     *    (starting x coordinate, starting y coordinate, height, width)
+     *    (starting x coordinate, starting y coordinate, width, height)
      */
     typedef cv::Rect Rectangle;
 
@@ -73,11 +74,21 @@ namespace VCL {
     /*  *********************** */
         /**
          *  Creates an Image object from the image id (where the
-         *    image data can be found in the system)
+         *    image data can be found)
          *
          *  @param image_id  The full path to the image
          */
         Image(const std::string &image_id);
+
+
+        /**
+         *  Creates an Image object from the image id (where the
+         *    image data can be found)
+         *
+         *  @param image_id  The full path to the image
+         *  @param connection  The RemoteConnection that has been initialized
+         */
+        Image(const std::string &image_id, RemoteConnection &connection);
 
         /**
          *  Creates an Image object from the OpenCV Mat
@@ -106,7 +117,6 @@ namespace VCL {
          *  @param type  The OpenCV type of the image
          *  @see OpenCV documentation for more information on type and Size
          */
-        // template <class T> Image(const T* buffer, cv::Size dimensions,
         Image(void* buffer, cv::Size dimensions,
             int cv_type);
 
@@ -244,7 +254,21 @@ namespace VCL {
          */
         void set_image_type(int cv_type);
 
+        /**
+         *  Sets the minimum number of tiles per dimension for the TDB format
+         *
+         *  @param dimension  The minimum number of tiles
+         */
         void set_minimum_dimension(int dimension);
+
+        /**
+         *  Indicates that the data is/will be stored remotely 
+         *    Currently S3 is supported
+         *
+         *  @param remote  The RemoteConnection that has been initialized
+         */
+        void set_connection(RemoteConnection &remote);
+
 
     /*  *********************** */
     /*    IMAGE INTERACTIONS    */

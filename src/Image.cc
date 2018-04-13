@@ -30,7 +30,6 @@
 #include <stddef.h>
 
 #include "Image.h"
-#include "Exception.h"
 #include "ImageData.h"
 
 using namespace VCL;
@@ -43,7 +42,12 @@ using namespace VCL;
 Image::Image(const std::string &image_id)
 {
     _image = new ImageData(image_id);
+    _image->read(image_id);
+}
 
+Image::Image(const std::string &image_id, RemoteConnection &connection)
+{
+    _image = new ImageData(image_id, connection);
     _image->read(image_id);
 }
 
@@ -178,6 +182,14 @@ void Image::set_minimum_dimension(int dimension)
 {
     _image->set_minimum(dimension);
 }
+
+void Image::set_connection(RemoteConnection &remote)
+{
+    if (!remote.connected())
+        remote.start();
+    _image->set_connection(remote);
+}
+
 
     /*  *********************** */
     /*    IMAGE INTERACTIONS    */

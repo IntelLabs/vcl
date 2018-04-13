@@ -39,7 +39,9 @@
 #include <stdlib.h>
 
 #include <tiledb/tiledb.h>
+
 #include "Exception.h"
+#include "RemoteConnection.h"
 #include "utils.h"
 
 namespace VCL {
@@ -89,6 +91,10 @@ namespace VCL {
         std::vector<uint64_t> _tile_dimension;
         tiledb_ctx_t* _ctx;
 
+        tiledb_config_t* _config;
+        tiledb_error_t* _error;
+        tiledb_vfs_t* _vfs;
+
     public:
 
     /*  *********************** */
@@ -105,6 +111,14 @@ namespace VCL {
          *  @param object_id  The path of the TDBObject
          */
         TDBObject(const std::string &object_id);
+
+        /**
+         *  Creates a TDBObject from an object id
+         *
+         *  @param object_id  The path of the TDBObject
+         #  @param connection  An initialized RemoteConnection
+         */
+        TDBObject(const std::string &object_id, RemoteConnection &connection);
 
         /**
          *  Creates a TDBObject from an existing TDBObject
@@ -210,6 +224,12 @@ namespace VCL {
          */
         void set_compression(CompressionType comp);
 
+        /**
+         *  Sets the configuration for a remote connection
+         *
+         *  @param remote  A RemoteConnection object
+         */
+        void set_config(RemoteConnection &remote);
 
     /*  *********************** */
     /*  TDBOBJECT INTERACTION   */
