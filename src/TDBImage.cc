@@ -95,14 +95,6 @@ void Polygon::create_edge_list(const std::vector<Point> &coords)
     }
 
     sort_edges();
-    // set_parity(0);
-
-    // for ( int x = 0; x < _edges.size(); ++x ) {
-    //     if ( _edges[x].y_min )
-    // }
-
-    // for (auto e : _edges)
-    //     print_edge(e);
 }
 
 void Polygon::print_edge(PolygonEdge e)
@@ -129,32 +121,13 @@ void Polygon::print_edges()
         print_edge(e);
 }
 
-bool Polygon::active_empty()
-{
-    if (_active.size() == 0)
-        return true;
-    return false;
-}
-
-bool Polygon::has_edges()
-{
-    if ( _edges.size() == 0 )
-        return false;
-    return true;
-}
-
-
 void Polygon::manage_active(int current_y) 
-// void Polygon::manage_active(int current_y, int max_y, int max_x) 
 {
     if ( !_active.empty() ) {
         for ( auto it = _active.begin(); it != _active.end(); ) {
             PolygonEdge edge = *it;
-            // std::cout << "Active edge: ";
-            // print_edge(edge);
             if ( current_y == it->y_max ) {
                 it = _active.erase(it);
-                // _edges.erase(it);
             }
             else
                 ++it;
@@ -165,9 +138,6 @@ void Polygon::manage_active(int current_y)
         for ( auto it = _edges.begin(); it != _edges.end(); ) {
             PolygonEdge edge = *it;
             if ( current_y == edge.y_min) {
-            // if ( current_y == edge.y_min && edge.y_max <= max_y && edge.x_val <= max_x) {
-                std::cout << "Moving to active: ";
-                print_edge(edge);
                 _active.push_back(edge);
                 it = _edges.erase(it);
             }
@@ -184,16 +154,6 @@ void Polygon::sort_edges()
 {
     std::sort(_edges.begin(), _edges.end(), yMaxCompare);
     std::sort(_edges.begin(), _edges.end(), yMinCompare);
-}
-
-bool Polygon::scanline_exists(int max_y)
-{
-    for ( auto &edge : _edges ) {
-        if ( edge.y_min <= max_y )
-            return true;
-    }
-
-    return false;
 }
 
 void Polygon::get_subarray(uint64_t *subarray)
@@ -214,26 +174,10 @@ void Polygon::get_subarray(uint64_t *subarray)
     subarray[3] = end_column - 1;
 }
 
-void Polygon::get_slope(std::vector<std::tuple<float, float, int>> &edges)
-{
-    for ( auto &edge : _edges ) {
-        if ( edge.dx > 0 )
-            edges.push_back(std::make_tuple(edge.dx, edge.dy, edge.sign));
-    }
-}
-
 void Polygon::get_active_x(std::vector<int> &x_vals)
 {
-    for ( auto &edge : _active ) {
+    for ( auto &edge : _active )
         x_vals.push_back(edge.x_val);
-        // print_edge(edge);
-    }
-}
-
-void Polygon::reset_edges()
-{
-    _edges.clear();
-    _active.clear();
 }
 
 void Polygon::swap_parity()
@@ -825,10 +769,8 @@ void TDBImage::threshold(int value)
     }
 }
 
-void TDBImage::area(const std::vector<Point> &coords)
+void TDBImage::area(const std::vector<Point> &coords, int fill_color)
 {
-    // check to see if the area is smaller than the entire image
-    
     _poly.create_edge_list(coords);
     _poly.set_parity(0);
 
@@ -846,13 +788,16 @@ void TDBImage::area(const std::vector<Point> &coords)
         read_from_tdb(subarray);
     }
 
-    fill_ordered_polygon(subarray);
-    // _poly.reset_edges();
-    // fill_polygon(subarray, coords);
+    // if the area requested is the entire image, don't bother trying to fill 
+    if ( (coords.size() == 4) && 
+        (_img_height == subarray[1] - subarray[0] + 1 && 
+         _img_width == subarray[3] - subarray[2] + 1) )
+        return;
+    else
+        fill_ordered_polygon(subarray, fill_color);
 }
 
-// // add the ability to set the background to a certain color? 
-void TDBImage::fill_ordered_polygon(uint64_t* subarray)
+void TDBImage::fill_ordered_polygon(uint64_t* subarray, int fill_color)
 {
     int i,j;
     std::vector<int> edges;
@@ -864,7 +809,7 @@ void TDBImage::fill_ordered_polygon(uint64_t* subarray)
     unsigned char* buffer = new unsigned char[img_size];
     reorder_buffer(buffer, subarray);
 
-    for ( i = 0; i < height; ++i ) { //height
+    for ( i = 0; i < height; ++i ) { 
         edges.clear();
         _poly.set_parity(0);
         _poly.manage_active(i);
@@ -881,14 +826,8 @@ void TDBImage::fill_ordered_polygon(uint64_t* subarray)
             size = edges[n] * _img_channels - start;
 
             if ( parity == 0 ) {
-                memset(&buffer[buffer_index], 0, size);
+                memset(&buffer[buffer_index], fill_color, size);
             }
-
-            // if ( parity == 0 ) {
-            //     for ( int k = start; k < edges[n] * _img_channels; ++k ) {
-            //             _raw_data[k] = fill_value;
-            //     }
-            // }
 
             buffer_index += size;
             start = edges[n] * _img_channels;
@@ -904,27 +843,6 @@ void TDBImage::fill_ordered_polygon(uint64_t* subarray)
     std::memcpy(_raw_data, buffer, img_size);
 
     delete [] buffer;
-}
-
-int TDBImage::in_vector(const std::vector<std::pair<int, int>> &vec, const std::pair<int, int> v)
-{
-    for ( int i = 0; i < vec.size(); ++i )
-        if ( vec[i].first == v.first && vec[i].second == v.second )
-            return i;
-    return -1;
-}
-
-std::pair<int, int> TDBImage::find_tile(Point p)
-{
-    int row = p.y / _tile_dimension[0];
-    if ( row > 0 )
-        row -= 1;
-
-    int col = p.x / _tile_dimension[1];
-    if ( col > 0 )
-        col -= 1;
-
-    return std::make_pair(row, col);
 }
 
 bool TDBImage::has_data()
@@ -1138,9 +1056,6 @@ void TDBImage::read_metadata()
         tiledb_kv_get_item(_ctx, metadata_kv, &kv_item, key, key_type, key_size),
         _ctx,
         "TileDB cannot retrieve metadata object");
-
-    if (kv_item == nullptr)
-        std::cout << "kv item is null" << std::endl;
 
     const void *h, *w, *c;
     tiledb_datatype_t h_type, w_type, c_type;

@@ -56,14 +56,82 @@ namespace VCL {
 
     class Polygon {
 
+    public:
+        /**
+         *  Creates a list of edges by which the Polygon is defined
+         *    
+         *  @param coords  A vector of Points that indicate the 
+         *     coordinates that make up the Polygon
+         */ 
+        void create_edge_list(const std::vector<Point> &coords);
+        
+        /**
+         * Prints the edge list 
+         */
+        void print_edges();
+
+        /**
+         * Manages the active edges given the current y coordinate
+         *
+         *  @param current_y Indicates the current y coordinate in the image
+         */
+        void manage_active(int current_y);
+
+        /**
+         * Gets the smallest area of the image defined by the edge list
+         *  Returns subarray filled with the coordinates of the area (smallest 
+         *  x, largest x, smallest y, largest y)
+         *
+         *  @param subarray  An unitialized array 
+         */
+        void get_subarray(uint64_t *subarray);
+
+        /**
+         * Gets the x values of the active edges and puts them 
+         *  in the edges vector
+         *
+         *  @param edges  An unitialized vector to contain x values
+         */
+        void get_active_x(std::vector<int> &edges);
+
+        /**
+         * Updates the values of the active edges using the slope
+         */
+        void update();
+
+        /**
+         * Swaps the parity (from 0 to 1 or 1 to 0)
+         */        
+        void swap_parity();
+
+        /**
+         * Returns the current parity
+         */        
+        int get_parity();
+
+        /**
+         * Sets the parity 
+         *
+         *  @param p  The value to set the parity to
+         */
+        void set_parity(int p);
+
     private:
+        // PolygonEdge 
         struct PolygonEdge {
-            int y_min;
+            // minimum y for this edge
+            int y_min; 
+            // maximum y for this edge
             int y_max;
+            // current x value 
             int x_val;
+            // change in x for the edge
             float dx;
+            // change in y for the edge
             float dy;
+            // positive or negative slope
             int sign;
+            // track where along the y axis you are
             int current_sum;
         };
 
@@ -71,42 +139,47 @@ namespace VCL {
         std::vector<PolygonEdge> _active;
         int _parity;
 
+        // Comparison functions for sorting
+        // Compares the x values of two edges
         struct {
             bool operator()(PolygonEdge a, PolygonEdge b) {
                 return a.x_val < b.x_val;
             }
         } xMinCompare;
+
+        // Compares the minimum y values of two edges
         struct {
             bool operator()(PolygonEdge a, PolygonEdge b) {
                 return a.y_min < b.y_min;
             }
         } yMinCompare;
+
+        // Compares the maximum y values of two edges
         struct {
             bool operator()(PolygonEdge a, PolygonEdge b) {
                 return a.y_max <= b.y_max;
             }
         } yMaxCompare;
 
-
-    public:
-        void create_edge_list(const std::vector<Point> &coords);
+        /**
+         * Prints a edge
+         *
+         * @param e  A PolygonEdge
+         */
         void print_edge(PolygonEdge e);
+
+        /**
+         * Determines if an edge already exists in the edge list
+         *
+         * @param edge  A PolygonEdge
+         */
         bool in_edges(PolygonEdge edge);
-        void print_edges();
-        bool active_empty();
-        bool has_edges();
-        void manage_active(int current_y);
-        // void manage_active(int current_y, int max_y, int max_x);
+
+        /**
+         * Sorts the edge list by maximum y values and then by 
+         *  minimum y values 
+         */        
         void sort_edges();
-        bool scanline_exists(int max_y);
-        void get_subarray(uint64_t *subarray);
-        void get_slope(std::vector<std::tuple<float, float, int>> &edges);
-        void reset_edges();
-        void get_active_x(std::vector<int> &edges);
-        void update();
-        void swap_parity();
-        int get_parity();
-        void set_parity(int p);
     };
 
 
@@ -123,11 +196,13 @@ namespace VCL {
         // threshold value
         int _threshold;
 
+        // indicates whether image is in tile order
         bool _tile_order;
 
         // raw data of the image
         unsigned char* _raw_data;
 
+        // Polygon area
         Polygon _poly;
 
 
@@ -314,9 +389,10 @@ namespace VCL {
          *
          *  @param coords  A vector of Points that make up the area of
          *    the image that is of interest
+         *  @param fill_color  Color to fill the area outside the polygon
          *  @see  Image.h for more details on Point
          */
-        void area(const std::vector<Point> &coords);    
+        void area(const std::vector<Point> &coords, int fill_color=0);    
 
         /**
          *  Checks to see if the TDBImage is pointing to data
@@ -463,9 +539,15 @@ namespace VCL {
          */
         void read_from_tdb(uint64_t* subarray);
 
+        /**
+         * Determines the number of tiles per row and column given the 
+         *  starting row and column
+         *
+         *  @param start_row  The starting row/height index
+         *  @param start_column  The starting column/width index
+         *  @return  A vector with the number of tiles per row and column
+         */
         std::vector<int> manage_tiles(int start_row, int start_column);
-        // void fill_tile(int buffer_index, int64_t* subarray);
-        int fill_tile(unsigned char* buffer, uint64_t* subarray, int buffer_index, int start_index);
 
 
         /**
@@ -489,9 +571,14 @@ namespace VCL {
         template <class T> int reorder_tile(T* buffer, uint64_t* subarray,
             int tile, int start_index);
 
-        void fill_ordered_polygon(uint64_t* subarray);
-        void fill_polygon(uint64_t* subarray, const std::vector<Point> &coords);
-        std::pair<int, int> find_tile(Point p);
+        /**
+         * Given the subarray and a previously defined polygon, fills the 
+         *  area within the subarray that is outside the polygon 
+         *
+         *  @param subarray  The subarray around the polygon
+         *  @param fill_color  The color to fill the area (default of 0)
+         */
+        void fill_ordered_polygon(uint64_t* subarray, int fill_color=0);
 
     /*  *********************** */
     /*      MATH FUNCTIONS      */
@@ -508,7 +595,5 @@ namespace VCL {
          */
         double linear_interpolation(double x1, double val1, double x2,
             double val2, double x);
-
-        int in_vector(const std::vector<std::pair<int, int>> &vec, const std::pair<int, int> v);
     };
 };

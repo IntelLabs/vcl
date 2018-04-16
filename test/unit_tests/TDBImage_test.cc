@@ -511,3 +511,40 @@ TEST_F(TDBImageTest, SetMinimum)
 //     ASSERT_FALSE(tdb.has_data());
 //     ASSERT_THROW(tdb.get_image_size(), VCL::Exception);
 // }
+
+TEST_F(TDBImageTest, Area)
+{
+    VCL::TDBImage tdb(tdb_img_);
+
+    std::vector<VCL::Point> points;
+    VCL::Point a(0, 100);
+    VCL::Point b(100, 0);
+    VCL::Point c(1024, 0);
+    VCL::Point d(1024, 640);
+    VCL::Point e(0, 640);
+
+    points.push_back(a);
+    points.push_back(b);
+    points.push_back(c);
+    points.push_back(d);
+    points.push_back(e);
+    
+    tdb.area(points);
+
+    cv::Mat tdb_mat = tdb.get_cvmat();
+
+    cv::Point_<int> ca(0, 99);
+    cv::Point_<int> cb(0, 0);
+    cv::Point_<int> cc(99, 0);
+
+    cv::Point_<int> cv_points[1][3];
+    cv_points[0][0] = ca;
+    cv_points[0][1] = cb;
+    cv_points[0][2] = cc;
+
+    const cv::Point_<int>* ppt[1] = { cv_points[0] };
+    int npt[] = {3};
+
+    cv::fillPoly(cv_img_, ppt, npt, 1, cv::Scalar_<double>(0, 0, 0), 8);
+    compare_mat_mat(tdb_mat, cv_img_);
+}
