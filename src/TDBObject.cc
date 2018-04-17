@@ -278,7 +278,7 @@ void TDBObject::set_config(RemoteConnection &remote)
         tiledb_config_create(&_config, &_error),
         _ctx, "TileDB config creation failed\n");
 
-    #ifdef HAVE_S3
+    #ifdef S3_SUPPORT
         std::string region = remote.get_s3_region();
         std::string connect_timeout = std::to_string(remote.get_s3_connect_timeout());
         std::string result_timeout = std::to_string(remote.get_s3_result_timeout());

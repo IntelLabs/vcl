@@ -32,11 +32,14 @@
  */
 
 #include <fstream>
+#include <vector>
+#include <regex>
 
-#ifdef HAVE_S3
+#ifdef S3_SUPPORT
     #include <aws/core/utils/StringUtils.h>
     #include <aws/s3/model/PutObjectRequest.h>
     #include <aws/s3/model/GetObjectRequest.h>
+    #include <aws/s3/model/DeleteObjectRequest.h>
 #endif 
 
 #include "RemoteConnection.h"
@@ -47,14 +50,16 @@ RemoteConnection::RemoteConnection()
 {    
     _remote = false;
 
-    #ifdef HAVE_S3
+    #ifdef S3_SUPPORT 
         _config.region = Aws::Utils::StringUtils::to_string("us-west-2");
         _config.requestTimeoutMs = 3000;
         _config.connectTimeoutMs = 3000;
     #endif
 }
 
-#ifdef HAVE_S3
+// Philip is going to come up with a better way to do this
+// try not to have API functions (esp constructors) dependent on an ifdef
+#ifdef S3_SUPPORT
 RemoteConnection::RemoteConnection(const std::string &region)
 {
     _config.region = Aws::Utils::StringUtils::to_string(region);
@@ -77,7 +82,7 @@ RemoteConnection::RemoteConnection(const RemoteConnection &connection)
 {    
     _remote = connection._remote;
 
-    #ifdef HAVE_S3
+    #ifdef S3_SUPPORT
         _options = connection._options;
         _config = connection._config;
         _credentials = connection._credentials;
@@ -88,7 +93,7 @@ void RemoteConnection::operator=(const RemoteConnection &connection)
 {    
     _remote = connection._remote;
 
-    #ifdef HAVE_S3
+    #ifdef S3_SUPPORT
         _options = connection._options;
         _config = connection._config;
         _credentials = connection._credentials;
@@ -99,38 +104,103 @@ RemoteConnection::~RemoteConnection()
 {
     if (!_remote)
         end();
+    #ifdef S3_SUPPORT
+        delete _client;
+    #endif
 }
 
 void RemoteConnection::start()
 {
-    #ifdef HAVE_S3
+    #ifdef S3_SUPPORT
         Aws::InitAPI(_options);
+        _client = new Aws::S3::S3Client(_credentials, _config);
     #endif
     _remote = true;
 }
 
 void RemoteConnection::end()
 {
-    #ifdef HAVE_S3
+    #ifdef S3_SUPPORT
         Aws::ShutdownAPI(_options);
     #endif
     _remote = false;
 }
 
-#ifdef HAVE_S3
+void RemoteConnection::set_https_proxy(const std::string &host, const int port)
+{
+    #ifdef S3_SUPPORT
+        _config.proxyScheme = Aws::Http::Scheme::HTTPS;
+        _config.proxyHost = Aws::Utils::StringUtils::to_string(host);
+        _config.proxyPort = port;
+    #endif
+}
+
+void RemoteConnection::write(const std::string &path, std::vector<unsigned char> data)
+{
+    if (_remote) {
+        #ifdef S3_SUPPORT
+            write_s3(path, data);
+        #else
+            throw VCLException(UnsupportedSystem, 
+                "The system specified by the path is not supported currently");
+        #endif
+    }
+    else
+        throw VCLException(SystemNotFound, "The RemoteConnection has not been started");
+}
+
+std::vector<char> RemoteConnection::read(const std::string &path)
+{
+    if ( _remote ) {
+        #ifdef S3_SUPPORT
+            return read_s3(path);
+        #else
+            throw VCLException(UnsupportedSystem, 
+                "The system specified by the path is not supported currently");
+        #endif
+    }
+    else
+        throw VCLException(SystemNotFound, "The RemoteConnection has not been started");       
+}
+
+void RemoteConnection::remove_object(const std::string &path)
+{
+    if ( _remote ) {
+        #ifdef S3_SUPPORT
+            return remove_s3_object(path);
+        #else
+            throw VCLException(UnsupportedSystem, 
+                "The system specified by the path is not supported currently");
+        #endif
+    }
+    else
+        throw VCLException(SystemNotFound, "The RemoteConnection has not been started");       
+}
+
+
+std::vector<std::string> RemoteConnection::split_path(const std::string &path)
+{
+    std::vector<std::string> divided_path;
+
+    std::regex split(
+        "^(([a-z0-9]+)(://))(([a-zA-Z0-9_]+)(/))((([a-zA-Z0-9_]+)(/))*([a-zA-Z0-9_]+)(\\.[a-zA-Z0-9]+)*)");
+    std::smatch match;
+    if ( std::regex_search(path, match, split) ) {
+        for ( auto element : match ) {
+            divided_path.push_back(element);
+        }
+    }
+
+    return divided_path;
+}
+
+#ifdef S3_SUPPORT
 void RemoteConnection::set_s3_configuration(const std::string &region, 
     const long request_timeout, const long connect_timeout)
 {
     _config.region = Aws::Utils::StringUtils::to_string(region);
     _config.requestTimeoutMs = request_timeout;
     _config.connectTimeoutMs = connect_timeout;
-}
-
-void RemoteConnection::set_s3_proxy(const std::string &host, const int port)
-{
-    _config.proxyScheme = Aws::Http::Scheme::HTTPS;
-    _config.proxyHost = Aws::Utils::StringUtils::to_string(host);
-    _config.proxyPort = port;
 }
 
 void RemoteConnection::set_s3_credentials(const std::string &access, const std::string &key)
@@ -141,9 +211,7 @@ void RemoteConnection::set_s3_credentials(const std::string &access, const std::
 
 std::string RemoteConnection::get_s3_region()
 {
-    std::stringstream ss;
-    ss << _config.region;
-    return ss.str();
+    return (_config.region).c_str();
 }
 
 long RemoteConnection::get_s3_result_timeout()
@@ -158,20 +226,75 @@ long RemoteConnection::get_s3_connect_timeout()
 
 std::string RemoteConnection::get_s3_access_id()
 {
-    std::stringstream ss;
-    ss << _credentials.GetAWSAccessKeyId();
-    return ss.str();
+    return (_credentials.GetAWSAccessKeyId()).c_str();
 }
 
 std::string RemoteConnection::get_s3_secret_key()
 {
-    std::stringstream ss;
-    ss << _credentials.GetAWSSecretKey();
-    return ss.str();
+    return (_credentials.GetAWSSecretKey()).c_str();
 }
 
-Aws::S3::S3Client RemoteConnection::create_s3_client()
+void RemoteConnection::write_s3(const std::string &path, std::vector<unsigned char> data)
 {
-    return Aws::S3::S3Client(_credentials, _config);
+    std::vector<std::string> divided_path = split_path(path);
+    Aws::String bucket_name = Aws::Utils::StringUtils::to_string(divided_path[5]);
+    Aws::String key_name = Aws::Utils::StringUtils::to_string(divided_path[7]);
+
+    Aws::S3::Model::PutObjectRequest object_request;
+    object_request.WithBucket(bucket_name).WithKey(key_name);
+
+    auto input_data = Aws::MakeShared<Aws::StringStream>("PutObjectInputStream");
+    input_data->write(reinterpret_cast<char*>(data.data()), data.size());
+
+    object_request.SetBody(input_data);
+
+    auto put_object_outcome = _client->PutObject(object_request);
+
+    if ( !put_object_outcome.IsSuccess() ) {
+        std::string err = (put_object_outcome.GetError().GetMessage()).c_str();
+        throw VCLException(OperationFailed, err);
+    }
 }
+
+std::vector<char> RemoteConnection::read_s3(const std::string &path)
+{
+    std::vector<std::string> divided_path = split_path(path);
+    Aws::String bucket_name = Aws::Utils::StringUtils::to_string(divided_path[5]);
+    Aws::String key_name = Aws::Utils::StringUtils::to_string(divided_path[7]);
+
+    Aws::S3::Model::GetObjectRequest object_request;
+    object_request.WithBucket(bucket_name).WithKey(key_name);
+
+    auto get_object_outcome = _client->GetObject(object_request);
+
+    if(get_object_outcome.IsSuccess()) {
+        std::stringstream stream;
+        stream << get_object_outcome.GetResult().GetBody().rdbuf();
+        std::string str_stream = stream.str();
+        std::vector<char> data(str_stream.begin(), str_stream.end());
+        return data;
+    }
+    else {
+        std::string err = (get_object_outcome.GetError().GetMessage()).c_str();
+        throw VCLException(OperationFailed, err);
+    }
+}
+
+void RemoteConnection::remove_s3_object(const std::string &path)
+{
+    std::vector<std::string> divided_path = split_path(path);
+    Aws::String bucket_name = Aws::Utils::StringUtils::to_string(divided_path[5]);
+    Aws::String key_name = Aws::Utils::StringUtils::to_string(divided_path[7]);
+
+    Aws::S3::Model::DeleteObjectRequest object_request;
+    object_request.WithBucket(bucket_name).WithKey(key_name);
+
+    auto delete_object_outcome = _client->DeleteObject(object_request);
+
+    if ( !delete_object_outcome.IsSuccess() ) {
+        std::string err = (delete_object_outcome.GetError().GetMessage()).c_str();
+        throw VCLException(OperationFailed, err);
+    }
+}
+
 #endif

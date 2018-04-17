@@ -86,6 +86,12 @@ namespace VCL {
              */
             virtual void operator()(ImageData *img) = 0;
 
+            /**
+             *  Implemented by the specific operation, returns
+             *     the type of Operation
+             *
+             *  @return  The OperationType of the Operation
+             */
             virtual OperationType get_type() = 0;
         };
 
@@ -120,11 +126,17 @@ namespace VCL {
              */
             void operator()(ImageData *img);
 
-
+            /**
+             *  Returns the OperationType (READ)
+             *
+             *  @return  OperationType READ
+             */
             OperationType get_type() { return READ; };
 
+            /**
+             *  Sets the system to write to (Local vs Remote)
+             */
             void set_system();
-            std::vector<char> remote_read(RemoteConnection *remote);
         };
 
     /*  *********************** */
@@ -164,10 +176,17 @@ namespace VCL {
              */
             void operator()(ImageData *img);
 
+            /**
+             *  Returns the OperationType (WRITE)
+             *
+             *  @return  OperationType WRITE
+             */
             OperationType get_type() { return WRITE; };
 
+            /**
+             *  Sets the system to write to (Local vs Remote)
+             */
             void set_system();
-            void remote_write(RemoteConnection *remote, std::vector<unsigned char> data);
         };
 
     /*  *********************** */
@@ -202,6 +221,11 @@ namespace VCL {
              */
             void operator()(ImageData *img);
 
+            /**
+             *  Returns the OperationType (RESIZE)
+             *
+             *  @return  OperationType RESIZE
+             */
             OperationType get_type() { return RESIZE; };
         };
 
@@ -238,6 +262,11 @@ namespace VCL {
              */
             void operator()(ImageData *img);
 
+            /**
+             *  Returns the OperationType (CROP)
+             *
+             *  @return  OperationType CROP
+             */
             OperationType get_type() { return CROP; };
         };
 
@@ -274,6 +303,11 @@ namespace VCL {
              */
             void operator()(ImageData *img);
 
+            /**
+             *  Returns the OperationType (THRESHOLD)
+             *
+             *  @return  OperationType THRESHOLD
+             */
             OperationType get_type() { return THRESHOLD; };
         };
 

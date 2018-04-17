@@ -64,7 +64,7 @@ Please note that if you have previously installed TileDB v0.6.1 on your machine,
     cd TileDB
     mkdir build
     cd build
-    ../bootstap --prefix=/usr/local/
+    ../bootstrap --prefix=/usr/local/
     make -jX   # substitute X for maximum number of CPUs (or leave it off to use all available)
     sudo make install
 
@@ -80,3 +80,6 @@ To run the unit tests:
     mkdir test/image_results
     rm -r tdb/
     ./test/unit_test
+
+## Amazon Web Services -- S3 Compatibility 
+S3 compatibility is available for S3, though it requires compiling both TileDB and VCL with a specific flag. You need to make sure you compile TileDB with the S3 flag (--enable-s3) when running the bootstrap script. You will also need to compile VCL with the S3 flag (scons ENABLE=S3)

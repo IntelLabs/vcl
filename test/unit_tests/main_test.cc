@@ -30,7 +30,7 @@
 #include "gtest/gtest.h"
 #include "Image.h"
 
-#ifdef HAVE_S3
+#ifdef S3_SUPPORT
 	#include <aws/core/utils/memory/stl/AWSString.h>
 	#include <aws/core/utils/logging/DefaultLogSystem.h>
 	#include <aws/core/utils/logging/AWSLogging.h>
