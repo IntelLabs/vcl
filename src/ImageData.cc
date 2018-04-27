@@ -31,7 +31,6 @@
 #include <sys/stat.h>
 #include <cstdio>
 #include <opencv2/imgproc.hpp>
-#include <iostream>
 #include <regex>
 
 #include "ImageData.h"
@@ -42,6 +41,22 @@ using namespace VCL;
     /*  *********************** */
     /*        OPERATION         */
     /*  *********************** */
+void ImageData::Operation::set_system(const std::string &_fullpath, System &_type)
+{
+    std::regex prefix("^(([a-z0-9]+)(://))");
+    std::smatch match;
+    if ( std::regex_search(_fullpath, match, prefix) ) {
+        std::string scheme = match[2];
+        if ( scheme == "s3")
+            _type = S3;
+        else {
+            throw VCLException(UnsupportedSystem,
+                "The system specified by the path is not supported currently");
+        }
+    }
+    else
+        _type = LOCAL;
+}
 
     /*  *********************** */
     /*       READ OPERATION     */
@@ -50,24 +65,7 @@ ImageData::Read::Read(const std::string& filename, ImageFormat format)
     : Operation(format),
       _fullpath(filename)
 {
-    set_system();
-}
-
-void ImageData::Read::set_system()
-{
-    std::regex prefix("^(([a-z0-9]+)(://))");
-    std::smatch match;
-    if ( std::regex_search(_fullpath, match, prefix) ) {
-        std::string scheme = match[2];
-        if ( scheme == "s3") 
-            _type = S3;
-        else {
-            throw VCLException(UnsupportedSystem, 
-                "The system specified by the path is not supported currently");
-        }
-    }
-    else
-        _type = LOCAL;
+    set_system(_fullpath, _type);
 }
 
 void ImageData::Read::operator()(ImageData *img)
@@ -109,24 +107,7 @@ ImageData::Write::Write(const std::string& filename, ImageFormat format,
       _metadata(metadata),
       _fullpath(filename)
 {
-    set_system();
-}
-
-void ImageData::Write::set_system()
-{
-    std::regex prefix("^(([a-z0-9]+)(://))");
-    std::smatch match;
-    if ( std::regex_search(_fullpath, match, prefix) ) {
-        std::string scheme = match[2];
-        if ( scheme == "s3") 
-            _type = S3;
-        else {
-            throw VCLException(UnsupportedSystem, 
-                "The system specified by the path is not supported currently");
-        }
-    }
-    else
-        _type = LOCAL;
+    set_system(_fullpath, _type);
 }
 
 void ImageData::Write::operator()(ImageData *img)
@@ -244,52 +225,59 @@ void ImageData::Threshold::operator()(ImageData *img)
                     /*         IMAGEDATA        */
                     /*  *********************** */
 
+void ImageData::initialize_image_empty()
+{
+    _channels = 0;
+    _height = 0;
+    _width = 0;
+    _cv_type = CV_8UC3;
+}
+
+void ImageData::initialize_tdb_empty()
+{
+    _format = VCL::NONE;
+    _tdb = NULL;
+    _remote = NULL;
+}
+
+void ImageData::initialize_id(const std::string &image_id) 
+{
+    std::string extension = get_extension(image_id);
+    set_format(extension);
+
+    _image_id = create_fullpath(image_id, _format);
+}
+
     /*  *********************** */
     /*        CONSTRUCTORS      */
     /*  *********************** */
 
 ImageData::ImageData()
 {
-    _channels = 0;
-    _height = 0;
-    _width = 0;
-    _cv_type = CV_8UC3;
+    initialize_image_empty();
+    initialize_tdb_empty();
 
-    _format = VCL::NONE;
     _compress = VCL::CompressionType::LZ4;
-
-    _tdb = NULL;
     _image_id = "";
-
-    _remote = NULL;
 }
 
 ImageData::ImageData(const cv::Mat &cv_img)
 {
     copy_cv(cv_img);
 
-    _format = VCL::NONE;
     _compress = VCL::CompressionType::LZ4;
     _image_id = "";
 
-    _tdb = NULL;
-
-    _remote = NULL;
+    initialize_tdb_empty();
 }
 
 ImageData::ImageData(const std::string &image_id)
 {
-    _channels = 0;
-    _height = 0;
-    _width = 0;
-    _cv_type = CV_8UC3;
-
-    std::string extension = get_extension(image_id);
-    set_format(extension);
+    initialize_image_empty();
 
     _compress = VCL::CompressionType::LZ4;
 
-    _image_id = create_fullpath(image_id, _format);
+    initialize_id(image_id);
 
     if ( _format == VCL::TDB ) {
         _tdb = new TDBImage(_image_id);
@@ -303,17 +291,11 @@ ImageData::ImageData(const std::string &image_id)
 
 ImageData::ImageData(const std::string &image_id, RemoteConnection &connection)
 {
-    _channels = 0;
-    _height = 0;
-    _width = 0;
-    _cv_type = CV_8UC3;
-
-    std::string extension = get_extension(image_id);
-    set_format(extension);
+    initialize_image_empty();
 
     _compress = VCL::CompressionType::LZ4;
 
-    _image_id = create_fullpath(image_id, _format);
+    initialize_id(image_id);
 
     if ( _format == VCL::TDB ) {
         _tdb = new TDBImage(_image_id, connection);
@@ -771,35 +753,10 @@ void ImageData::delete_object()
         _tdb->delete_image();
 
     else {
-        if (exists(_image_id)) {
+        if (exists(_image_id)) 
             std::remove(_image_id.c_str());
-        }
-        else if ( _remote != NULL ) {
-            size_t pos = _image_id.find("//");
-            std::string sys = _image_id.substr(0, pos);
-            if ( sys == "s3:" ) {
-            #ifdef HAVE_S3
-                std::string _fullpath = _image_id.substr(pos + 2);
-                size_t pos = _fullpath.find("/");
-                Aws::String bucket_name = Aws::Utils::StringUtils::to_string(_fullpath.substr(0, pos));
-                Aws::String key_name = Aws::Utils::StringUtils::to_string(_fullpath.substr(pos + 1));
-
-                Aws::S3::S3Client s3_client = _remote->create_s3_client();
-                Aws::S3::Model::DeleteObjectRequest object_request;
-                object_request.WithBucket(bucket_name).WithKey(key_name);
-
-                auto delete_object_outcome = s3_client.DeleteObject(object_request);
-                if ( !delete_object_outcome.IsSuccess() ) {
-                    std::stringstream stream;
-                    stream << delete_object_outcome.GetError().GetMessage();
-                    std::string err = stream.str();
-                    throw VCLException(OperationFailed, err);
-                }
-            #endif
-            }
-            else throw VCLException(UnsupportedSystem, "System specified by prefix " + sys +
-                " is not supported");
-        }
+        else if ( _remote != NULL ) 
+            _remote->remove_object(_image_id);
         else
             throw VCLException(ObjectNotFound, 
                 "Object does not exist in local system and no remote connection is defined");

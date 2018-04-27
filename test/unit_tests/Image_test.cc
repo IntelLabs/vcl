@@ -50,19 +50,7 @@ class ImageTest : public ::testing::Test {
         rect_ = VCL::Rectangle(100, 100, 100, 100);
         bad_rect_ = VCL::Rectangle(1000, 1000, 10000, 10000);
         dimension_ = 256;
-
-        // _remotepath = "s3://<path/to/your/bucket>";
-        // connection_ = new VCL::RemoteConnection();
-        // connection_->set_s3_configuration("us-west-2");
-        // connection_->set_s3_proxy(<PROXY_HOST>, <PROXY_PORT>);
-        // connection_->start();
-        // connection_->set_s3_credentials(<ACCESS_ID>, <SECRET_KEY>);
     }
-
-    // virtual void TearDown() {
-    //     connection_->end();
-    //     delete connection_;
-    // }
 
     void compare_mat_buffer(cv::Mat &img, unsigned char* buffer)
     {
@@ -129,9 +117,6 @@ class ImageTest : public ::testing::Test {
     std::string tdb_img_;
 
     cv::Mat cv_img_;
-
-    // std::string _remotepath;
-    // VCL::RemoteConnection *connection_;
 
     int dimension_;
     int size_;
@@ -498,43 +483,3 @@ TEST_F(ImageTest, NoMetadata){
     cv::Mat mat = tdbimg.get_cvmat();
     compare_mat_mat(mat, cv_img_);
 }
-
-// TEST_F(ImageTest, RemoteWritePNG)
-// {
-//     VCL::Image img(cv_img_);
-
-//     img.set_connection(*connection_);
-
-//     std::string path = _remotepath + "pngs/test_image.png";
-
-//     img.store(path, VCL::PNG);
-// }
-
-// TEST_F(ImageTest, RemoteReadJPG)
-// {
-//     VCL::Image img(_remotepath + "large1.jpg", *connection_);
-
-//     cv::Mat mat = img.get_cvmat();
-
-//     compare_mat_mat(mat, cv_img_);
-// }
-
-// TEST_F(ImageTest, RemoteReadTDB)
-// {
-//     VCL::Image img(_remotepath + "tdb/test_image.tdb", *connection_);
-
-//     cv::Mat mat = img.get_cvmat();
-//     compare_mat_mat(mat, cv_img_);   
-// }
-
-// TEST_F(ImageTest, RemoteRemoveTDB)
-// {
-//     VCL::Image img(_remotepath + "tdb/test_image.tdb", *connection_);
-//     img.delete_image();
-// }
-
-// TEST_F(ImageTest, RemoteRemovePNG)
-// {
-//     VCL::Image img(_remotepath + "pngs/test_image.png", *connection_);
-//     img.delete_image();
-// }

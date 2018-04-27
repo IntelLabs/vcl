@@ -404,5 +404,8 @@ namespace VCL {
          *    tiles is 100
          */
         void find_tile_extents();
+
+        void set_default();
+        void initialize_id(const std::string &object_id);
     };
 };

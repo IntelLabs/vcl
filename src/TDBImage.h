@@ -342,6 +342,9 @@ namespace VCL {
         void set_image_data_equal(const TDBImage &tdb);
 
 
+        void initialize_image_empty();
+        void initialize_image();
+
     /*  *********************** */
     /*      TDBIMAGE SETUP      */
     /*  *********************** */

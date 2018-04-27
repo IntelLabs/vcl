@@ -53,42 +53,28 @@ TDBObject::TDBObject()
     _group = "";
     _name = "";
 
-    // set default values
-    _num_attributes = 1;
-    const char* attr = "value";
-    _attributes.push_back(attr);
-    _compressed = CompressionType::LZ4;
-    _min_tile_dimension = 4;
+    set_default();
 
     _config = NULL;
     _error = NULL;
     _vfs = NULL;
 }
 
-TDBObject::TDBObject(const std::string &image_id)
+TDBObject::TDBObject(const std::string &object_id)
 {
     Error_Check(
         tiledb_ctx_create(&_ctx, NULL), 
         _ctx, "TileDB context initialization failed");
 
-    size_t pos = get_path_delimiter(image_id);
-
-    _group = get_group(image_id, pos);
-    _name = get_name(image_id, pos);
-
-    // set default values
-    _num_attributes = 1;
-    const char* attr = "value";
-    _attributes.push_back(attr);
-    _compressed = CompressionType::LZ4;
-    _min_tile_dimension = 4;
+    initialize_id(object_id);
+    set_default();
 
     _config = NULL;
     _error = NULL;
     _vfs = NULL;
 }
 
-TDBObject::TDBObject(const std::string &image_id, RemoteConnection &connection)
+TDBObject::TDBObject(const std::string &object_id, RemoteConnection &connection)
 {
     Error_Check(
         tiledb_ctx_create(&_ctx, NULL), 
@@ -96,17 +82,8 @@ TDBObject::TDBObject(const std::string &image_id, RemoteConnection &connection)
 
     set_config(connection);
 
-    size_t pos = get_path_delimiter(image_id);
-
-    _group = get_group(image_id, pos);
-    _name = get_name(image_id, pos);
-
-    // set default values
-    _num_attributes = 1;
-    const char* attr = "value";
-    _attributes.push_back(attr);
-    _compressed = CompressionType::LZ4;
-    _min_tile_dimension = 4;
+    initialize_id(object_id);
+    set_default();
 }
 
 TDBObject::TDBObject(const TDBObject &tdb)
@@ -160,6 +137,23 @@ void TDBObject::set_equal(const TDBObject &tdb)
     _config = tdb._config;
     _error = tdb._error;
     _vfs = tdb._vfs;
+}
+
+void TDBObject::set_default()
+{
+    // set default values
+    _num_attributes = 1;
+    const char* attr = "value";
+    _attributes.push_back(attr);
+    _compressed = CompressionType::LZ4;
+    _min_tile_dimension = 4;
+}
+
+void TDBObject::initialize_id(const std::string &object_id)
+{
+    size_t pos = get_path_delimiter(object_id);
+    _group = get_group(object_id, pos);
+    _name = get_name(object_id, pos);
 }
 
 TDBObject::~TDBObject()

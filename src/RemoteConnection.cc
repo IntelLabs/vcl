@@ -57,8 +57,6 @@ RemoteConnection::RemoteConnection()
     #endif
 }
 
-// Philip is going to come up with a better way to do this
-// try not to have API functions (esp constructors) dependent on an ifdef
 #ifdef S3_SUPPORT
 RemoteConnection::RemoteConnection(const std::string &region)
 {

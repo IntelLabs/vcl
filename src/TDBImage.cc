@@ -47,16 +47,8 @@ using namespace VCL;
     /*  *********************** */
 TDBImage::TDBImage() : TDBObject()
 {
-    _img_height = 0;
-    _img_width = 0;
-    _img_channels = 0;
-    _img_size = 0;
-
-    _threshold = 0;
-
-    set_num_dimensions(2);
-    set_default_attributes();
-    set_default_dimensions();
+    initialize_image_empty();
+    initialize_image();
 
     _raw_data = NULL;
     _tile_order = false;
@@ -64,16 +56,8 @@ TDBImage::TDBImage() : TDBObject()
 
 TDBImage::TDBImage(const std::string &image_id) : TDBObject(image_id)
 {
-    _img_height = 0;
-    _img_width = 0;
-    _img_channels = 0;
-    _img_size = 0;
-
-    _threshold = 0;
-
-    set_num_dimensions(2);
-    set_default_attributes();
-    set_default_dimensions();
+    initialize_image_empty();
+    initialize_image();
 
     _raw_data = NULL;
     _tile_order = false;
@@ -82,16 +66,8 @@ TDBImage::TDBImage(const std::string &image_id) : TDBObject(image_id)
 TDBImage::TDBImage(const std::string &image_id, RemoteConnection &connection) 
     : TDBObject(image_id, connection)
 {
-    _img_height = 0;
-    _img_width = 0;
-    _img_channels = 0;
-    _img_size = 0;
-
-    _threshold = 0;
-
-    set_num_dimensions(2);
-    set_default_attributes();
-    set_default_dimensions();
+    initialize_image_empty();
+    initialize_image();
 
     _raw_data = NULL;
     _tile_order = false;
@@ -101,16 +77,10 @@ TDBImage::TDBImage(const std::string &image_id, RemoteConnection &connection)
 template <class T>
 TDBImage::TDBImage(T* buffer, int size) : TDBObject()
 {
-    _img_height = 0;
-    _img_width = 0;
-    _img_channels = 0;
+    initialize_image_empty();
+    initialize_image();
+
     _img_size = size;
-
-    _threshold = 0;
-
-    set_num_dimensions(2);
-    set_default_attributes();
-    set_default_dimensions();
 
     _raw_data = new unsigned char[size];
     std::memcpy(_raw_data, buffer, _img_size);
@@ -188,6 +158,23 @@ void TDBImage::set_image_data_equal(const TDBImage &tdb)
     _img_size = tdb._img_size;
     _threshold = tdb._threshold;
     _tile_order = tdb._tile_order;
+}
+
+void TDBImage::initialize_image_empty()
+{
+    _img_height = 0;
+    _img_width = 0;
+    _img_channels = 0;
+    _img_size = 0;
+}
+
+void TDBImage::initialize_image()
+{
+    set_num_dimensions(2);
+    set_default_attributes();
+    set_default_dimensions();
+
+    _threshold = 0;
 }
 
 TDBImage::~TDBImage()

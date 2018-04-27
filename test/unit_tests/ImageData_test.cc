@@ -44,19 +44,7 @@ class ImageDataTest : public ::testing::Test {
         tdb_img_ = "tdb/test_image.tdb";
         cv_img_ = cv::imread(img_, cv::IMREAD_ANYCOLOR);
         rect_ = VCL::Rectangle(100, 100, 100, 100);
-    
-        // _remotepath = "s3://<path/to/your/bucket>";
-        // connection_ = new VCL::RemoteConnection();
-        // connection_->set_s3_configuration("us-west-2");
-        // connection_->set_s3_proxy(<PROXY_HOST>, <PROXY_PORT>);
-        // connection_->start();
-        // connection_->set_s3_credentials(<ACCESS_ID>, <SECRET_KEY>);
     }
-
-    // virtual void TearDown() {
-    //     connection_->end();
-    //     delete connection_;
-    // }
 
     void compare_mat_mat(cv::Mat &cv_img, cv::Mat &img)
     {
@@ -122,9 +110,6 @@ class ImageDataTest : public ::testing::Test {
     std::string test_img_;
     cv::Mat cv_img_;
     VCL::Rectangle rect_;
-
-    std::string _remotepath;
-    VCL::RemoteConnection *connection_;
 };
 
 
@@ -450,50 +435,3 @@ TEST_F(ImageDataTest, SetMinimum)
 
     img_data.set_minimum(3);
 }
-
-// TEST_F(ImageDataTest, RemoteWritePNG)
-// {
-//     VCL::ImageData img_data(cv_img_);
-
-//     img_data.set_connection(*connection_);
-
-//     std::string path = _remotepath + "pngs/test_image.png";
-
-//     img_data.write(path, VCL::PNG);
-//     img_data.perform_operations();
-// }
-
-// TEST_F(ImageDataTest, RemoteReadPNG)
-// {
-//     VCL::ImageData img_data;
-
-//     img_data.set_connection(*connection_);
-
-//     std::string path = _remotepath + "pngs/test_image.jpg";
-
-//     img_data.read(remote_path);
-
-//     cv::Mat data = img_data.get_cvmat();
-
-//     compare_mat_mat(data, cv_img_);
-// }
-
-// TEST_F(ImageDataTest, RemoteWriteTDB)
-// {
-//     VCL::ImageData img_data(cv_img_);
-
-//     img_data.set_connection(*connection_);
-
-//     img_data.write(_remotepath + "tdb/test_image", VCL::TDB);
-//     img_data.perform_operations();
-// }
-
-// TEST_F(ImageDataTest, RemoteReadTDB)
-// {
-//     VCL::ImageData img_data(_remotepath + "tdb/test_image.tdb", *connection_);
-
-//     img_data.read(_remotepath + "tdb/test_image.tdb");
-        
-//     cv::Mat data = img_data.get_cvmat();
-//     compare_mat_mat(data, cv_img_);
-// }

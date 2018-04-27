@@ -93,6 +93,11 @@ namespace VCL {
              *  @return  The OperationType of the Operation
              */
             virtual OperationType get_type() = 0;
+
+            /**
+             *  Sets the system to write to (Local vs Remote)
+             */
+            void set_system(const std::string &_fullpath, System &_type);
         };
 
     /*  *********************** */
@@ -132,11 +137,6 @@ namespace VCL {
              *  @return  OperationType READ
              */
             OperationType get_type() { return READ; };
-
-            /**
-             *  Sets the system to write to (Local vs Remote)
-             */
-            void set_system();
         };
 
     /*  *********************** */
@@ -182,11 +182,6 @@ namespace VCL {
              *  @return  OperationType WRITE
              */
             OperationType get_type() { return WRITE; };
-
-            /**
-             *  Sets the system to write to (Local vs Remote)
-             */
-            void set_system();
         };
 
     /*  *********************** */
@@ -695,6 +690,10 @@ namespace VCL {
          *  @return True if the file does not exist, false if it does
          */
         bool exists(const std::string &name);
+
+        void initialize_image_empty();
+        void initialize_tdb_empty();
+        void initialize_id(const std::string &image_id);
     };
 
 }
