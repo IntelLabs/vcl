@@ -39,6 +39,7 @@ namespace VCL {
 
       UnsupportedFormat,
       UnsupportedOperation,
+      OperationFailed,
 
       ObjectNotFound,
       OpenFailed,
@@ -49,6 +50,10 @@ namespace VCL {
 
       TileDBNotFound,
       TileDBError,
+
+      UnsupportedSystem,
+      SystemNotFound,
+      IncorrectConfiguration,
 
     };
 

@@ -84,3 +84,6 @@ To run the unit tests:
     mkdir test/image_results
     rm -r tdb/
     ./test/unit_test
+
+## Amazon Web Services -- S3 Compatibility 
+S3 compatibility is available for S3, though it requires compiling both TileDB and VCL with a specific flag. You need to make sure you compile TileDB with the S3 flag (--enable-s3) when running the bootstrap script. You will also need to compile VCL with the S3 flag (scons ENABLE=S3)

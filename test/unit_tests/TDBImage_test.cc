@@ -28,7 +28,6 @@
  */
 
 
-#include "TDBObject.h"
 #include "TDBImage.h"
 #include "gtest/gtest.h"
 
@@ -36,6 +35,8 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <string>
+
+#include <fstream>
 
 class TDBImageTest : public ::testing::Test {
 
@@ -118,8 +119,6 @@ protected:
     cv::Mat cv_img_;
     VCL::Rectangle rect_;
 };
-
-
 
 
 TEST_F(TDBImageTest, DefaultConstructor)

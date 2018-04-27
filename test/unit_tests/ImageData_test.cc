@@ -304,7 +304,7 @@ TEST_F(ImageDataTest, CreateUnique)
 {
     VCL::ImageData img_data(cv_img_);
 
-    img_data.create_unique("image_results/", VCL::PNG);
+    img_data.create_unique("images/", VCL::PNG);
 
     img_data.write(img_data.get_image_id(), VCL::PNG);
     img_data.perform_operations();
@@ -417,7 +417,7 @@ TEST_F(ImageDataTest, DeleteIMG)
 {
     VCL::ImageData img_data(cv_img_);
 
-    img_data.create_unique("image_results/", VCL::PNG);
+    img_data.create_unique("images/", VCL::PNG);
 
     test_img_ = img_data.get_image_id();
     img_data.write(test_img_, VCL::PNG);

@@ -481,4 +481,5 @@ TEST_F(ImageTest, NoMetadata){
     tdbimg.set_dimensions(dims);
 
     cv::Mat mat = tdbimg.get_cvmat();
+    compare_mat_mat(mat, cv_img_);
 }

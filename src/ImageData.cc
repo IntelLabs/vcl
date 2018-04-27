@@ -31,17 +31,32 @@
 #include <sys/stat.h>
 #include <cstdio>
 #include <opencv2/imgproc.hpp>
-#include <iostream>
+#include <regex>
 
 #include "ImageData.h"
 #include "TDBImage.h"
-#include "VCL.h"
 
 using namespace VCL;
 
     /*  *********************** */
     /*        OPERATION         */
     /*  *********************** */
+void ImageData::Operation::set_system(const std::string &_fullpath, System &_type)
+{
+    std::regex prefix("^(([a-z0-9]+)(://))");
+    std::smatch match;
+    if ( std::regex_search(_fullpath, match, prefix) ) {
+        std::string scheme = match[2];
+        if ( scheme == "s3")
+            _type = S3;
+        else {
+            throw VCLException(UnsupportedSystem,
+                "The system specified by the path is not supported currently");
+        }
+    }
+    else
+        _type = LOCAL;
+}
 
     /*  *********************** */
     /*       READ OPERATION     */
@@ -50,14 +65,15 @@ ImageData::Read::Read(const std::string& filename, ImageFormat format)
     : Operation(format),
       _fullpath(filename)
 {
+    set_system(_fullpath, _type);
 }
 
 void ImageData::Read::operator()(ImageData *img)
 {
     if ( _format == VCL::TDB ) {
         if ( img->_tdb == NULL )
-            throw VCLException(TileDBNotFound, "ImageFormat indicates image \
-                stored in TDB format, but no data was found");
+            throw VCLException(TileDBNotFound, "ImageFormat indicates image "\
+                "stored in TDB format, but no data was found");
 
         img->_tdb->read();
         img->_height = img->_tdb->get_image_height();
@@ -65,10 +81,19 @@ void ImageData::Read::operator()(ImageData *img)
         img->_channels = img->_tdb->get_image_channels();
     }
     else {
-        img->copy_cv(cv::imread(_fullpath, cv::IMREAD_ANYCOLOR));
+        if ( _type == LOCAL )
+            img->copy_cv(cv::imread(_fullpath, cv::IMREAD_ANYCOLOR));
+        else {
+            std::vector<char> data = img->_remote->read(_fullpath);
+            if ( !data.empty() )
+                img->copy_cv(cv::imdecode(cv::Mat(data), cv::IMREAD_ANYCOLOR));
+            else
+                throw VCLException(ObjectEmpty,  _fullpath + 
+                    " could not be read from RemoteConnection");
+        }
         if ( img->_cv_img.empty() )
-            throw VCLException(ObjectEmpty, _fullpath + " could not be read, \
-                object is empty");
+            throw VCLException(ObjectEmpty,  _fullpath + 
+                " could not be read, object is empty");
     }
 }
 
@@ -82,19 +107,30 @@ ImageData::Write::Write(const std::string& filename, ImageFormat format,
       _metadata(metadata),
       _fullpath(filename)
 {
+    set_system(_fullpath, _type);
 }
 
 void ImageData::Write::operator()(ImageData *img)
 {
     if (_format == VCL::TDB) {
         if ( img->_tdb == NULL ) {
-            img->_tdb = new TDBImage(_fullpath);
+            if ( _type == LOCAL )
+                img->_tdb = new TDBImage(_fullpath);
+            else if ( _type == S3 ) 
+                img->_tdb = new TDBImage(_fullpath, *(img->_remote));
+            else {
+                throw VCLException(UnsupportedSystem, 
+                    "The system specified by the path is not supported currently");
+            }
             img->_tdb->set_compression(img->_compress);
         }
 
-        if ( img->_tdb->has_data() )
+        if ( img->_tdb->has_data() ) {
+            if ( _type != LOCAL )
+                img->_tdb->set_configuration(*(img->_remote));
             img->_tdb->write(_fullpath, _metadata);
-        else
+        }
+        else 
             img->_tdb->write(img->_cv_img, _metadata);
     }
     else {
@@ -104,8 +140,16 @@ void ImageData::Write::operator()(ImageData *img)
         else
             cv_img = img->_cv_img;
 
-        if ( !cv_img.empty() )
-            cv::imwrite(_fullpath, cv_img);
+        if ( !cv_img.empty() ) {
+            if ( _type == LOCAL )
+                cv::imwrite(_fullpath, cv_img);
+            else {
+                std::vector<unsigned char> data;
+                std::string ext = "." + img->format_to_string(_format);
+                cv::imencode(ext, cv_img, data);
+                img->_remote->write(_fullpath, data);
+            }
+        }
         else
             throw VCLException(ObjectEmpty, _fullpath + " could not be written \
                 object is empty");
@@ -181,21 +225,39 @@ void ImageData::Threshold::operator()(ImageData *img)
                     /*         IMAGEDATA        */
                     /*  *********************** */
 
+void ImageData::initialize_image_empty()
+{
+    _channels = 0;
+    _height = 0;
+    _width = 0;
+    _cv_type = CV_8UC3;
+}
+
+void ImageData::initialize_tdb_empty()
+{
+    _format = VCL::NONE;
+    _tdb = NULL;
+    _remote = NULL;
+}
+
+void ImageData::initialize_id(const std::string &image_id) 
+{
+    std::string extension = get_extension(image_id);
+    set_format(extension);
+
+    _image_id = create_fullpath(image_id, _format);
+}
+
     /*  *********************** */
     /*        CONSTRUCTORS      */
     /*  *********************** */
 
 ImageData::ImageData()
 {
-    _channels = 0;
-    _height = 0;
-    _width = 0;
-    _cv_type = CV_8UC3;
+    initialize_image_empty();
+    initialize_tdb_empty();
 
-    _format = VCL::NONE;
     _compress = VCL::CompressionType::LZ4;
-
-    _tdb = NULL;
     _image_id = "";
 }
 
@@ -203,26 +265,19 @@ ImageData::ImageData(const cv::Mat &cv_img)
 {
     copy_cv(cv_img);
 
-    _format = VCL::NONE;
     _compress = VCL::CompressionType::LZ4;
     _image_id = "";
 
-    _tdb = NULL;
+    initialize_tdb_empty();
 }
 
 ImageData::ImageData(const std::string &image_id)
 {
-    _channels = 0;
-    _height = 0;
-    _width = 0;
-    _cv_type = CV_8UC3;
-
-    std::string extension = get_extension(image_id);
-    set_format(extension);
+    initialize_image_empty();
 
     _compress = VCL::CompressionType::LZ4;
 
-    _image_id = create_fullpath(image_id, _format);
+    initialize_id(image_id);
 
     if ( _format == VCL::TDB ) {
         _tdb = new TDBImage(_image_id);
@@ -231,6 +286,25 @@ ImageData::ImageData(const std::string &image_id)
     else
         _tdb = NULL;
 
+    _remote = NULL;
+}
+
+ImageData::ImageData(const std::string &image_id, RemoteConnection &connection)
+{
+    initialize_image_empty();
+
+    _compress = VCL::CompressionType::LZ4;
+
+    initialize_id(image_id);
+
+    if ( _format == VCL::TDB ) {
+        _tdb = new TDBImage(_image_id, connection);
+        _tdb->set_compression(_compress);
+    }
+    else
+        _tdb = NULL;
+
+    _remote = &connection;
 }
 
 ImageData::ImageData(void* buffer, cv::Size dimensions, int cv_type)
@@ -246,6 +320,8 @@ ImageData::ImageData(void* buffer, cv::Size dimensions, int cv_type)
 
     set_data_from_raw(buffer, _height*_width*_channels);
     _tdb->set_compression(_compress);
+
+    _remote = NULL;
 }
 
 ImageData::ImageData(const ImageData &img)
@@ -275,6 +351,8 @@ ImageData::ImageData(const ImageData &img)
         for (int i = start; i < img._operations.size(); ++i)
             _operations.push_back(img._operations[i]);
     }
+
+    _remote = img._remote;
 }
 
 void ImageData::operator=(const ImageData &img)
@@ -321,6 +399,8 @@ void ImageData::operator=(const ImageData &img)
     }
 
     delete temp;
+
+    _remote = img._remote;
 }
 
 ImageData::~ImageData()
@@ -603,6 +683,17 @@ void ImageData::set_minimum(int dimension)
     }
 }
 
+void ImageData::set_connection(RemoteConnection &remote)
+{
+    if ( !remote.connected() )
+        throw VCLException(SystemNotFound, "No remote connection started");
+
+    _remote = &remote;
+
+    if ( _tdb != NULL )
+        _tdb->set_configuration(remote);
+}
+
 
     /*  *********************** */
     /*   IMAGEDATA INTERACTION  */
@@ -661,8 +752,14 @@ void ImageData::delete_object()
     if (_tdb != NULL)
         _tdb->delete_image();
 
-    if (exists(_image_id)) {
-        std::remove(_image_id.c_str());
+    else {
+        if (exists(_image_id)) 
+            std::remove(_image_id.c_str());
+        else if ( _remote != NULL ) 
+            _remote->remove_object(_image_id);
+        else
+            throw VCLException(ObjectNotFound, 
+                "Object does not exist in local system and no remote connection is defined");
     }
 }
 
