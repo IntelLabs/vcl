@@ -151,7 +151,7 @@ TEST_F(ImageTest, MatConstructor)
 
 TEST_F(ImageTest, EncodedBufferConstructor)
 {
-    std::fstream jpgimage("images/large1.jpg");
+    std::fstream jpgimage(img_);
 
     jpgimage.seekg(0, jpgimage.end);
     int length = jpgimage.tellg();
@@ -230,7 +230,7 @@ TEST_F(ImageTest, GetMatFromMat)
     compare_mat_mat(cv_img, cv_img_);
 }
 
-TEST_F(ImageTest, GetMatFromPNG)
+TEST_F(ImageTest, GetMatFromIMG)
 {
     VCL::Image img(img_);
 
@@ -269,7 +269,7 @@ TEST_F(ImageTest, GetBufferFromMat)
     delete [] buffer;
 }
 
-TEST_F(ImageTest, GetBufferFromPNG)
+TEST_F(ImageTest, GetBufferFromIMG)
 {
     VCL::Image img(img_);
 
@@ -298,7 +298,7 @@ TEST_F(ImageTest, GetBufferFromTDB)
     delete [] buffer;
 }
 
-TEST_F(ImageTest, GetRectangleFromPNG)
+TEST_F(ImageTest, GetRectangleFromIMG)
 {
     VCL::Image img(img_);
 
@@ -336,7 +336,6 @@ TEST_F(ImageTest, GetRectangleFromMat)
     EXPECT_EQ(rect_.width, dims.width);
 }
 
-
 TEST_F(ImageTest, WriteMatToJPG)
 {
     VCL::Image img(cv_img_);
@@ -347,16 +346,42 @@ TEST_F(ImageTest, WriteMatToJPG)
     EXPECT_FALSE( test.empty() );
 }
 
+TEST_F(ImageTest, WriteMatToPNG)
+{
+    VCL::Image img(cv_img_);
+    img.store("images/test_image", VCL::PNG);
+
+    cv::Mat test = cv::imread("images/test_image.png");
+
+    EXPECT_FALSE( test.empty() );
+}
+
+TEST_F(ImageTest, WriteMatToTIFF)
+{
+    VCL::Image img(cv_img_);
+    img.store("images/test_image", VCL::TIFF);
+
+    cv::Mat test = cv::imread("images/test_image.tiff");
+
+    EXPECT_FALSE( test.empty() );
+}
+
 TEST_F(ImageTest, WriteMatToTDB)
 {
     VCL::Image img(cv_img_);
     img.store("tdb/mat_to_tdb", VCL::TDB);
+
+    cv::Mat test = img.get_cvmat();
+    EXPECT_FALSE( test.empty() );
 }
 
 TEST_F(ImageTest, WriteStringToTDB)
 {
     VCL::Image img(img_);
     img.store("tdb/png_to_tdb.png", VCL::TDB);
+
+    cv::Mat test = img.get_cvmat();
+    EXPECT_FALSE( test.empty() );
 }
 
 TEST_F(ImageTest, ResizeMat)
@@ -444,6 +469,13 @@ TEST_F(ImageTest, TDBToJPG)
     VCL::Image img(tdb_img_);
 
     img.store("images/tdb_to_jpg", VCL::JPG);
+}
+
+TEST_F(ImageTest, TDBToTIFF)
+{
+    VCL::Image img(tdb_img_);
+
+    img.store("images/tdb_to_tiff", VCL::TIFF);
 }
 
 TEST_F(ImageTest, EncodedImage)

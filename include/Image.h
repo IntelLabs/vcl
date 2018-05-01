@@ -52,7 +52,7 @@ namespace VCL {
     /**
      *  Determines what kind of image it is
      */
-    enum ImageFormat { NONE, JPG, PNG, TDB, };
+    enum ImageFormat { NONE, JPG, PNG, TIFF, TDB, };
 
     /**
      *  Uses the OpenCV Rect class to define an area in the image

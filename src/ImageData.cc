@@ -605,6 +605,8 @@ void ImageData::set_format(const std::string &extension)
         _format = VCL::JPG;
     else if ( extension == "png" )
         _format = VCL::PNG;
+    else if ( extension == "tiff" || extension == "tif" )
+        _format = VCL::TIFF;
     else if ( extension == "tdb" )
         _format = VCL::TDB;
     else
@@ -847,6 +849,8 @@ std::string ImageData::format_to_string(ImageFormat image_format)
             return "jpg";
         case VCL::PNG:
             return "png";
+        case VCL::TIFF:
+            return "tiff";
         case VCL::TDB:
             return "tdb";
         case VCL::NONE:
