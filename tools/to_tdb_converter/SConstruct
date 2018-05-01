@@ -1,0 +1,10 @@
+## Compile and Build Library ##
+
+env = Environment(CPPPATH=['../../include'],
+                  CXXFLAGS="-std=c++11 -fopenmp -O3")
+
+source_files = ['to_tdb_converter.cc']
+
+env.Program('converter', source_files,
+        LIBS = ['vcl',],
+        LIBPATH = ['../../', '/usr/local/lib', '/usr/lib'])
