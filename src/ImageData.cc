@@ -501,7 +501,7 @@ void ImageData::create_unique(const std::string &path,
     const char& last = path.back();
 
     do {
-        uint64_t id = get_int64();
+        uint64_t id = get_uint64();
         std::stringstream ss;
         ss << std::hex << id;
         unique_id = ss.str();
