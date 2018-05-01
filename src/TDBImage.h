@@ -280,7 +280,7 @@ namespace VCL {
          *  @param  column  The column index
          *  @return  The index in the raw data where [row, column] is
          */
-        int get_index(int row, int column) const;
+        long get_index(int row, int column) const;
 
        /**
          *  Used for resizing, calculates the height of the current tile (used
