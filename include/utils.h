@@ -61,6 +61,6 @@ namespace VCL {
 
     bool supports_rdrand();
 
-    uint64_t get_int64();
+    uint64_t get_uint64();
 
 };

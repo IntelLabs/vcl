@@ -72,7 +72,7 @@ namespace VCL {
         return a*multiplier + b;
     }
 
-    uint64_t get_int64()
+    uint64_t get_uint64()
     {
         if ( supports_rdrand() ) {
             return combine(rdrand(), rdrand());
