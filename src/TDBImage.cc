@@ -629,10 +629,10 @@ void TDBImage::get_index_value(unsigned char* image_buffer, int index,
     if ( row_bottom > _img_height - 1 )
         row_bottom = _img_height - 1;
 
-    int top_left_index = get_index(row_top, column_left) * _img_channels;
-    int top_right_index = get_index(row_top, column_right) * _img_channels;
-    int bottom_left_index = get_index(row_bottom, column_left) * _img_channels;
-    int bottom_right_index = get_index(row_bottom, column_right) * _img_channels;
+    long top_left_index = get_index(row_top, column_left) * _img_channels;
+    long top_right_index = get_index(row_top, column_right) * _img_channels;
+    long bottom_left_index = get_index(row_bottom, column_left) * _img_channels;
+    long bottom_right_index = get_index(row_bottom, column_right) * _img_channels;
 
     for ( int x = 0; x < _img_channels; ++x ) {
         unsigned char top_left = _raw_data[top_left_index + x];
@@ -650,22 +650,22 @@ void TDBImage::get_index_value(unsigned char* image_buffer, int index,
     }
 }
 
-int TDBImage::get_index(int row, int column) const
+long TDBImage::get_index(int row, int column) const
 {
     int tile_width = get_tile_width(column, _img_width / _tile_dimension[1]);
     int tile_height = get_tile_height(row, _img_height / _tile_dimension[0]);
 
-    int tile_size = tile_width * tile_height;
+    long tile_size = tile_width * tile_height;
 
-    int current_tile_row = row % int(_tile_dimension[0]);
-    int current_row_tile = row / int(_tile_dimension[0]);
-    int current_column_tile = column / int(_tile_dimension[1]);
-    int current_tile_column = column % int(_tile_dimension[1]);
+    long current_tile_row = row % long(_tile_dimension[0]);
+    long current_row_tile = row / long(_tile_dimension[0]);
+    long current_column_tile = column / long(_tile_dimension[1]);
+    long current_tile_column = column % long(_tile_dimension[1]);
 
-    int full_row_tile = _img_width * _tile_dimension[0];
+    long full_row_tile = _img_width * _tile_dimension[0];
 
-    int row_index = current_row_tile * full_row_tile + current_tile_row * tile_width;
-    int column_index = current_column_tile * tile_size + current_tile_column;
+    long row_index = current_row_tile * full_row_tile + current_tile_row * tile_width;
+    long column_index = current_column_tile * tile_size + current_tile_column;
 
     return row_index + column_index;
 }
