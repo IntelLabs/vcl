@@ -195,7 +195,7 @@ TEST_F(RemoteConnectionTest, ImageDataRemoteReadPNG)
 
     std::string path = _remotepath + "pngs/test_image.jpg";
 
-    img_data.read(remote_path);
+    img_data.read(_remote_path);
 
     cv::Mat data = img_data.get_cvmat();
 
