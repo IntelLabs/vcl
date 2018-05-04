@@ -57,10 +57,13 @@ Image::Image(const cv::Mat &cv_img)
 
 }
 
-Image::Image(void* buffer, int size, int flags)
+Image::Image(void* buffer, long size, int flags)
 {
     cv::Mat raw_data(cv::Size(size, 1), CV_8UC1, buffer);
     cv::Mat img = cv::imdecode(raw_data, flags);
+    if ( img.empty() ) {
+        throw VCLException(ObjectEmpty, "Image object is empty");
+    }
 
     _image = new ImageData(img);
 }
@@ -109,7 +112,7 @@ ImageFormat Image::get_image_format() const
     return _image->get_image_format();
 }
 
-int Image::get_raw_data_size() const
+long Image::get_raw_data_size() const
 {
     return _image->get_size();
 }
@@ -135,7 +138,7 @@ cv::Mat Image::get_cvmat() const
     return mat.clone();
 }
 
-void Image::get_raw_data(void* buffer, int buffer_size ) const
+void Image::get_raw_data(void* buffer, long buffer_size ) const
 {
     _image->get_buffer(buffer, buffer_size);
 }

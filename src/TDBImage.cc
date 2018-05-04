@@ -80,7 +80,7 @@ TDBImage::TDBImage(const std::string &image_id) : TDBObject(image_id)
 }
 
 template <class T>
-TDBImage::TDBImage(T* buffer, int size) : TDBObject()
+TDBImage::TDBImage(T* buffer, long size) : TDBObject()
 {
     _img_height = 0;
     _img_width = 0;
@@ -99,19 +99,19 @@ TDBImage::TDBImage(T* buffer, int size) : TDBObject()
 }
 
 // OpenCV type CV_8UC1-4
-template TDBImage::TDBImage(unsigned char* buffer, int size);
+template TDBImage::TDBImage(unsigned char* buffer, long size);
 // OpenCV type CV_8SC1-4
-template TDBImage::TDBImage(char* buffer, int size);
+template TDBImage::TDBImage(char* buffer, long size);
 // OpenCV type CV_16UC1-4
-template TDBImage::TDBImage(unsigned short* buffer, int size);
+template TDBImage::TDBImage(unsigned short* buffer, long size);
 // OpenCV type CV_16SC1-4
-template TDBImage::TDBImage(short* buffer, int size);
+template TDBImage::TDBImage(short* buffer, long size);
 // OpenCV type CV_32SC1-4
-template TDBImage::TDBImage(int* buffer, int size);
+template TDBImage::TDBImage(int* buffer, long size);
 // OpenCV type CV_32FC1-4
-template TDBImage::TDBImage(float* buffer, int size);
+template TDBImage::TDBImage(float* buffer, long size);
 // OpenCV type CV_64FC1-4
-template TDBImage::TDBImage(double* buffer, int size);
+template TDBImage::TDBImage(double* buffer, long size);
 
 
 TDBImage::TDBImage(TDBImage &tdb) : TDBObject(tdb)
@@ -181,7 +181,7 @@ TDBImage::~TDBImage()
     /*        GET FUNCTIONS     */
     /*  *********************** */
 
-int TDBImage::get_image_size()
+long TDBImage::get_image_size()
 {
     if (_img_size == 0 && _name == "")
         throw VCLException(TileDBNotFound, "No data in TileDB object yet");
@@ -249,7 +249,7 @@ cv::Mat TDBImage::get_cvmat()
 }
 
 template <class T>
-void TDBImage::get_buffer(T* buffer, int buffer_size)
+void TDBImage::get_buffer(T* buffer, long buffer_size)
 {
     if ( buffer_size != get_image_size() )
         throw VCLException(SizeMismatch, buffer_size + " is not equal to "
@@ -264,13 +264,13 @@ void TDBImage::get_buffer(T* buffer, int buffer_size)
         std::memcpy(buffer, _raw_data, buffer_size);
 }
 
-template void TDBImage::get_buffer(unsigned char* buffer, int buffer_size);
-template void TDBImage::get_buffer(char* buffer, int buffer_size);
-template void TDBImage::get_buffer(unsigned short* buffer, int buffer_size);
-template void TDBImage::get_buffer(short* buffer, int buffer_size);
-template void TDBImage::get_buffer(int* buffer, int buffer_size);
-template void TDBImage::get_buffer(float* buffer, int buffer_size);
-template void TDBImage::get_buffer(double* buffer, int buffer_size);
+template void TDBImage::get_buffer(unsigned char* buffer, long buffer_size);
+template void TDBImage::get_buffer(char* buffer, long buffer_size);
+template void TDBImage::get_buffer(unsigned short* buffer, long buffer_size);
+template void TDBImage::get_buffer(short* buffer, long buffer_size);
+template void TDBImage::get_buffer(int* buffer, long buffer_size);
+template void TDBImage::get_buffer(float* buffer, long buffer_size);
+template void TDBImage::get_buffer(double* buffer, long buffer_size);
 
 
     /*  *********************** */
@@ -929,8 +929,8 @@ void TDBImage::reorder_buffer(T* buffer)
     int nRows = _array_dimension[0] / float(_tile_dimension[0]);
     int nCols = _array_dimension[1] / float(_tile_dimension[1]);
 
-    int buffer_index = 0;
-    int full_row_tile = _img_width * _tile_dimension[0] * _img_channels;
+    long buffer_index = 0;
+    long full_row_tile = _img_width * _tile_dimension[0] * _img_channels;
 
     if ( _array_dimension[1] > _img_width ) {
         nCols = _img_width / _tile_dimension[1];
@@ -948,7 +948,7 @@ void TDBImage::reorder_buffer(T* buffer)
             int64_t subarray[4];
             get_tile_coordinates(subarray, i, j);
 
-            int start = i * full_row_tile + j * _tile_dimension[1] * _img_channels;
+            long start = i * full_row_tile + j * _tile_dimension[1] * _img_channels;
             buffer_index = reorder_tile(buffer, subarray, buffer_index, start);
         }
     }
@@ -957,14 +957,14 @@ void TDBImage::reorder_buffer(T* buffer)
 template void TDBImage::reorder_buffer(unsigned char* buffer);
 
 template <class T>
-int TDBImage::reorder_tile(T* buffer, int64_t* subarray, int buffer_index,
-    int start_index)
+long TDBImage::reorder_tile(T* buffer, int64_t* subarray, long buffer_index,
+    long start_index)
 {
-    int current_tile_height = subarray[1] - subarray[0];
-    int current_tile_width = subarray[3] - subarray[2];
+    long current_tile_height = subarray[1] - subarray[0];
+    long current_tile_width = subarray[3] - subarray[2];
 
-    int data_index;
-    int x, y;
+    long data_index;
+    long x, y;
 
     for ( x = 0; x < current_tile_height; ++x ) {
         data_index = start_index + x * _img_width * _img_channels;
@@ -977,8 +977,8 @@ int TDBImage::reorder_tile(T* buffer, int64_t* subarray, int buffer_index,
     return buffer_index;
 }
 
-template int TDBImage::reorder_tile(unsigned char* buffer, int64_t* subarray,
-        int buffer_index, int start_index);
+template long TDBImage::reorder_tile(unsigned char* buffer, int64_t* subarray,
+        long buffer_index, long start_index);
 
 
     /*  *********************** */

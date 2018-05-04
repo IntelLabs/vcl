@@ -38,7 +38,6 @@
 #include "Exception.h"
 #include "TDBObject.h"
 
-
 namespace VCL {
 
     /**
@@ -55,7 +54,7 @@ namespace VCL {
     private:
         // Image dimensions
         uint64_t _img_height, _img_width, _img_channels;
-        uint64_t _img_size;
+        long _img_size;
 
         // threshold value
         int _threshold;
@@ -87,7 +86,7 @@ namespace VCL {
          *  @param buffer  The raw pixel data
          *  @param size  The length of the buffer
          */
-        template <class T> TDBImage(T* buffer, int size);
+        template <class T> TDBImage(T* buffer, long size);
 
         /**
          *  Creates a TDBImage object from an existing TDBImage
@@ -114,7 +113,7 @@ namespace VCL {
          *
          *  @return The size of the image (height x width x channels)
          */
-        int get_image_size();
+        long get_image_size();
 
         /**
          *  Gets the height of the image (number of rows)
@@ -153,7 +152,7 @@ namespace VCL {
          *     data when the function ends
          *  @param  buffer_size  The length of buffer (not in bytes)
          */
-        template <class T> void get_buffer(T* buffer, int buffer_size);
+        template <class T> void get_buffer(T* buffer, long buffer_size);
 
     /*  *********************** */
     /*        SET FUNCTIONS     */
@@ -387,12 +386,12 @@ namespace VCL {
          *
          *  @param  buffer  The buffer to store the image order data in
          *  @param  subarray  The coordinates of the current tile
-         *  @param  tile  The current tile number (in row order)
+         *  @param  buffer_index  The current index into the image order buffer
          *  @param  start_index  The current index into the raw data buffer
          *  @return  The current index into the image order buffer
          */
-        template <class T> int reorder_tile(T* buffer, int64_t* subarray,
-            int tile, int start_index);
+        template <class T> long reorder_tile(T* buffer, int64_t* subarray,
+            long buffer_index, long start_index);
 
     /*  *********************** */
     /*      MATH FUNCTIONS      */

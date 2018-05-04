@@ -381,7 +381,7 @@ namespace VCL {
          *
          *  @return The size of the image in pixels
          */
-        int get_size();
+        long get_size();
 
         /**
          *  Gets the image data in a buffer
@@ -391,7 +391,7 @@ namespace VCL {
          *  @param  buffer_size  The pixel size of the image (length of
          *     the buffer, not bytes)
          */
-        void get_buffer(void* buffer, int buffer_size);
+        void get_buffer(void* buffer, long buffer_size);
 
         /**
          *  Gets an OpenCV Mat that contains the image data
@@ -487,7 +487,7 @@ namespace VCL {
          *  @param buffer  The buffer containing the raw pixel data
          *  @param size  The size of the buffer
          */
-        void set_data_from_raw(void* buffer, int size);
+        void set_data_from_raw(void* buffer, long size);
 
         /**
          *  Sets the Image object to contain raw pixel data
