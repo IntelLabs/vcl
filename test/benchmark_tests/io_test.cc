@@ -301,8 +301,7 @@ int main(int argc, char** argv )
     std::vector<std::vector<float>> times;
     std::vector< std::vector<long long int>> sizes;
 
-    VCL::RemoteConnection remote("us-east-1", "AKIAIZZYHO3BGM3I4C2Q", "VrVoLsiUvCCKCw1HlqOcj0E5i8FUZXMlORj4FU9f");
-    remote.set_https_proxy("proxy.jf.intel.com", 911);
+    VCL::RemoteConnection remote("us-east-1");
     remote.start();
 
     cv::Mat cv_img;

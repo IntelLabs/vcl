@@ -63,12 +63,6 @@ class RemoteConnectionTest : public ::testing::Test {
         // connection_->set_s3_proxy(<PROXY_HOST>, <PROXY_PORT>);
         // connection_->start();
         // connection_->set_s3_credentials(<ACCESS_ID>, <SECRET_KEY>);
-        // _remotepath = "s3://netowrkingteam-test/FD19_SAMPLE_SET/ImageEnhancement/F0128/ForReconstruction/38.tif";
-        // connection_ = new VCL::RemoteConnection();
-        // connection_->set_s3_configuration("us-east-1");
-        // connection_->set_https_proxy("proxy.jf.intel.com", 911);
-        // connection_->start();
-        // connection_->set_s3_credentials("AKIAIZZYHO3BGM3I4C2Q", "VrVoLsiUvCCKCw1HlqOcj0E5i8FUZXMlORj4FU9f");
     }
 
     virtual void TearDown() {
