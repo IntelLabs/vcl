@@ -121,8 +121,7 @@ void get_file_sizes( std::vector<std::string> &tiff_files,
     }
 }
 
-void write(std::string &output_dir, std::string &image_dir,
-    std::vector<std::string> &files,
+void write(std::string &output_dir, cv::Mat &cv_img,
     std::vector<std::string> &tiff_files,
     std::vector<std::string> &tdb_files,
     std::vector<int> &heights, std::vector<int> &widths,
@@ -138,45 +137,41 @@ void write(std::string &output_dir, std::string &image_dir,
     std::string tif_outdir = output_dir + "image_results/tiff/";
     std::string tdb_outdir = output_dir + "image_results/tdb/";
 
-    for (int i = 0; i < files.size(); ++i) {
-        // Read the image in 
-        std::vector<float> time;
-        cv::Mat cv_img = cv::imread(image_dir + files[i], cv::IMREAD_ANYCOLOR);
-        
-        // get height and width
-        height = cv_img.rows;
-        width = cv_img.cols;
-        heights.push_back(height);
-        widths.push_back(width);
+    std::vector<float> time;
+    
+    // get height and width
+    height = cv_img.rows;
+    width = cv_img.cols;
+    heights.push_back(height);
+    widths.push_back(width);
 
-        // Determine the tdb image name
-        VCL::CompressionType comp = get_compression(compression);
-        VCL::Image tdbimg(cv_img);
-        std::string tdbname = tdbimg.create_unique(tdb_outdir, VCL::TDB);
-        std::string basename = get_name(tdbname);
+    // Determine the tdb image name
+    VCL::CompressionType comp = get_compression(compression);
+    VCL::Image tdbimg(cv_img);
+    std::string tdbname = tdbimg.create_unique(tdb_outdir, VCL::TDB);
+    std::string basename = get_name(tdbname);
 
-        std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-        std::string cv_name = tif_outdir + basename + ".tiff";
-        tiff_files.push_back(cv_name);
-        tif_chrono.tic();
-        cv::imwrite(cv_name, cv_img);
-        tif_chrono.tac();
+    std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
+    std::string cv_name = tif_outdir + basename + ".tiff";
+    tiff_files.push_back(cv_name);
+    tif_chrono.tic();
+    cv::imwrite(cv_name, cv_img);
+    tif_chrono.tac();
 
-        // Write the TDB
-        std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-        tdbimg.set_compression(comp);
-        tdbimg.set_minimum_dimension(minimum);
-        tdb_files.push_back(tdbname);
+    // Write the TDB
+    std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
+    tdbimg.set_compression(comp);
+    tdbimg.set_minimum_dimension(minimum);
+    tdb_files.push_back(tdbname);
 
-        tdb_chrono.tic();
-        tdbimg.store(tdbname, VCL::TDB);
-        tdb_chrono.tac();
-       
-        time.push_back(tif_chrono.getLastTime_us() / 1000.0);
-        time.push_back(tdb_chrono.getLastTime_us() / 1000.0);
+    tdb_chrono.tic();
+    tdbimg.store(tdbname, VCL::TDB);
+    tdb_chrono.tac();
+   
+    time.push_back(tif_chrono.getLastTime_us() / 1000.0);
+    time.push_back(tdb_chrono.getLastTime_us() / 1000.0);
 
-        times.push_back(time);
-    }
+    times.push_back(time);
 }
 
 void read( std::vector<std::string> &tiff_files,
@@ -294,7 +289,7 @@ int main(int argc, char** argv )
     std::string output_dir = argv[4];
     std::string output_file = argv[5];
 
-    std::ofstream outfile (output_dir + output_file);
+    std::ofstream outfile(output_dir + output_file);
 
     std::vector<std::string> files;
 
@@ -306,19 +301,46 @@ int main(int argc, char** argv )
     std::vector<std::vector<float>> times;
     std::vector< std::vector<long long int>> sizes;
 
+    VCL::RemoteConnection remote("us-east-1", "AKIAIZZYHO3BGM3I4C2Q", "VrVoLsiUvCCKCw1HlqOcj0E5i8FUZXMlORj4FU9f");
+    remote.set_https_proxy("proxy.jf.intel.com", 911);
+    remote.start();
+
+    cv::Mat cv_img;
+
     for (int i = 0; i < 1; ++i)
     {
+        std::string frame_num = std::to_string(i);
+        int zeros = 4 - frame_num.length();
+        std::string frame = "F";
+        for (int x = 0; x < zeros; ++x)
+            frame += "0";
+        frame += frame_num;
+
         for (int j = 1; j < 11; ++j)
         {
-            std::string file = std::to_string(i) + "_" + std::to_string(j) + ".tif";
-            files.push_back(file);
+            std::string cam_num = std::to_string(j);
+            zeros = 4 - cam_num.length();
+
+            std::string camera = "";
+            for (int x = 0; x < zeros; ++x)
+                camera += "0";
+            camera += cam_num;
+
+            std::string fullpath = image_dir + frame + "/ForReconstruction/" + camera + ".tif";
+
+            std::cout << fullpath << std::endl;
+            files.push_back(frame + "_" + camera);
+
+            std::vector<char> data = remote.read(fullpath);
+            if ( !data.empty() )
+                cv_img = cv::imdecode(cv::Mat(data), cv::IMREAD_ANYCOLOR);
+
+            std::cout << "Writing\n";
+            system("sync && echo 3 > /proc/sys/vm/drop_caches");
+            write(output_dir, cv_img, tiff_files, tdb_files, heights, widths, times, compression, min_tiles);
         }
     }
 
-
-    std::cout << "Writing\n";
-    system("sync && echo 3 > /proc/sys/vm/drop_caches");
-    write(output_dir, image_dir, files, tiff_files, tdb_files, heights, widths, times, compression, min_tiles);
     std::cout << "Reading\n";
     system("sync && echo 3 > /proc/sys/vm/drop_caches");
     read(tiff_files, tdb_files, heights, widths, times);
@@ -329,7 +351,31 @@ int main(int argc, char** argv )
     system("sync && echo 3 > /proc/sys/vm/drop_caches");
     get_file_sizes(tiff_files, tdb_files, sizes);
 
-    
+    // for (int i = 0; i < 1; ++i)
+    // {
+    //     for (int j = 1; j < 11; ++j)
+    //     {
+    //         std::string file = std::to_string(i) + "_" + std::to_string(j) + ".tif";
+    //         files.push_back(file);
+    //     }
+    // }
+
+
+    // std::cout << "Writing\n";
+    // system("sync && echo 3 > /proc/sys/vm/drop_caches");
+    // write(output_dir, image_dir, files, tiff_files, tdb_files, heights, widths, times, compression, min_tiles);
+    // std::cout << "Reading\n";
+    // system("sync && echo 3 > /proc/sys/vm/drop_caches");
+    // read(tiff_files, tdb_files, heights, widths, times);
+    // std::cout << "Cropping\n";
+    // system("sync && echo 3 > /proc/sys/vm/drop_caches");
+    // crop(tiff_files, tdb_files, heights, widths, times);
+    // std::cout << "Getting File Sizes\n";
+    // system("sync && echo 3 > /proc/sys/vm/drop_caches");
+    // get_file_sizes(tiff_files, tdb_files, sizes);
+
+    std::cout << "Output to file\n";
+
     outfile << "# Image Name, Compression Type, Num Pixels, Min Tiles, ";
     outfile << "TIFF Size, TDB Size, TIFF Write, TDB Write, ";
     
