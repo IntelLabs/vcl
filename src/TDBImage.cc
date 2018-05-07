@@ -46,6 +46,11 @@ using namespace VCL;
     /*        CONSTRUCTORS      */
     /*  *********************** */
 TDBImage::TDBImage() : TDBObject()
+    #ifdef CHRONO_TIMING
+        ,tdb_convert("Convert to TDB")
+        ,tdb_write("Write TDB")
+        ,tdb_total("Convert and Write to TDB")
+    #endif
 {
     initialize_image_empty();
     initialize_image();
@@ -55,6 +60,11 @@ TDBImage::TDBImage() : TDBObject()
 }
 
 TDBImage::TDBImage(const std::string &image_id) : TDBObject(image_id)
+    #ifdef CHRONO_TIMING
+        ,tdb_convert("Convert to TDB")
+        ,tdb_write("Write TDB")
+        ,tdb_total("Convert and Write to TDB")
+    #endif
 {
     initialize_image_empty();
     initialize_image();
@@ -65,6 +75,11 @@ TDBImage::TDBImage(const std::string &image_id) : TDBObject(image_id)
 
 TDBImage::TDBImage(const std::string &image_id, RemoteConnection &connection) 
     : TDBObject(image_id, connection)
+    #ifdef CHRONO_TIMING
+        ,tdb_convert("Convert to TDB")
+        ,tdb_write("Write TDB")
+        ,tdb_total("Convert and Write to TDB")
+    #endif
 {
     initialize_image_empty();
     initialize_image();
@@ -76,6 +91,11 @@ TDBImage::TDBImage(const std::string &image_id, RemoteConnection &connection)
 
 template <class T>
 TDBImage::TDBImage(T* buffer, int size) : TDBObject()
+    #ifdef CHRONO_TIMING
+        ,tdb_convert("Convert to TDB")
+        ,tdb_write("Write TDB")
+        ,tdb_total("Convert and Write to TDB")
+    #endif
 {
     initialize_image_empty();
     initialize_image();
@@ -104,6 +124,11 @@ template TDBImage::TDBImage(double* buffer, int size);
 
 
 TDBImage::TDBImage(TDBImage &tdb) : TDBObject(tdb)
+    #ifdef CHRONO_TIMING
+        ,tdb_convert("Convert to TDB")
+        ,tdb_write("Write TDB")
+        ,tdb_total("Convert and Write to TDB")
+    #endif
 {
     if ( !tdb.has_data() ) {
         try {
@@ -187,7 +212,7 @@ TDBImage::~TDBImage()
     /*        GET FUNCTIONS     */
     /*  *********************** */
 
-int TDBImage::get_image_size()
+long TDBImage::get_image_size()
 {
     if (_img_size == 0 && _name == "")
         throw VCLException(TileDBNotFound, "No data in TileDB object yet");
@@ -255,7 +280,7 @@ cv::Mat TDBImage::get_cvmat()
 }
 
 template <class T>
-void TDBImage::get_buffer(T* buffer, int buffer_size)
+void TDBImage::get_buffer(T* buffer, long buffer_size)
 {
     if ( buffer_size != get_image_size() )
         throw VCLException(SizeMismatch, buffer_size + " is not equal to "
@@ -270,13 +295,13 @@ void TDBImage::get_buffer(T* buffer, int buffer_size)
         std::memcpy(buffer, _raw_data, buffer_size);
 }
 
-template void TDBImage::get_buffer(unsigned char* buffer, int buffer_size);
-template void TDBImage::get_buffer(char* buffer, int buffer_size);
-template void TDBImage::get_buffer(unsigned short* buffer, int buffer_size);
-template void TDBImage::get_buffer(short* buffer, int buffer_size);
-template void TDBImage::get_buffer(int* buffer, int buffer_size);
-template void TDBImage::get_buffer(float* buffer, int buffer_size);
-template void TDBImage::get_buffer(double* buffer, int buffer_size);
+template void TDBImage::get_buffer(unsigned char* buffer, long buffer_size);
+template void TDBImage::get_buffer(char* buffer, long buffer_size);
+template void TDBImage::get_buffer(unsigned short* buffer, long buffer_size);
+template void TDBImage::get_buffer(short* buffer, long buffer_size);
+template void TDBImage::get_buffer(int* buffer, long buffer_size);
+template void TDBImage::get_buffer(float* buffer, long buffer_size);
+template void TDBImage::get_buffer(double* buffer, long buffer_size);
 
 
     /*  *********************** */
@@ -305,6 +330,11 @@ void TDBImage::set_configuration(RemoteConnection &remote)
     /*  *********************** */
 void TDBImage::write(const std::string &image_id, bool metadata)
 {
+    #ifdef CHRONO_TIMING
+        CHRONO_TIC(tdb_convert);
+        CHRONO_TIC(tdb_total);
+    #endif
+
     if ( _raw_data == NULL )
         throw VCLException(ObjectEmpty, "No data to be written");
 
@@ -370,6 +400,11 @@ void TDBImage::write(const std::string &image_id, bool metadata)
 
     }
 
+    #ifdef CHRONO_TIMING
+        CHRONO_TAC(tdb_convert);
+        CHRONO_TIC(tdb_write);
+    #endif
+
     Error_Check(
         tiledb_query_submit(_ctx, write_array), 
         _ctx,
@@ -379,11 +414,24 @@ void TDBImage::write(const std::string &image_id, bool metadata)
         tiledb_query_free(_ctx, &write_array),
         _ctx,
         "Failed to free TileDB write request");
+
+    #ifdef CHRONO_TIMING
+        CHRONO_TAC(tdb_write);
+        CHRONO_TAC(tdb_total);
+        CHRONO_PRINT_LAST_MS(tdb_convert);
+        CHRONO_PRINT_LAST_MS(tdb_write);
+        CHRONO_PRINT_LAST_MS(tdb_total);
+    #endif
 }
 
 
 void TDBImage::write(const cv::Mat &cv_img, bool metadata)
 {
+    #ifdef CHRONO_TIMING
+        CHRONO_TIC(tdb_convert);
+        CHRONO_TIC(tdb_total);
+    #endif
+
     _tile_order = false;
 
     if ( _group == "" )
@@ -478,6 +526,11 @@ void TDBImage::write(const cv::Mat &cv_img, bool metadata)
         delete [] red_buffer;
     }
 
+    #ifdef CHRONO_TIMING
+        CHRONO_TAC(tdb_convert);
+        CHRONO_TIC(tdb_write);
+    #endif
+
     Error_Check(
         tiledb_query_submit(_ctx, write_array), 
         _ctx,
@@ -487,6 +540,14 @@ void TDBImage::write(const cv::Mat &cv_img, bool metadata)
         tiledb_query_free(_ctx, &write_array),
         _ctx,
         "Failed to free TileDB write request");
+
+    #ifdef CHRONO_TIMING
+        CHRONO_TAC(tdb_write);
+        CHRONO_TAC(tdb_total);
+        CHRONO_PRINT_LAST_MS(tdb_convert);
+        CHRONO_PRINT_LAST_MS(tdb_write);
+        CHRONO_PRINT_LAST_MS(tdb_total);
+    #endif
 }
 
 void TDBImage::read()
@@ -624,7 +685,7 @@ void TDBImage::get_tile_coordinates(int64_t* subarray, int current_row_tile, int
     subarray[3] = column_end;
 }
 
-void TDBImage::get_index_value(unsigned char* image_buffer, int index,
+void TDBImage::get_index_value(unsigned char* image_buffer, long index,
     float scale_r, float scale_c)
 {
     int column_left = floor(scale_c);
@@ -642,10 +703,10 @@ void TDBImage::get_index_value(unsigned char* image_buffer, int index,
     if ( row_bottom > _img_height - 1 )
         row_bottom = _img_height - 1;
 
-    int top_left_index = get_index(row_top, column_left) * _img_channels;
-    int top_right_index = get_index(row_top, column_right) * _img_channels;
-    int bottom_left_index = get_index(row_bottom, column_left) * _img_channels;
-    int bottom_right_index = get_index(row_bottom, column_right) * _img_channels;
+    long top_left_index = get_index(row_top, column_left) * _img_channels;
+    long top_right_index = get_index(row_top, column_right) * _img_channels;
+    long bottom_left_index = get_index(row_bottom, column_left) * _img_channels;
+    long bottom_right_index = get_index(row_bottom, column_right) * _img_channels;
 
     for ( int x = 0; x < _img_channels; ++x ) {
         unsigned char top_left = _raw_data[top_left_index + x];
@@ -663,22 +724,22 @@ void TDBImage::get_index_value(unsigned char* image_buffer, int index,
     }
 }
 
-int TDBImage::get_index(int row, int column) const
+long TDBImage::get_index(int row, int column) const
 {
-    int tile_width = get_tile_width(column, _img_width / _tile_dimension[1]);
-    int tile_height = get_tile_height(row, _img_height / _tile_dimension[0]);
+    long tile_width = get_tile_width(column, _img_width / _tile_dimension[1]);
+    long tile_height = get_tile_height(row, _img_height / _tile_dimension[0]);
 
-    int tile_size = tile_width * tile_height;
+    long tile_size = tile_width * tile_height;
 
-    int current_tile_row = row % int(_tile_dimension[0]);
-    int current_row_tile = row / int(_tile_dimension[0]);
-    int current_column_tile = column / int(_tile_dimension[1]);
-    int current_tile_column = column % int(_tile_dimension[1]);
+    long current_tile_row = row % long(_tile_dimension[0]);
+    long current_row_tile = row / long(_tile_dimension[0]);
+    long current_column_tile = column / long(_tile_dimension[1]);
+    long current_tile_column = column % long(_tile_dimension[1]);
 
-    int full_row_tile = _img_width * _tile_dimension[0];
+    long full_row_tile = _img_width * _tile_dimension[0];
 
-    int row_index = current_row_tile * full_row_tile + current_tile_row * tile_width;
-    int column_index = current_column_tile * tile_size + current_tile_column;
+    long row_index = current_row_tile * full_row_tile + current_tile_row * tile_width;
+    long column_index = current_column_tile * tile_size + current_tile_column;
 
     return row_index + column_index;
 }
@@ -942,7 +1003,7 @@ void TDBImage::reorder_buffer(T* buffer)
     int nRows = _array_dimension[0] / float(_tile_dimension[0]);
     int nCols = _array_dimension[1] / float(_tile_dimension[1]);
 
-    int buffer_index = 0;
+    long buffer_index = 0;
     int full_row_tile = _img_width * _tile_dimension[0] * _img_channels;
 
     if ( _array_dimension[1] > _img_width ) {
@@ -961,7 +1022,7 @@ void TDBImage::reorder_buffer(T* buffer)
             int64_t subarray[4];
             get_tile_coordinates(subarray, i, j);
 
-            int start = i * full_row_tile + j * _tile_dimension[1] * _img_channels;
+            long start = i * full_row_tile + j * _tile_dimension[1] * _img_channels;
             buffer_index = reorder_tile(buffer, subarray, buffer_index, start);
         }
     }
@@ -970,14 +1031,14 @@ void TDBImage::reorder_buffer(T* buffer)
 template void TDBImage::reorder_buffer(unsigned char* buffer);
 
 template <class T>
-int TDBImage::reorder_tile(T* buffer, int64_t* subarray, int buffer_index,
-    int start_index)
+long TDBImage::reorder_tile(T* buffer, int64_t* subarray, long buffer_index,
+    long start_index)
 {
-    int current_tile_height = subarray[1] - subarray[0];
-    int current_tile_width = subarray[3] - subarray[2];
+    long current_tile_height = subarray[1] - subarray[0];
+    long current_tile_width = subarray[3] - subarray[2];
 
-    int data_index;
-    int x, y;
+    long data_index;
+    long x, y;
 
     for ( x = 0; x < current_tile_height; ++x ) {
         data_index = start_index + x * _img_width * _img_channels;
@@ -990,8 +1051,8 @@ int TDBImage::reorder_tile(T* buffer, int64_t* subarray, int buffer_index,
     return buffer_index;
 }
 
-template int TDBImage::reorder_tile(unsigned char* buffer, int64_t* subarray,
-        int buffer_index, int start_index);
+template long TDBImage::reorder_tile(unsigned char* buffer, int64_t* subarray,
+        long buffer_index, long start_index);
 
 
     /*  *********************** */

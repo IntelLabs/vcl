@@ -181,13 +181,15 @@ std::vector<std::string> RemoteConnection::split_path(const std::string &path)
     std::vector<std::string> divided_path;
 
     std::regex split(
-        "^(([a-z0-9]+)(://))(([a-zA-Z0-9_]+)(/))((([a-zA-Z0-9_]+)(/))*([a-zA-Z0-9_]+)(\\.[a-zA-Z0-9]+)*)");
+        "^(([a-z0-9]+)(://))(([a-zA-Z0-9_-]+)(/))((([a-zA-Z0-9_-]+)(/))*([a-zA-Z0-9_-]+)(\\.[a-zA-Z0-9_-]+)*)");
     std::smatch match;
     if ( std::regex_search(path, match, split) ) {
         for ( auto element : match ) {
             divided_path.push_back(element);
         }
     }
+    else
+        throw VCLException(ObjectNotFound, path + " is formatted incorrectly");
 
     return divided_path;
 }

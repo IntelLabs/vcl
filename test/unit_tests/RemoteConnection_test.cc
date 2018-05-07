@@ -57,12 +57,18 @@ class RemoteConnectionTest : public ::testing::Test {
         cv_img_ = cv::imread(img_, cv::IMREAD_ANYCOLOR);
         rect_ = VCL::Rectangle(100, 100, 100, 100);
     
-        _remotepath = "s3://<path/to/your/bucket>";
-        connection_ = new VCL::RemoteConnection();
-        connection_->set_s3_configuration("us-west-2");
-        connection_->set_s3_proxy(<PROXY_HOST>, <PROXY_PORT>);
-        connection_->start();
-        connection_->set_s3_credentials(<ACCESS_ID>, <SECRET_KEY>);
+        // _remotepath = "s3://<path/to/your/bucket>";
+        // connection_ = new VCL::RemoteConnection();
+        // connection_->set_s3_configuration("us-west-2");
+        // connection_->set_s3_proxy(<PROXY_HOST>, <PROXY_PORT>);
+        // connection_->start();
+        // connection_->set_s3_credentials(<ACCESS_ID>, <SECRET_KEY>);
+        // _remotepath = "s3://netowrkingteam-test/FD19_SAMPLE_SET/ImageEnhancement/F0128/ForReconstruction/38.tif";
+        // connection_ = new VCL::RemoteConnection();
+        // connection_->set_s3_configuration("us-east-1");
+        // connection_->set_https_proxy("proxy.jf.intel.com", 911);
+        // connection_->start();
+        // connection_->set_s3_credentials("AKIAIZZYHO3BGM3I4C2Q", "VrVoLsiUvCCKCw1HlqOcj0E5i8FUZXMlORj4FU9f");
     }
 
     virtual void TearDown() {
@@ -140,126 +146,141 @@ class RemoteConnectionTest : public ::testing::Test {
     VCL::RemoteConnection *connection_;
 };
 
+// TEST_F(RemoteConnectionTest, ReadS3)
+// {
+//     try {
+//     VCL::Image img(_remotepath, *connection_);
 
-TEST_F(RemoteConnectionTest, TDBImageWriteS3)
-{
-    VCL::TDBImage tdb(_remotepath + "tdb/test_image.tdb", *connection_);
+//     cv::Mat mat = img.get_cvmat();
 
-    tdb.write(cv_img_);
-}
+//     VCL::Image tdb(mat);
 
-TEST_F(RemoteConnectionTest, TDBImageReadS3)
-{
-    std::string fullpath = _remotepath + "tdb/test_image.tdb";
+//     tdb.store("freedtest", VCL::TDB);
+//     }
+//     catch(VCL::Exception &e) {
+//         print_exception(e);
+//     }
+// }
 
-    VCL::TDBImage tdb(fullpath, *connection_);
+// TEST_F(RemoteConnectionTest, TDBImageWriteS3)
+// {
+//     VCL::TDBImage tdb(_remotepath + "tdb/test_image.tdb", *connection_);
 
-    int size = tdb.get_image_size();
+//     tdb.write(cv_img_);
+// }
 
-    unsigned char* buf = new unsigned char[size];
+// TEST_F(RemoteConnectionTest, TDBImageReadS3)
+// {
+//     std::string fullpath = _remotepath + "tdb/test_image.tdb";
 
-    tdb.get_buffer(buf, size);
+//     VCL::TDBImage tdb(fullpath, *connection_);
 
-    compare_mat_buffer(cv_img_, buf);
+//     int size = tdb.get_image_size();
 
-    delete [] buf;
-}
+//     unsigned char* buf = new unsigned char[size];
 
-TEST_F(RemoteConnectionTest, TDBImageRemoveS3)
-{
-    VCL::TDBImage tdb(_remotepath + "tdb/test_image.tdb", *connection_);
+//     tdb.get_buffer(buf, size);
 
-    tdb.delete_image();
+//     compare_mat_buffer(cv_img_, buf);
 
-    ASSERT_FALSE(tdb.has_data());
-    ASSERT_THROW(tdb.get_image_size(), VCL::Exception);
-}
+//     delete [] buf;
+// }
 
-TEST_F(RemoteConnectionTest, ImageDataRemoteWritePNG)
-{
-    VCL::ImageData img_data(cv_img_);
+// TEST_F(RemoteConnectionTest, TDBImageRemoveS3)
+// {
+//     VCL::TDBImage tdb(_remotepath + "tdb/test_image.tdb", *connection_);
 
-    img_data.set_connection(*connection_);
+//     tdb.delete_image();
 
-    std::string path = _remotepath + "pngs/test_image.png";
+//     ASSERT_FALSE(tdb.has_data());
+//     ASSERT_THROW(tdb.get_image_size(), VCL::Exception);
+// }
 
-    img_data.write(path, VCL::PNG);
-    img_data.perform_operations();
-}
+// TEST_F(RemoteConnectionTest, ImageDataRemoteWritePNG)
+// {
+//     VCL::ImageData img_data(cv_img_);
 
-TEST_F(RemoteConnectionTest, ImageDataRemoteReadPNG)
-{
-    VCL::ImageData img_data;
+//     img_data.set_connection(*connection_);
 
-    img_data.set_connection(*connection_);
+//     std::string path = _remotepath + "pngs/test_image.png";
 
-    std::string path = _remotepath + "pngs/test_image.jpg";
+//     img_data.write(path, VCL::PNG);
+//     img_data.perform_operations();
+// }
 
-    img_data.read(_remote_path);
+// TEST_F(RemoteConnectionTest, ImageDataRemoteReadPNG)
+// {
+//     VCL::ImageData img_data;
 
-    cv::Mat data = img_data.get_cvmat();
+//     img_data.set_connection(*connection_);
 
-    compare_mat_mat(data, cv_img_);
-}
+//     std::string path = _remotepath + "pngs/test_image.jpg";
 
-TEST_F(RemoteConnectionTest, ImageDataRemoteWriteTDB)
-{
-    VCL::ImageData img_data(cv_img_);
+//     img_data.read(_remote_path);
 
-    img_data.set_connection(*connection_);
+//     cv::Mat data = img_data.get_cvmat();
 
-    img_data.write(_remotepath + "tdb/test_image", VCL::TDB);
-    img_data.perform_operations();
-}
+//     compare_mat_mat(data, cv_img_);
+// }
 
-TEST_F(RemoteConnectionTest, ImageDataRemoteReadTDB)
-{
-    VCL::ImageData img_data(_remotepath + "tdb/test_image.tdb", *connection_);
+// TEST_F(RemoteConnectionTest, ImageDataRemoteWriteTDB)
+// {
+//     VCL::ImageData img_data(cv_img_);
 
-    img_data.read(_remotepath + "tdb/test_image.tdb");
+//     img_data.set_connection(*connection_);
+
+//     img_data.write(_remotepath + "tdb/test_image", VCL::TDB);
+//     img_data.perform_operations();
+// }
+
+// TEST_F(RemoteConnectionTest, ImageDataRemoteReadTDB)
+// {
+//     VCL::ImageData img_data(_remotepath + "tdb/test_image.tdb", *connection_);
+
+//     img_data.read(_remotepath + "tdb/test_image.tdb");
         
-    cv::Mat data = img_data.get_cvmat();
-    compare_mat_mat(data, cv_img_);
-}
+//     cv::Mat data = img_data.get_cvmat();
+//     compare_mat_mat(data, cv_img_);
+// }
 
-TEST_F(RemoteConnectionTest, ImageRemoteWritePNG)
-{
-    VCL::Image img(cv_img_);
+// TEST_F(RemoteConnectionTest, ImageRemoteWritePNG)
+// {
+//     VCL::Image img(cv_img_);
 
-    img.set_connection(*connection_);
+//     img.set_connection(*connection_);
 
-    std::string path = _remotepath + "pngs/test_image.png";
+//     std::string path = _remotepath + "pngs/test_image.png";
 
-    img.store(path, VCL::PNG);
-}
+//     img.store(path, VCL::PNG);
+// }
 
-TEST_F(RemoteConnectionTest, ImageRemoteReadJPG)
-{
-    VCL::Image img(_remotepath + "large1.jpg", *connection_);
+// TEST_F(RemoteConnectionTest, ImageRemoteReadJPG)
+// {
+//     VCL::Image img(_remotepath + "large1.jpg", *connection_);
 
-    cv::Mat mat = img.get_cvmat();
+//     cv::Mat mat = img.get_cvmat();
 
-    compare_mat_mat(mat, cv_img_);
-}
+//     compare_mat_mat(mat, cv_img_);
+// }
 
-TEST_F(RemoteConnectionTest, ImageRemoteReadTDB)
-{
-    VCL::Image img(_remotepath + "tdb/test_image.tdb", *connection_);
+// TEST_F(RemoteConnectionTest, ImageRemoteReadTDB)
+// {
+//     VCL::Image img(_remotepath + "tdb/test_image.tdb", *connection_);
 
-    cv::Mat mat = img.get_cvmat();
-    compare_mat_mat(mat, cv_img_);   
-}
+//     cv::Mat mat = img.get_cvmat();
+//     compare_mat_mat(mat, cv_img_);   
+// }
 
-TEST_F(RemoteConnectionTest, ImageRemoteRemoveTDB)
-{
-    VCL::Image img(_remotepath + "tdb/test_image.tdb", *connection_);
-    img.delete_image();
-}
+// TEST_F(RemoteConnectionTest, ImageRemoteRemoveTDB)
+// {
+//     VCL::Image img(_remotepath + "tdb/test_image.tdb", *connection_);
+//     img.delete_image();
+// }
 
-TEST_F(RemoteConnectionTest, ImageRemoteRemovePNG)
-{
-    VCL::Image img(_remotepath + "pngs/test_image.png", *connection_);
-    img.delete_image();
-}
+// TEST_F(RemoteConnectionTest, ImageRemoteRemovePNG)
+// {
+//     VCL::Image img(_remotepath + "pngs/test_image.png", *connection_);
+//     img.delete_image();
+// }
 
 #endif

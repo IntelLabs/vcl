@@ -38,6 +38,9 @@
 #include "Exception.h"
 #include "TDBObject.h"
 
+#ifdef CHRONO_TIMING
+    #include "chrono/Chrono.h"
+#endif 
 
 namespace VCL {
 
@@ -55,7 +58,7 @@ namespace VCL {
     private:
         // Image dimensions
         uint64_t _img_height, _img_width, _img_channels;
-        uint64_t _img_size;
+        long _img_size;
 
         // threshold value
         int _threshold;
@@ -64,6 +67,12 @@ namespace VCL {
 
         // raw data of the image
         unsigned char* _raw_data;
+
+        #ifdef CHRONO_TIMING
+            ChronoCpu tdb_convert;
+            ChronoCpu tdb_write;
+            ChronoCpu tdb_total;
+        #endif
 
     public:
     /*  *********************** */
@@ -122,7 +131,7 @@ namespace VCL {
          *
          *  @return The size of the image (height x width x channels)
          */
-        int get_image_size();
+        long get_image_size();
 
         /**
          *  Gets the height of the image (number of rows)
@@ -161,7 +170,7 @@ namespace VCL {
          *     data when the function ends
          *  @param  buffer_size  The length of buffer (not in bytes)
          */
-        template <class T> void get_buffer(T* buffer, int buffer_size);
+        template <class T> void get_buffer(T* buffer, long buffer_size);
 
     /*  *********************** */
     /*        SET FUNCTIONS     */
@@ -283,7 +292,7 @@ namespace VCL {
          *  @param  scale_c  The column to be used to calculate the index into
          *    the raw data
          */
-        void get_index_value(unsigned char* image_buffer, int index,
+        void get_index_value(unsigned char* image_buffer, long index,
             float scale_r, float scale_c);
 
        /**
@@ -294,7 +303,7 @@ namespace VCL {
          *  @param  column  The column index
          *  @return  The index in the raw data where [row, column] is
          */
-        int get_index(int row, int column) const;
+        long get_index(int row, int column) const;
 
        /**
          *  Used for resizing, calculates the height of the current tile (used
@@ -404,12 +413,12 @@ namespace VCL {
          *
          *  @param  buffer  The buffer to store the image order data in
          *  @param  subarray  The coordinates of the current tile
-         *  @param  tile  The current tile number (in row order)
+         *  @param  buffer_index  The current index into the image order buffer
          *  @param  start_index  The current index into the raw data buffer
          *  @return  The current index into the image order buffer
          */
-        template <class T> int reorder_tile(T* buffer, int64_t* subarray,
-            int tile, int start_index);
+        template <class T> long reorder_tile(T* buffer, int64_t* subarray,
+            long buffer_index, long start_index);
 
     /*  *********************** */
     /*      MATH FUNCTIONS      */
