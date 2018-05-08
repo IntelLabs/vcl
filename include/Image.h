@@ -95,7 +95,7 @@ namespace VCL {
          *    defaults to IMREAD_COLOR
          *  @see OpenCV documentation on imdecode for more information on flags
          */
-        Image(void* buffer, int size, int flags=cv::IMREAD_ANYCOLOR);
+        Image(void* buffer, long size, int flags=cv::IMREAD_ANYCOLOR);
 
         /**
          *  Creates an Image object from a buffer of raw pixel data
@@ -155,7 +155,7 @@ namespace VCL {
          *
          *  @return The size of the image in pixels
          */
-        int get_raw_data_size() const;
+        long get_raw_data_size() const;
 
         /**
          *  Gets the OpenCV type of the image
@@ -190,7 +190,7 @@ namespace VCL {
          *  @param  buffer_size  The pixel size of the image (length of
          *     the buffer, not bytes)
          */
-        void get_raw_data(void* buffer, int buffer_size) const;
+        void get_raw_data(void* buffer, long buffer_size) const;
 
         /**
          *  Gets encoded image data in a buffer

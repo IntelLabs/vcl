@@ -146,7 +146,7 @@ TEST_F(TDBImageTest, BufferConstructor)
 {
     unsigned char* buffer = cv_img_.data;
 
-    int size = cv_img_.rows * cv_img_.cols * cv_img_.channels();
+    long size = long(cv_img_.rows) * long(cv_img_.cols) * cv_img_.channels();
 
     VCL::TDBImage tdb(buffer, size);
 
@@ -158,6 +158,8 @@ TEST_F(TDBImageTest, BufferConstructor)
     tdb.get_buffer(buf, size);
 
     compare_mat_buffer(cv_img_, buf);
+
+    delete [] buf;
 }
 
 TEST_F(TDBImageTest, CopyConstructorNoData)
@@ -195,7 +197,7 @@ TEST_F(TDBImageTest, CopyConstructorData)
     EXPECT_EQ(tdb.get_image_size(), imgcopy.get_image_size());
     ASSERT_TRUE(imgcopy.has_data());
 
-    int size = tdb.get_image_size();
+    long size = tdb.get_image_size();
     unsigned char* buffer1 = new unsigned char[size];
     unsigned char* buffer2 = new unsigned char[size];
 
@@ -204,8 +206,8 @@ TEST_F(TDBImageTest, CopyConstructorData)
 
     compare_buffer_buffer(buffer1, buffer2, size);
 
-    delete buffer2;
-    delete buffer1;
+    delete [] buffer2;
+    delete [] buffer1;
 }
 
 TEST_F(TDBImageTest, CopyConstructor)
@@ -270,7 +272,7 @@ TEST_F(TDBImageTest, OperatorEqualsData)
     EXPECT_EQ(tdb.get_image_size(), imgcopy.get_image_size());
     ASSERT_TRUE(imgcopy.has_data());
 
-    int size = tdb.get_image_size();
+    long size = tdb.get_image_size();
     unsigned char* buffer1 = new unsigned char[size];
     unsigned char* buffer2 = new unsigned char[size];
 
@@ -279,8 +281,8 @@ TEST_F(TDBImageTest, OperatorEqualsData)
 
     compare_buffer_buffer(buffer1, buffer2, size);
 
-    delete buffer2;
-    delete buffer1;
+    delete [] buffer2;
+    delete [] buffer1;
 }
 
 TEST_F(TDBImageTest, OperatorEquals)
@@ -297,7 +299,7 @@ TEST_F(TDBImageTest, OperatorEquals)
     EXPECT_EQ(tdb.get_image_size(), imgcopy.get_image_size());
     ASSERT_TRUE(imgcopy.has_data());
 
-    int size = tdb.get_image_size();
+    long size = tdb.get_image_size();
     unsigned char* buffer1 = new unsigned char[size];
     unsigned char* buffer2 = new unsigned char[size];
 
@@ -306,8 +308,8 @@ TEST_F(TDBImageTest, OperatorEquals)
 
     compare_buffer_buffer(buffer1, buffer2, size);
 
-    delete buffer1;
-    delete buffer2;
+    delete [] buffer1;
+    delete [] buffer2;
 }
 
 TEST_F(TDBImageTest, GetImageSize)
@@ -315,9 +317,9 @@ TEST_F(TDBImageTest, GetImageSize)
     VCL::TDBImage tdb(tdb_img_);
     tdb.write(cv_img_);
 
-    int h = tdb.get_image_height();
-    int w = tdb.get_image_width();
-    int c = tdb.get_image_channels();
+    long h = tdb.get_image_height();
+    long w = tdb.get_image_width();
+    long c = tdb.get_image_channels();
 
     EXPECT_EQ(h*w*c, tdb.get_image_size());
 }
@@ -334,7 +336,7 @@ TEST_F(TDBImageTest, GetBuffer)
 {
     VCL::TDBImage tdb(tdb_img_);
 
-    int size = tdb.get_image_size();
+    long size = tdb.get_image_size();
 
     unsigned char* buf = new unsigned char[size];
 

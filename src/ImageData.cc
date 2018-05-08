@@ -34,8 +34,7 @@
 #include <iostream>
 
 #include "ImageData.h"
-#include "TDBImage.h"
-#include "VCL.h"
+
 
 using namespace VCL;
 
@@ -106,6 +105,7 @@ void ImageData::Write::operator()(ImageData *img)
 
         if ( !cv_img.empty() )
             cv::imwrite(_fullpath, cv_img);
+
         else
             throw VCLException(ObjectEmpty, _fullpath + " could not be written \
                 object is empty");
@@ -359,7 +359,7 @@ cv::Size ImageData::get_dimensions()
     return cv::Size(_width, _height);
 }
 
-int ImageData::get_size()
+long ImageData::get_size()
 {
     if ( _height == 0 ) {
         if ( _format == VCL::TDB ) {
@@ -375,10 +375,10 @@ int ImageData::get_size()
         }
     }
 
-    return int(_height) * int(_width) * _channels;
+    return long(_height) * long(_width) * _channels;
 }
 
-void ImageData::get_buffer(void* buffer, int buffer_size)
+void ImageData::get_buffer(void* buffer, long buffer_size)
 {
     perform_operations();
 
@@ -557,7 +557,7 @@ void ImageData::set_dimensions(cv::Size dimensions)
     }
 }
 
-void ImageData::set_data_from_raw(void* buffer, int size)
+void ImageData::set_data_from_raw(void* buffer, long size)
 {
     switch ( _cv_type % 8 ) {
         case 0:
