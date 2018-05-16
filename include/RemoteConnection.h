@@ -135,6 +135,13 @@ namespace VCL {
         void remove_object(const std::string &path);
 
         /**
+         *  Get object metadata from a remote location
+         *
+         *  @param path  A string containing the path to the object
+         */
+        long long get_object_size(const std::string &path);        
+
+        /**
          *  Split a path into parts
          *
          *  @param path  A string containing the path to the remote location
@@ -225,6 +232,15 @@ namespace VCL {
              *     starting with s3://
              */
             void remove_s3_object(const std::string &path);
+
+            /**
+             *  Get object metadata from S3
+             *
+             *  @param path  A string containing the path to the object, 
+             *     starting with s3://
+             */
+            long long get_s3_object_size(const std::string &path);
+
         #endif
 
 

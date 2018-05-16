@@ -40,6 +40,8 @@
     #include <aws/s3/model/PutObjectRequest.h>
     #include <aws/s3/model/GetObjectRequest.h>
     #include <aws/s3/model/DeleteObjectRequest.h>
+    #include <aws/s3/model/ListObjectsRequest.h>
+    #include <aws/s3/model/Object.h>
 #endif 
 
 #include "RemoteConnection.h"
@@ -165,7 +167,7 @@ void RemoteConnection::remove_object(const std::string &path)
 {
     if ( _remote ) {
         #ifdef S3_SUPPORT
-            return remove_s3_object(path);
+            remove_s3_object(path);
         #else
             throw VCLException(UnsupportedSystem, 
                 "The system specified by the path is not supported currently");
@@ -173,6 +175,20 @@ void RemoteConnection::remove_object(const std::string &path)
     }
     else
         throw VCLException(SystemNotFound, "The RemoteConnection has not been started");       
+}
+
+long long RemoteConnection::get_object_size(const std::string &path)
+{
+    if ( _remote ) {
+        #ifdef S3_SUPPORT
+            return get_s3_object_size(path);
+        #else
+            throw VCLException(UnsupportedSystem, 
+                "The system specified by the path is not supported currently");
+        #endif
+    }
+    else
+        throw VCLException(SystemNotFound, "The RemoteConnection has not been started");   
 }
 
 
@@ -297,4 +313,32 @@ void RemoteConnection::remove_s3_object(const std::string &path)
     }
 }
 
+long long RemoteConnection::get_s3_object_size(const std::string &path)
+{
+    std::vector<std::string> divided_path = split_path(path);
+    Aws::String bucket_name = Aws::Utils::StringUtils::to_string(divided_path[5]);
+    Aws::String key_name = Aws::Utils::StringUtils::to_string(divided_path[7]);
+
+    long long size = 0;
+
+    Aws::S3::Model::ListObjectsRequest objects_request;
+    objects_request.WithBucket(bucket_name).WithPrefix(key_name);
+
+    auto list_objects_outcome = _client->ListObjects(objects_request);
+
+    if (list_objects_outcome.IsSuccess())
+    {
+        Aws::Vector<Aws::S3::Model::Object> object_list =
+            list_objects_outcome.GetResult().GetContents();
+
+        for (auto const &s3_object : object_list)
+            size += s3_object.GetSize();
+        return size;
+    }
+    else
+    {
+        std::string err = list_objects_outcome.GetError().GetMessage().c_str();
+        throw VCLException(OperationFailed, err);  
+    }
+}
 #endif

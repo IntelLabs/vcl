@@ -85,8 +85,10 @@ void ImageData::Read::operator()(ImageData *img)
             img->copy_cv(cv::imread(_fullpath, cv::IMREAD_ANYCOLOR));
         else {
             std::vector<char> data = img->_remote->read(_fullpath);
-            if ( !data.empty() )
-                img->copy_cv(cv::imdecode(cv::Mat(data), cv::IMREAD_ANYCOLOR));
+            if ( !data.empty() ){
+                cv::Mat cvimg = cv::imdecode(cv::Mat(data), cv::IMREAD_ANYCOLOR);
+                img->copy_cv(cvimg);
+            }
             else
                 throw VCLException(ObjectEmpty,  _fullpath + 
                     " could not be read from RemoteConnection");

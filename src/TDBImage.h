@@ -38,10 +38,6 @@
 #include "Exception.h"
 #include "TDBObject.h"
 
-#ifdef CHRONO_TIMING
-    #include "chrono/Chrono.h"
-#endif 
-
 namespace VCL {
 
     /**
@@ -67,12 +63,6 @@ namespace VCL {
 
         // raw data of the image
         unsigned char* _raw_data;
-
-        #ifdef CHRONO_TIMING
-            ChronoCpu tdb_convert;
-            ChronoCpu tdb_write;
-            ChronoCpu tdb_total;
-        #endif
 
     public:
     /*  *********************** */

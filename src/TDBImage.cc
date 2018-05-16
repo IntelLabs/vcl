@@ -46,11 +46,6 @@ using namespace VCL;
     /*        CONSTRUCTORS      */
     /*  *********************** */
 TDBImage::TDBImage() : TDBObject()
-    #ifdef CHRONO_TIMING
-        ,tdb_convert("Convert to TDB")
-        ,tdb_write("Write TDB")
-        ,tdb_total("Convert and Write to TDB")
-    #endif
 {
     initialize_image_empty();
     initialize_image();
@@ -60,11 +55,6 @@ TDBImage::TDBImage() : TDBObject()
 }
 
 TDBImage::TDBImage(const std::string &image_id) : TDBObject(image_id)
-    #ifdef CHRONO_TIMING
-        ,tdb_convert("Convert to TDB")
-        ,tdb_write("Write TDB")
-        ,tdb_total("Convert and Write to TDB")
-    #endif
 {
     initialize_image_empty();
     initialize_image();
@@ -75,11 +65,6 @@ TDBImage::TDBImage(const std::string &image_id) : TDBObject(image_id)
 
 TDBImage::TDBImage(const std::string &image_id, RemoteConnection &connection) 
     : TDBObject(image_id, connection)
-    #ifdef CHRONO_TIMING
-        ,tdb_convert("Convert to TDB")
-        ,tdb_write("Write TDB")
-        ,tdb_total("Convert and Write to TDB")
-    #endif
 {
     initialize_image_empty();
     initialize_image();
@@ -91,11 +76,6 @@ TDBImage::TDBImage(const std::string &image_id, RemoteConnection &connection)
 
 template <class T>
 TDBImage::TDBImage(T* buffer, int size) : TDBObject()
-    #ifdef CHRONO_TIMING
-        ,tdb_convert("Convert to TDB")
-        ,tdb_write("Write TDB")
-        ,tdb_total("Convert and Write to TDB")
-    #endif
 {
     initialize_image_empty();
     initialize_image();
@@ -124,11 +104,6 @@ template TDBImage::TDBImage(double* buffer, int size);
 
 
 TDBImage::TDBImage(TDBImage &tdb) : TDBObject(tdb)
-    #ifdef CHRONO_TIMING
-        ,tdb_convert("Convert to TDB")
-        ,tdb_write("Write TDB")
-        ,tdb_total("Convert and Write to TDB")
-    #endif
 {
     if ( !tdb.has_data() ) {
         try {
@@ -330,11 +305,6 @@ void TDBImage::set_configuration(RemoteConnection &remote)
     /*  *********************** */
 void TDBImage::write(const std::string &image_id, bool metadata)
 {
-    #ifdef CHRONO_TIMING
-        CHRONO_TIC(tdb_convert);
-        CHRONO_TIC(tdb_total);
-    #endif
-
     if ( _raw_data == NULL )
         throw VCLException(ObjectEmpty, "No data to be written");
 
@@ -400,38 +370,23 @@ void TDBImage::write(const std::string &image_id, bool metadata)
 
     }
 
-    #ifdef CHRONO_TIMING
-        CHRONO_TAC(tdb_convert);
-        CHRONO_TIC(tdb_write);
-    #endif
-
-    Error_Check(
-        tiledb_query_submit(_ctx, write_array), 
-        _ctx,
-        "TileDB array write failed");
+    #pragma omp parallel 
+    {
+        Error_Check(
+            tiledb_query_submit(_ctx, write_array), 
+            _ctx,
+            "TileDB array write failed");
+    }
 
     Error_Check(
         tiledb_query_free(_ctx, &write_array),
         _ctx,
         "Failed to free TileDB write request");
-
-    #ifdef CHRONO_TIMING
-        CHRONO_TAC(tdb_write);
-        CHRONO_TAC(tdb_total);
-        CHRONO_PRINT_LAST_MS(tdb_convert);
-        CHRONO_PRINT_LAST_MS(tdb_write);
-        CHRONO_PRINT_LAST_MS(tdb_total);
-    #endif
 }
 
 
 void TDBImage::write(const cv::Mat &cv_img, bool metadata)
 {
-    #ifdef CHRONO_TIMING
-        CHRONO_TIC(tdb_convert);
-        CHRONO_TIC(tdb_total);
-    #endif
-
     _tile_order = false;
 
     if ( _group == "" )
@@ -526,28 +481,18 @@ void TDBImage::write(const cv::Mat &cv_img, bool metadata)
         delete [] red_buffer;
     }
 
-    #ifdef CHRONO_TIMING
-        CHRONO_TAC(tdb_convert);
-        CHRONO_TIC(tdb_write);
-    #endif
-
+    // #pragma omp parallel
+    // {
     Error_Check(
         tiledb_query_submit(_ctx, write_array), 
         _ctx,
         "TileDB array write failed");
+    // }
 
     Error_Check(
         tiledb_query_free(_ctx, &write_array),
         _ctx,
         "Failed to free TileDB write request");
-
-    #ifdef CHRONO_TIMING
-        CHRONO_TAC(tdb_write);
-        CHRONO_TAC(tdb_total);
-        CHRONO_PRINT_LAST_MS(tdb_convert);
-        CHRONO_PRINT_LAST_MS(tdb_write);
-        CHRONO_PRINT_LAST_MS(tdb_total);
-    #endif
 }
 
 void TDBImage::read()
