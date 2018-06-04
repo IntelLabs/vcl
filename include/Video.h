@@ -47,7 +47,7 @@ namespace VCL {
     class VideoData; // To hide the implementation details
 
     /* VideoFormat*/
-    enum VideoFormat { NONE1, MPEG1,MPEG2, VC1, Uncompressed_YUV420, };
+    enum VideoFormat { NONE1, MP4 , AVI, MPEG  };
 
     typedef cv::Rect Rectangle; // spcifiy an ROI inside a video
 
@@ -55,24 +55,9 @@ namespace VCL {
 
     private:
 
-    VideoData *_video; // a video object
+    VideoData *_video; // Pointer to a VideoData object
 
-    std::string file_name;
-    std::string path;
 
-    int start_frame = 0;
-    int end_frame = INT_MAX;
-    int scale_num = 8;
-    const float scale_stride = sqrt(3);
-
-    int frame_width;
-    int frame_height;
-
-    float fps;
-    float frame_count;
-
-    cv::VideoCapture _inputVideo;
-    cv::VideoWriter _outputVideo;
 
 
     public:
@@ -86,20 +71,15 @@ namespace VCL {
          *  @param video_id  The full path to the video
          */
        // Video(const std::string &video_id);
-        Video (const std::string &fileName); // fileName is the full path to the video
+        Video(const std::string &fileName); // fileName is the full path to the video
 
-        Video( const cv::VideoCapture &cv_video ) ; // a cv_video an OpenCV that contains the actual video
 
-        Video (void* buffer, int size ); // creates a video from an encoded buffer
+        Video(void* buffer, int size); // creates a video from an encoded buffer
 
 
         void operator=(const Video &video);
 
-        int processVideo( const std::string &video_id );
 
-        void read_video();
-
-        std::string  get_video(void);
 
         ~Video();
 
@@ -113,12 +93,12 @@ namespace VCL {
 
         VideoFormat get_video_format() const;
 
-        Video get_area(const Rectangle &roi) const;
+        int get_raw_dat_size() const;
+
+        void get_raw_data(void* buffer, int buffer_size) const;
 
         std::string create_unique(const std::string &path,
                 VideoFormat format);
-
-
         /**
          *  Sets the size of the image in pixels (width, height) using
          *    an OpenCV Size object
@@ -134,7 +114,7 @@ namespace VCL {
          *  @param The OpenCV type (CV_8UC3, etc)
          *  @see OpenCV documentation on types for more details
          */
-        void set_image_type(int cv_type);
+        void set_video_type(int cv_type);
 
         void set_minimum_dimension(int dimension);
 

@@ -39,6 +39,9 @@
 #include <memory>
 
 #include "Video.h"
+// #include "Image.h"
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
 
 namespace VCL {
 
@@ -271,7 +274,24 @@ namespace VCL {
     /*        VARIABLES         */
     /*  *********************** */
         // Video height and width
-        uint _height, _width;
+
+    std::string _file_name;
+    std::string _path;
+
+    int _start_frame = 0 ;
+    int _end_frame = INT_MAX;
+    int _scale_num = 8 ;
+    const float scale_stride = sqrt(3) ;
+
+    int _frame_width;
+    int _frame_height;
+
+    float _fps;
+    float _frame_count;
+    cv::Size _size;
+    int _length;
+    uint _height, _width;
+    int _video_time;
 
         // Type of Video (OpenCV definition) and number of channels
         int _cv_type, _channels;
@@ -281,13 +301,25 @@ namespace VCL {
 
         // Video format and compression type
         VideoFormat _format;
-        CompressionType _compress;
+        int _format1;
+
 
         // Full path to Video
-        std::string _Video_id;
+        std::string _video_id;
 
         // Video data (OpenCV Mat or TDBVideo)
-        cv::Mat _cv_video;
+        cv::VideoCapture _inputVideo;
+        cv::VideoWriter _outputVideo;
+
+
+
+        std::ifstream* infile ;// (video_id,std::ifstream::binary);
+        std::ofstream* outfile; // (video_id,std::ofstream::binary);
+
+
+
+
+        // std::vector<Image> _frames;
 
 
     public:
@@ -300,12 +332,8 @@ namespace VCL {
          */
         VideoData();
 
-       /**
-         *  Creates an VideoData object from the OpenCV Mat.
-         *
-         *  @param cv_img  An OpenCV Mat that contains an Video
-         */
-        VideoData(const cv::Mat &cv_video);
+        // creates a video from an encoded buffer
+        VideoData(void* buffer, int size);
 
         /**
          *  Creates an VideoData object from the filename
@@ -313,6 +341,9 @@ namespace VCL {
          *  @param Video_id  A string indicating where the Video is on disk
          */
         VideoData(const std::string &video_id);
+
+        VideoData(const cv::VideoCapture &cv_video );
+
 
        /**
          *  Creates an VideoData object from the given parameters
@@ -380,7 +411,7 @@ namespace VCL {
          *
          *  @return The size of the Video in pixels
          */
-        int get_size();
+        cv::Size get_size();
 
         /**
          *  Gets the Video data in a buffer
@@ -526,8 +557,7 @@ namespace VCL {
          *    metadata in TileDB or not. Defaults to true
          *  @see Video.h for more details on VideoFormat
          */
-        void write(const std::string &video_id, VideoFormat Video_format,
-            bool store_metadata=true);
+        void write(const std::string &video_id,  bool store_metadata=true);
 
         // void remove(const std::string &Video_id);
 
