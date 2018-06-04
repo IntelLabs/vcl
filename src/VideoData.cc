@@ -1,7 +1,12 @@
 #include <opencv2/highgui.hpp>
 #include <stddef.h>
+#include <opencv2/videoio.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/videoio/videoio.hpp>
 #include <iostream>
-#include "VCL.h"
+#include <fstream>
+using namespace std;
+
 #include "VideoData.h"
 
 using namespace VCL;
@@ -147,6 +152,8 @@ void VideoData::Threshold::operator()(VideoData *img)
 
 VideoData::VideoData()
 {
+
+    std::cout<< "Hello"<<std::endl;
     // _channels = 0;
     // _height = 0;
     // _width = 0;
@@ -159,7 +166,7 @@ VideoData::VideoData()
     // _Video_id = "";
 }
 
-VideoData::VideoData(const cv::Mat &cv_img)
+VideoData::VideoData(const VideoData &video)
 {
     // copy_cv(cv_img);
 
@@ -170,46 +177,123 @@ VideoData::VideoData(const cv::Mat &cv_img)
     // _tdb = NULL;
 }
 
-VideoData::VideoData(const std::string &Video_id)
+VideoData::VideoData( const std::string &video_id)
 {
-    // _channels = 0;
-    // _height = 0;
-    // _width = 0;
-    // _cv_type = CV_8UC3;
 
-    // std::string extension = get_extension(Video_id);
-    // set_format(extension);
+     std::cout<< " Hello VidoeData"<<std::endl;
+    _inputVideo =  cv::VideoCapture(video_id);
 
-    // _compress = VCL::CompressionType::LZ4;
+    _fps = _inputVideo.get(CV_CAP_PROP_FPS);
+    _frame_count= _inputVideo.get(CV_CAP_PROP_FRAME_COUNT);
+    _frame_width = _inputVideo.get(CV_CAP_PROP_FRAME_WIDTH);
+    _frame_height = _inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT);
+     _video_time= _frame_count/_fps;
 
-    // _Video_id = create_fullpath(Video_id, _format);
+    std::cout<<" Video time in minutes" << _video_time/60<<std::endl;
 
-    // if ( _format == VCL::TDB ) {
-    //     _tdb = new TDBVideo(_Video_id);
-    //     _tdb->set_compression(_compress);
-    // }
-    // else
-    //     _tdb = NULL;
+
+    // open the default camera
+    if(!_inputVideo.isOpened())  // check if we succeeded
+      std::cout<<" Error in Opening the File " <<std::endl;
+
+    _video_id = video_id;
+
+
+   _format1 = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FOURCC));     // Get Codec Type- Int form
+
+    // Transform from int to char via Bitwise operators
+   //char EXT[] = {(char)(ex & 0XFF) , (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
+
+
+    _length = (int) _inputVideo.get(CV_CAP_PROP_FRAME_COUNT);
+     std::cout<< _format1 <<"\t"<< _length<<std::endl;
+
+ // while(1)
+ //  {
+ //    cv::Mat frame;
+
+ //    // Capture frame-by-frame
+ //    _inputVideo >> frame;
+
+ //    // If the frame is empty, break immediately
+ //    if (frame.empty())
+ //      break;
+
+ //    // Write the frame into the file 'outcpp.avi'
+ //    _outputVideo.write(frame);
+
+ //    // Display the resulting frame
+ //    //cv::imshow( "Frame", frame );
+
+ //    // Press  ESC on keyboard to  exit
+ //    char c = (char)cv::waitKey(1);
+ //    if( c == 27 )
+ //      break;
+ //  }
+
+
+
+   // string::size_type pAt = source.find_last_of('.');                  // Find extension point
+
 
 }
 
-// VideoData::VideoData(void* buffer, cv::Size dimensions, int cv_type)
-// {
-//     // _height = dimensions.height;
-//     // _width = dimensions.width;
-//     // _cv_type = cv_type;
-//     // _channels = (cv_type / 8) + 1;
-
-//     // _format = VCL::TDB;
-//     // _compress = VCL::CompressionType::LZ4;
-//     // _Video_id = "";
-
-//     // set_data_from_raw(buffer, _height*_width*_channels);
-//     // _tdb->set_compression(_compress);
-// }
-
-VideoData::VideoData(const VideoData &img)
+VideoData::VideoData(char*  buffer, long size)
 {
+
+    std::cout<<" This is the blob Constructor"<<std::endl;
+    std::cout<< " The BloB size is "<< size << std::endl;
+
+    _outfile->write(buffer, size);
+
+    delete[] buffer;
+
+    _outfile->close();
+
+}
+
+
+VideoData::VideoData(const cv::VideoCapture &cv_video )
+{
+
+ std::cout<<" Here is the CV VideoCapture CONSTRUCTORS"<<std::endl;
+
+ _inputVideo = cv_video;
+
+  if(!_inputVideo.isOpened())  // check if we succeeded
+      std::cout<<" Error in Opening the File " <<std::endl;
+  else {
+
+
+     _length = (int) _inputVideo.get(CV_CAP_PROP_FRAME_COUNT);
+     _format1 = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FOURCC));
+
+      _frame_width = _inputVideo.get(CV_CAP_PROP_FRAME_WIDTH);
+      _frame_height = _inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT);
+
+      std::cout<< " Frame Width is" << _frame_width << std::endl;
+      std::cout<< " Frame Height is" << _frame_height<<std::endl;
+    }
+
+
+
+    std::vector<cv::Mat> one_video_vector;
+
+    cv::Mat video_img;
+    cv::VideoCapture Temp_video_capture=_inputVideo;
+    Temp_video_capture.read(video_img);
+    while (!video_img.empty())
+    {
+        one_video_vector.push_back(video_img);
+        Temp_video_capture.read(video_img);
+    }
+
+    Temp_video_capture.release();
+
+    std::cout<< " The number of the frames is " <<one_video_vector.size();
+
+
+
     // _format = img._format;
     // _compress = img._compress;
     // _Video_id = img._Video_id;
@@ -237,57 +321,72 @@ VideoData::VideoData(const VideoData &img)
     // }
 }
 
+void VideoData::read(const std::string &video_id){
+
+_infile = new std::ifstream(video_id,std::ifstream::binary);
+_infile->seekg (0,_infile->end);
+long size = _infile->tellg();
+_infile->seekg (0);
+
+  // allocate memory for file content
+char* buffer = new char[size];
+
+  // read content of infile
+  _infile->read (buffer,size);
+
+   delete[] buffer;
+
+   _infile->close();
+
+
+}
+
+void VideoData::write( const std::string &video_id,
+            bool store_metadata)
+{
+_infile = new std::ifstream (video_id,std::ifstream::binary);
+_outfile = new std::ofstream("output.txt",std::ofstream::binary);
+
+  // get size of file
+  _infile->seekg (0,_infile->end);
+  long size = _infile->tellg();
+  _infile->seekg (0);
+
+  // allocate memory for file content
+  char* buffer = new char[size];
+
+  // read content of infile
+  _infile->read (buffer,size);
+
+  // write to outfile
+  _outfile->write (buffer,size);
+
+  // release dynamically-allocated memory
+  delete[] buffer;
+
+  _outfile->close();
+  _infile->close();
+
+
+
+}
+
+
+
 void VideoData::operator=(const VideoData &img)
 {
-    // TDBVideo *temp = _tdb;
 
-    // if ( !(img._cv_img).empty() )
-    //     copy_cv(img._cv_img);
-    // else {
-    //     _channels = img._channels;
-
-    //     _height = img._height;
-    //     _width = img._width;
-
-    //     _cv_type = img._cv_type;
-    // }
-
-    // _format = img._format;
-    // _compress = img._compress;
-    // _Video_id = img._Video_id;
-
-    // if ( img._tdb != NULL ) {
-    //     _tdb = new TDBVideo(*img._tdb);
-    // }
-    // else
-    //     _tdb = NULL;
-
-    // int start;
-
-    // _operations.clear();
-    // _operations.shrink_to_fit();
-
-    // if ( img._operations.size() > 0 ) {
-    //     std::shared_ptr<Operation> front = img._operations.front();
-    //     if (front->get_type() == OperationType::READ) {
-    //         start = 1;
-    //         copy_cv(cv::imread(img._Video_id, cv::IMREAD_ANYCOLOR));
-    //     }
-    //     else
-    //         start = 0;
-
-    //     for (int i = start; i < img._operations.size(); ++i)
-    //         _operations.push_back(img._operations[i]);
-    // }
-
-    // delete temp;
 }
 
 VideoData::~VideoData()
 {
-    // _operations.clear();
-    // _operations.shrink_to_fit();
-    // delete _tdb;
+
+ // _inputVideo.release();
+ //  _outputVideo.release();
+
+ //  // Closes all the windows
+ //  destroyAllWindows();
+ //  delete _video;
 }
 
 
@@ -297,7 +396,7 @@ VideoData::~VideoData()
 
 std::string VideoData::get_Video_id() const
 {
-    return _Video_id;
+    return _video_id;
 }
 
 VideoFormat VideoData::get_Video_format() const
@@ -307,91 +406,30 @@ VideoFormat VideoData::get_Video_format() const
 
 int VideoData::get_type() const
 {
-   // return _cv_type;
+    return _cv_type;
     return 0;
 }
 
 cv::Size VideoData::get_dimensions()
 {
-    // TODO: iterate over operations themsevles to determine
-    //          Video size, rather than performing the operations
-    // if ( _operations.size() > 0 )
-    //     perform_operations();
-    return cv::Size(10, 10);
+     _size = cv::Size((int) _inputVideo.get(CV_CAP_PROP_FRAME_WIDTH),    // Acquire input size
+                 (int) _inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT));
+    return _size;
 }
 
-int VideoData::get_size()
+cv::Size VideoData::get_size()
 {
-    // if ( _height == 0 ) {
-    //     if ( _format == VCL::TDB ) {
-    //         if ( _tdb == NULL )
-    //             throw VCLException(TileDBNotFound, "VideoFormat indicates Video \
-    //                 stored in TDB format, but no data was found");
-    //         return _tdb->get_Video_size();
-    //     }
-    //     else {
-    //         std::shared_ptr<Operation> op = _operations.front();
-    //         (*op)(this);
-    //         _operations.erase(_operations.begin());
-    //     }
-    // }
+   _size = cv::Size(_frame_width,    // Acquire input size
+                _frame_height);
+    return _size;
 
-    // return int(_height) * int(_width) * _channels;
-    return 1;
+
 }
 
 void VideoData::get_buffer(void* buffer, int buffer_size)
 {
-    // perform_operations();
 
-    // switch ( _cv_type % 8 ) {
-    //     case 0:
-    //         if ( _format != VCL::TDB )
-    //             copy_to_buffer(static_cast<unsigned char*>(buffer));
-    //         else
-    //             _tdb->get_buffer(static_cast<unsigned char*>(buffer), buffer_size);
-    //         break;
-    //     case 1:
-    //         if ( _format != VCL::TDB )
-    //             copy_to_buffer(static_cast<char*>(buffer));
-    //         else
-    //             _tdb->get_buffer(static_cast<char*>(buffer), buffer_size);
-    //         break;
-    //     case 2:
-    //         if ( _format != VCL::TDB )
-    //             copy_to_buffer(static_cast<unsigned short*>(buffer));
-    //         else
-    //             _tdb->get_buffer(static_cast<unsigned short*>(buffer), buffer_size);
-    //         break;
-    //     case 3:
-    //         if ( _format != VCL::TDB )
-    //             copy_to_buffer(static_cast<short*>(buffer));
-    //         else
-    //             _tdb->get_buffer(static_cast<short*>(buffer), buffer_size);
-    //         break;
-    //     case 4:
-    //         if ( _format != VCL::TDB )
-    //             copy_to_buffer(static_cast<int*>(buffer));
-    //         else
-    //             _tdb->get_buffer(static_cast<int*>(buffer), buffer_size);
-    //         break;
-    //     case 5:
-    //         if ( _format != VCL::TDB )
-    //             copy_to_buffer(static_cast<float*>(buffer));
-    //         else
-    //             _tdb->get_buffer(static_cast<float*>(buffer), buffer_size);
-    //         break;
-    //     case 6:
-    //         if ( _format != VCL::TDB )
-    //             copy_to_buffer(static_cast<double*>(buffer));
-    //         else
-    //             _tdb->get_buffer(static_cast<double*>(buffer), buffer_size);
-    //         break;
-    //     default:
-    //         throw VCLException(UnsupportedFormat, _cv_type + " is not a \
-    //             supported type");
-    //         break;
-    // }
+    // perform_operations();
 }
 
 
@@ -409,43 +447,13 @@ VideoData VideoData::get_area(const Rectangle &roi)
 {
     VideoData area = *this;
 
-    // if ( area._format == VCL::TDB && area._operations.size() == 1 ) {
-    //     if ( area._tdb == NULL )
-    //         throw VCLException(TileDBNotFound, "VideoFormat indicates Video \
-    //             stored in TDB format, but no data was found");
-    //     area._operations.pop_back();
-    // }
-
-    // std::shared_ptr<Operation> op = std::make_shared<Crop> (roi, area._format);
-
-    // area._operations.push_back(op);
-
-    // area.perform_operations();
-
-    // area._height = roi.height;
-    // area._width = roi.width;
-
      return area;
 }
 
 std::vector<unsigned char> VideoData::get_encoded(VideoFormat format,
     const std::vector<int>& params)
 {
-    // perform_operations();
 
-    // std::string extension = "." + format_to_string(format);
-
-    // if ( _cv_img.empty() ) {
-    //     if ( _tdb == NULL)
-    //         throw VCLException(ObjectEmpty, "No data to encode");
-    //     else
-    //         copy_cv(_tdb->get_cvmat());
-    // }
-
-    // std::vector<unsigned char> buffer;
-    // cv::imencode(extension, _cv_img, buffer, params);
-
-    // return buffer;
 }
 
 
@@ -455,48 +463,30 @@ std::vector<unsigned char> VideoData::get_encoded(VideoFormat format,
 void VideoData::create_unique(const std::string &path,
     VideoFormat format)
 {
-    // std::string unique_id;
-    // std::string name;
 
-    // std::string extension = format_to_string(format);
-
-    // const char& last = path.back();
-
-    // do {
-    //     uint64_t id = get_int64();
-    //     std::stringstream ss;
-    //     ss << std::hex << id;
-    //     unique_id = ss.str();
-    //     if (last != '/')
-    //         name = path + "/" + unique_id + "." + extension;
-    //     else
-    //         name = path + unique_id + "." + extension;
-    // } while ( exists(name) );
-
-    // _Video_id = name;
 }
 
-void VideoData::set_Video_id(const std::string &Video_id)
+void VideoData::set_Video_id(const std::string &video_id)
 {
-    // _Video_id = Video_id;
+  _video_id =video_id;
 }
 
 void VideoData::set_format(const std::string &extension)
 {
-    // if ( extension == "jpg" )
-    //     _format = VCL::JPG;
-    // else if ( extension == "png" )
-    //     _format = VCL::PNG;
-    // else if ( extension == "tdb" )
-    //     _format = VCL::TDB;
-    // else
-    //     throw VCLException(UnsupportedFormat, extension + " is not a \
-    //         supported format");
+    if ( extension == "avi" )
+        _format = VCL::AVI;
+    else if ( extension == "mp4" )
+        _format = VCL::MP4;
+    else if ( extension == "mpeg" )
+        _format = VCL::MPEG;
+    else
+        throw VCLException(UnsupportedFormat, extension + " is not a \
+            supported format");
 }
 
 void VideoData::set_type(int type)
 {
-    // _cv_type = type;
+     _cv_type = type;
 
     // _channels = (type / 8) + 1;
 }
@@ -505,61 +495,26 @@ void VideoData::set_type(int type)
 
 void VideoData::set_dimensions(cv::Size dimensions)
 {
-    // _height = dimensions.height;
-    // _width = dimensions.width;
+    _frame_height = dimensions.height;
+    _frame_width = dimensions.width;
 
-    // if ( _format == VCL::TDB ) {
-    //     if ( _tdb == NULL )
-    //         throw VCLException(TileDBNotFound, "VideoFormat indicates Video \
-    //             stored in TDB format, but no data was found");
-    //     _tdb->set_Video_properties(_height, _width, _channels);
-    // }
+
 }
 
 void VideoData::set_data_from_raw(void* buffer, int size)
 {
-    // switch ( _cv_type % 8 ) {
-    //     case 0:
-    //         _tdb = new TDBVideo(static_cast<unsigned char*>(buffer), size);
-    //         break;
-    //     case 1:
-    //         _tdb = new TDBVideo(static_cast<char*>(buffer), size);
-    //         break;
-    //     case 2:
-    //         _tdb = new TDBVideo(static_cast<unsigned short*>(buffer), size);
-    //         break;
-    //     case 3:
-    //         _tdb = new TDBVideo(static_cast<short*>(buffer), size);
-    //         break;
-    //     case 4:
-    //         _tdb = new TDBVideo(static_cast<int*>(buffer), size);
-    //         break;
-    //     case 5:
-    //         _tdb = new TDBVideo(static_cast<float*>(buffer), size);
-    //         break;
-    //     case 6:
-    //         _tdb = new TDBVideo(static_cast<double*>(buffer), size);
-    //         break;
-    //     default:
-    //         throw VCLException(UnsupportedFormat, _cv_type + " is not a \
-    //             supported type");
-    //         break;
-    // }
+
+
 }
 
 void VideoData::set_data_from_encoded(const std::vector<unsigned char> &buffer)
 {
-    // copy_cv(cv::imdecode(buffer, cv::IMREAD_ANYCOLOR));
+
 }
 
 void VideoData::set_minimum(int dimension)
 {
-    // if ( _format == VCL::TDB ) {
-    //     if ( _tdb == NULL )
-    //         throw VCLException(TileDBNotFound, "VideoFormat indicates Video \
-    //             stored in TDB format, but no data was found\n");
-    //     _tdb->set_minimum(dimension);
-    // }
+
 }
 
 
@@ -569,63 +524,29 @@ void VideoData::set_minimum(int dimension)
 
 void VideoData::perform_operations()
 {
-    // for (int x = 0; x < _operations.size(); ++x) {
-    //     std::shared_ptr<Operation> op = _operations[x];
-    //     if ( op == NULL )
-    //         throw VCLException(ObjectEmpty, "Nothing to be done");
-    //     (*op)(this);
-    // }
 
-    // _operations.clear();
-}
-
-void VideoData::read(const std::string &Video_id)
-{
-    // _Video_id = create_fullpath(Video_id, _format);
-
-    // _operations.push_back(std::make_shared<Read> (_Video_id, _format));
-}
-
-void VideoData::write(const std::string &Video_id, VideoFormat img_format,
-    bool metadata)
-{
-    // _operations.push_back(std::make_shared<Write> (create_fullpath(Video_id, img_format),
-    //     img_format, _format, metadata));
 }
 
 void VideoData::resize(int rows, int columns)
 {
-    // _operations.push_back(std::make_shared<Resize> (Rectangle(0, 0, columns, rows), _format));
+
 }
 
 void VideoData::crop(const Rectangle &rect)
 {
-    // if ( _format == VCL::TDB && _operations.size() == 1 ) {
-    //     if ( _tdb == NULL )
-    //         throw VCLException(TileDBNotFound, "VideoFormat indicates Video \
-    //             stored in TDB format, but no data was found");
-    //     _operations.pop_back();
-    // }
 
-    // _operations.push_back(std::make_shared<Crop> (rect, _format));
 }
 
 void VideoData::threshold(int value)
 {
-   // _operations.push_back(std::make_shared<Threshold> (value, _format));
+
 }
 
 void VideoData::delete_object()
 {
-    // if (_tdb != NULL)
-    //     _tdb->delete_Video();
 
-    // if (exists(_Video_id)) {
-    //     std::remove(_Video_id.c_str());
-    // }
 }
-
-            /*  *********************** */
+           /*  *********************** */
             /*         PRIVATE          */
             /*  *********************** */
 
@@ -635,106 +556,49 @@ void VideoData::delete_object()
 
 void VideoData::copy_cv(const cv::Mat &cv_img)
 {
-    // _channels = cv_img.channels();
 
-    // _height = cv_img.rows;
-    // _width = cv_img.cols;
-
-    // _cv_type = cv_img.type();
-
-    // _cv_img = cv_img.clone();
 }
 
 template <class T>
 void VideoData::copy_to_buffer(T* buffer)
 {
-    // int index = 0;
 
-    // int rows = _height;
-    // int columns = _width;
-
-    // if ( _cv_img.isContinuous() ) {
-    //     columns *= rows;
-    //     rows = 1;
-    // }
-
-    // for ( int i = 0; i < rows; ++i ) {
-    //     for ( int j = 0; j < columns; ++j ) {
-    //         if ( _channels == 1 )
-    //             buffer[index] = T(_cv_img.at<unsigned char>(i, j));
-    //         else {
-    //             cv::Vec3b colors = _cv_img.at<cv::Vec3b>(i, j);
-    //             for ( int x = 0; x < _channels; ++x ) {
-    //                 buffer[index + x] = T(colors.val[x]);
-    //             }
-    //         }
-    //         index += _channels;
-    //     }
-    // }
 }
-
-
 
     /*  *********************** */
     /*      UTIL FUNCTIONS      */
     /*  *********************** */
 std::string VideoData::get_extension(const std::string &Video_id)
 {
-    // size_t file_ext = Video_id.find_last_of(".");
-    // size_t dir_ext = Video_id.find_last_of("/");
+    size_t file_ext = Video_id.find_last_of(".");
+    size_t dir_ext = Video_id.find_last_of("/");
 
-    // if ( file_ext != std::string::npos ) {
-    //     if ( file_ext > dir_ext + 2 )
-    //         return Video_id.substr(file_ext + 1);
-    //     else
-    //         throw VCLException(ObjectEmpty, Video_id + " does not have a valid extension");
-    // }
-    // else
-    //     return "";
-    return "";
-
+    if ( file_ext != std::string::npos ) {
+        if ( file_ext > dir_ext + 2 )
+            return Video_id.substr(file_ext + 1);
+        else
+            throw VCLException(ObjectEmpty, Video_id + " does not have a valid extension");
+    }
+    else
+        return "";
 
 }
 
 std::string VideoData::format_to_string(VideoFormat Video_format)
 {
-    // switch( Video_format )
-    // {
-    //     case VCL::JPG:
-    //         return "jpg";
-    //     case VCL::PNG:
-    //         return "png";
-    //     case VCL::TDB:
-    //         return "tdb";
-    //     case VCL::NONE:
-    //         return "";
-    //     default:
-    //         throw VCLException(UnsupportedFormat, Video_format + " is not a \
-    //             valid format");
-    // }
+
     return " Format";
 }
 
 std::string VideoData::create_fullpath(const std::string &filename,
     VideoFormat format)
 {
-    // if ( filename == "" )
-    //     throw VCLException(ObjectNotFound, "Location to write object is undefined");
 
-    // std::string extension = get_extension(filename);
-    // std::string ext = format_to_string(format);
-
-    // if ( ext.compare(extension) == 0 || ext == "" )
-    //     return filename;
-    // else
-    //     return filename + "." + ext;
     return "id";
 }
 
 bool VideoData::exists(const std::string &name)
 {
-    // struct stat filestatus;
 
-    // return (stat (name.c_str(), &filestatus) == 0);
     return true;
 }
