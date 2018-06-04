@@ -225,6 +225,8 @@ namespace VCL {
              */
             std::vector<char> read_s3(const std::string &path);
 
+            void read_to_file(const std::string &path, const std::string &local);
+
             /**
              *  Remove an object from S3
              *

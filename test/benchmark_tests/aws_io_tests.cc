@@ -10,13 +10,44 @@
 #include <VCL.h>
 
 #include "chrono/Chrono.h"
-
-#include "tbb/concurrent_vector.h"
+#include "tiledb/tiledb.h"
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
+
+bool compare_mat_mat(cv::Mat &cv_img, cv::Mat &img)
+{
+    int rows = img.rows;
+    int columns = img.cols;
+    int channels = img.channels();
+
+    if ( img.isContinuous() ) {
+        columns *= rows;
+        rows = 1;
+    }
+
+    for ( int i = 0; i < rows; ++i ) {
+        for ( int j = 0; j < columns; ++j ) {
+            if (channels == 1) {
+                unsigned char pixel = img.at<unsigned char>(i, j);
+                unsigned char test_pixel = cv_img.at<unsigned char>(i, j);
+                if (pixel != test_pixel)
+                    return false;
+            }
+            else {
+                cv::Vec3b colors = img.at<cv::Vec3b>(i, j);
+                cv::Vec3b test_colors = cv_img.at<cv::Vec3b>(i, j);
+                for ( int x = 0; x < channels; ++x ) {
+                    if(colors.val[x] != test_colors.val[x])
+                        return false;
+                }
+            }
+        }
+    }
+    return true;
+}
 
 
 long long int get_folder_size(const std::string &path) {
@@ -100,150 +131,79 @@ std::string compression_string(int comp)
     }
 }
 
-void get_file_sizes( std::vector<std::string> &tiff_files,
-    std::vector<std::string> &tdb_files, 
+void get_file_sizes(std::string &local_dir,
+    std::string &efs_dir,
+    std::string &remote_dir,
+    std::string &base,
+    std::string &type, 
     std::vector<std::vector<long long int>> &sizes, 
-    bool remote_io, 
     VCL::RemoteConnection &remote)
 {
+    std::string local_name = local_dir +  type + "/" + base + "." + type;
+    std::string efs_name = efs_dir + type + "/" + base + "." + type;
+    std::string remote_name = remote_dir + type + "/" + base + "." + type;
+
     long long int img_size = 0;
     struct stat stat_buf;
 
-    for ( int i = 0; i < tdb_files.size(); ++i ) {
-        std::vector<long long int> size;
+    std::vector<long long int> size;
 
-        if (remote_io) {
-            size.push_back(remote.get_object_size(tiff_files[i]));
-            size.push_back(remote.get_object_size(tdb_files[i]));
-        }
-        else {
-            int irc = stat(tiff_files[i].c_str(), &stat_buf);
-            if ( irc == 0 )
-                img_size = stat_buf.st_size;
-            
-            size.push_back(img_size);
-            size.push_back(get_folder_size(tdb_files[i]));
-        }
-
-        sizes.push_back(size);
+    if ( type == "tdb") {
+        size.push_back(get_folder_size(local_name));
+        size.push_back(get_folder_size(efs_name));
     }
+    else {
+        int irc = stat(local_name.c_str(), &stat_buf);
+        if ( irc == 0 )
+            img_size = stat_buf.st_size;
+        size.push_back(img_size);
+        irc = stat(efs_name.c_str(), &stat_buf);
+        if ( irc == 0 )
+            img_size = stat_buf.st_size;
+        size.push_back(img_size);
+    }
+    
+    size.push_back(remote.get_object_size(remote_name));    
+    sizes.push_back(size);
 }
 
-// void write(std::string &output_dir, std::string &basename, cv::Mat &cv_img,
-//     std::vector<std::string> &tiff_files,
-//     std::vector<std::string> &tdb_files,
-//     std::vector<int> &heights, std::vector<int> &widths,
-//     std::vector<std::vector<float>> &times,
-//     int compression, int minimum, 
-//     bool remote_io, 
-//     VCL::RemoteConnection &remote)
-// {
-//     int height = 0;
-//     int width = 0;
 
-//     ChronoCpu tdb_chrono("Write TDB");
-//     ChronoCpu tif_chrono("Write Tiff");
-
-//     std::string tif_outdir = output_dir + "image_results/tiff/";
-//     std::string tdb_outdir = output_dir + "image_results/tdb/";
-
-//     std::vector<float> time;
-    
-//     // get height and width
-//     height = cv_img.rows;
-//     width = cv_img.cols;
-//     heights.push_back(height);
-//     widths.push_back(width);
-//     VCL::CompressionType comp = get_compression(compression);
-    
-//     // Determine the tdb image name
-//     if (remote_io) {
-//         VCL::Image tdbimg(cv_img);
-//         tdbimg.set_connection(remote);
-        
-//         // std::string tdbname = tdbimg.create_unique(tdb_outdir, VCL::TDB);
-//         // basename = get_name(tdbname);
-//         std::string tdbname = tdb_outdir + basename + ".tdb";
-    
-//         std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-//         std::string cv_name = tif_outdir + basename + ".tiff";
-//         tiff_files.push_back(cv_name);
-
-//         std::vector<unsigned char> data;
-//         cv::imencode(".tiff", cv_img, data);
-//         tif_chrono.tic();
-//         remote.write(cv_name, data);
-//         tif_chrono.tac();
-
-//         // Write the TDB
-//         std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-//         tdbimg.set_compression(comp);
-//         tdbimg.set_minimum_dimension(minimum);
-//         tdb_files.push_back(tdbname);
-
-//         tdb_chrono.tic();
-//         tdbimg.store(tdbname, VCL::TDB);
-//         tdb_chrono.tac();
-//     }
-//     else {
-//         VCL::Image tdbimg(cv_img);
-//         // std::string tdbname = tdbimg.create_unique(tdb_outdir, VCL::TDB);
-//         // basename = get_name(tdbname);
-//         std::string tdbname = tdb_outdir + basename + ".tdb";
-    
-//         std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-//         std::string cv_name = tif_outdir + basename + ".tiff";
-//         tiff_files.push_back(cv_name);
-
-//         tif_chrono.tic();
-//         cv::imwrite(cv_name, cv_img);
-//         tif_chrono.tac();  
-    
-//         // Write the TDB
-//         std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-//         tdbimg.set_compression(comp);
-//         tdbimg.set_minimum_dimension(minimum);
-//         tdb_files.push_back(tdbname);
-
-//         tdb_chrono.tic();
-//         tdbimg.store(tdbname, VCL::TDB);
-//         tdb_chrono.tac();   
-//     }
-    
-//     time.push_back(tif_chrono.getLastTime_us() / 1000.0);
-//     time.push_back(tdb_chrono.getLastTime_us() / 1000.0);
-
-//     times.push_back(time);
-// }
-
-void write(std::string &output_dir, 
+void write(std::string &local_dir,
+    std::string &efs_dir,
+    std::string &remote_dir, 
     std::string &base, 
     cv::Mat &cv_img,
     std::string &type,
     int compression, int minimum, 
     VCL::RemoteConnection &remote, 
-    // tbb::concurrent_vector<tbb::concurrent_vector<float>> &times)
     std::vector<std::vector<float>> &times)
 {
-    // tbb::concurrent_vector<float> time;
     std::vector<float> time;
 
     ChronoCpu localchrono("Write Local");
+    ChronoCpu nfschrono("Write NFS");
     ChronoCpu remotechrono("Write Remote");
     
-    std::string outdir = output_dir + "image_results/" + type + "/";
-
-    std::string local_name = outdir + base + "." + type;
-    std::string remote_name = "s3://irlcsrtdbtests/image_results/" + type + "/" + base + "." + type;
+    std::string local_name = local_dir + type + "/" + base + "." + type;
+    std::string efs_name = efs_dir + type + "/" + base + "." + type;
+    std::string remote_name = remote_dir + type + "/" + base + "." + type;
 
     if (type == "tdb") {
         VCL::CompressionType comp = get_compression(compression);
+
         VCL::Image tdbimg(cv_img);
         tdbimg.set_compression(comp);
         tdbimg.set_minimum_dimension(minimum);
         localchrono.tic();
         tdbimg.store(local_name, VCL::TDB);
         localchrono.tac();
+
+        VCL::Image nfstdb(cv_img);
+        nfstdb.set_compression(comp);
+        nfstdb.set_minimum_dimension(minimum);
+        nfschrono.tic();
+        nfstdb.store(efs_name, VCL::TDB, false);
+        nfschrono.tac();
 
         VCL::Image remotetdb(cv_img);
         remotetdb.set_connection(remote);
@@ -254,24 +214,31 @@ void write(std::string &output_dir,
         remotechrono.tac();
     }
     else if (type == "tiff") {
+        localchrono.tic();
+        cv::imwrite(local_name, cv_img);
+        localchrono.tac();
+
+        nfschrono.tic();
+        cv::imwrite(efs_name, cv_img);
+        nfschrono.tac();
+
         std::vector<unsigned char> data;
         cv::imencode(".tiff", cv_img, data);
         remotechrono.tic();
         remote.write(remote_name, data);
         remotechrono.tac();
-
-        localchrono.tic();
-        cv::imwrite(local_name, cv_img);
-        localchrono.tac();
     }
 
     time.push_back(localchrono.getLastTime_us() / 1000.0);
+    time.push_back(nfschrono.getLastTime_us() / 1000.0);
     time.push_back(remotechrono.getLastTime_us() / 1000.0);
 
     times.push_back(time);
 }
 
-void write_all(std::string &output_dir, 
+void write_all(std::string &local_dir,
+    std::string &efs_dir,
+    std::string &remote_dir,
     std::string &base, 
     cv::Mat &cv_img,
     std::string &type,
@@ -279,9 +246,9 @@ void write_all(std::string &output_dir,
     bool remote_io,
     VCL::RemoteConnection &remote)
 {
-    std::string outdir = output_dir + "image_results/" + type + "/";
-
-    std::string name = outdir + base + "." + type;
+    std::string local_name = local_dir + base + "." + type;
+    std::string efs_name = efs_dir + base + "." + type;
+    std::string remote_name = remote_dir + base + "." + type;
 
     if (type == "tdb") {
         VCL::CompressionType comp = get_compression(compression);
@@ -290,122 +257,44 @@ void write_all(std::string &output_dir,
             remotetdb.set_connection(remote);
             remotetdb.set_compression(comp);
             remotetdb.set_minimum_dimension(minimum);
-            remotetdb.store(name, VCL::TDB);
+            remotetdb.store(remote_name, VCL::TDB);
         }
         else {
             VCL::Image tdbimg(cv_img);
             tdbimg.set_compression(comp);
             tdbimg.set_minimum_dimension(minimum);
-            tdbimg.store(name, VCL::TDB);
+            tdbimg.store(local_name, VCL::TDB);
         }
     }
     else if (type == "tiff") {
         if (remote_io) {
             std::vector<unsigned char> data;
             cv::imencode(".tiff", cv_img, data);
-            remote.write(name, data);
+            remote.write(remote_name, data);
         }
         else
-            cv::imwrite(name, cv_img);
+            cv::imwrite(local_name, cv_img);
     }
 }
 
 
-// void read( std::vector<std::string> &tiff_files,
-//     std::vector<std::string> &tdb_files,
-//     std::vector<int> &heights, std::vector<int> &widths,
-//     std::vector<std::vector<float>> &times, 
-//     bool remote_io, 
-//     VCL::RemoteConnection &remote)
-// {
-//     ChronoCpu read_tdb("Read TDB");
-//     ChronoCpu tdb_mat("Read TDB to CV");
-//     ChronoCpu read_tiff("Read TIFF");
 
-//     for (int i = 0; i < tdb_files.size(); ++i) {
-//         // Read the tiff image
-//         std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-
-//         if (remote_io) {
-//             read_tiff.tic();
-//             std::vector<char> imgdata = remote.read(tiff_files[i]);
-//             if ( !imgdata.empty() )
-//                 cv::Mat tif_img = cv::imdecode(cv::Mat(imgdata), cv::IMREAD_ANYCOLOR);
-//             read_tiff.tac();
-
-//             // Read the TDB image into a buffer
-//             std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-
-//             read_tdb.tic();
-//             VCL::Image tdb_img(tdb_files[i], remote);
-
-//             int size = tdb_img.get_raw_data_size();
-//             unsigned char* buffer = new unsigned char[size];
-
-//             tdb_img.get_raw_data(buffer, size);
-//             read_tdb.tac();
-
-//             delete [] buffer;
-
-//             // Read the TDB image into a mat
-//             std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-
-//             tdb_mat.tic();
-//             VCL::Image tdbimg(tdb_files[i], remote);
-//             cv::Mat tdbmat = tdbimg.get_cvmat();
-//             tdb_mat.tac();
-
-//         }
-//         else {
-//             read_tiff.tic();
-//             cv::Mat tif_img = cv::imread(tiff_files[i], cv::IMREAD_ANYCOLOR);
-//             read_tiff.tac();
-
-//             // Read the TDB image into a buffer
-//             std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-
-//             read_tdb.tic();
-//             VCL::Image tdb_img(tdb_files[i]);
-
-//             int size = tdb_img.get_raw_data_size();
-//             unsigned char* buffer = new unsigned char[size];
-
-//             tdb_img.get_raw_data(buffer, size);
-//             read_tdb.tac();
-
-//             delete [] buffer;
-
-//             // Read the TDB image into a mat
-//             std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-
-//             tdb_mat.tic();
-//             VCL::Image tdbimg(tdb_files[i]);
-
-//             cv::Mat tdbmat = tdbimg.get_cvmat();
-//             tdb_mat.tac();
-//         }
-
-//         times[i].push_back(read_tiff.getLastTime_us() / 1000.0);
-//         times[i].push_back(read_tdb.getLastTime_us() / 1000.0);
-//         times[i].push_back(tdb_mat.getLastTime_us() / 1000.0);
-//     }
-// }
-
-void read(std::string &output_dir, 
+void read(std::string &local_dir,
+    std::string &efs_dir,
+    std::string &remote_dir,
     std::string &base,
-    int height, int width,
     std::string &type,
     VCL::RemoteConnection &remote, 
     std::vector<std::vector<float>> &times, 
     int index)
 {
     ChronoCpu localchrono("Read Local");
+    ChronoCpu nfschrono("Read NFS");
     ChronoCpu remotechrono("Read Remote");
     
-    std::string outdir = output_dir + "image_results/" + type + "/";
-
-    std::string local_name = outdir + base + "." + type;
-    std::string remote_name = "s3://irlcsrtdbtests/image_results/" + type + "/" + base + "." + type;
+    std::string local_name = local_dir + type + "/" + base + "." + type;
+    std::string efs_name = efs_dir + type + "/" + base + "." + type;
+    std::string remote_name = remote_dir + type + "/" + base + "." + type;
 
     if (type == "tdb") {
         VCL::Image tdbimg(local_name);
@@ -413,15 +302,27 @@ void read(std::string &output_dir,
         cv::Mat limg = tdbimg.get_cvmat();
         localchrono.tac();
 
+        VCL::Image fsimg(efs_name);
+        nfschrono.tic();
+        cv::Mat fimg = fsimg.get_cvmat();
+        nfschrono.tac();
+
         VCL::Image remotetdb(remote_name, remote);
         remotechrono.tic();
         cv::Mat rimg = remotetdb.get_cvmat();
         remotechrono.tac();
+
+        // if (!compare_mat_mat(limg, rimg))
+        //     std::cout << "Remote Image does not match Local Image\n";
     }
     else if (type == "tiff") {
         localchrono.tic();
         cv::Mat rimg = cv::imread(local_name, cv::IMREAD_ANYCOLOR);
         localchrono.tac();
+
+        nfschrono.tic();
+        cv::Mat fimg = cv::imread(efs_name, cv::IMREAD_ANYCOLOR);
+        nfschrono.tac();
 
         remotechrono.tic();
         std::vector<char> imgdata = remote.read(remote_name);
@@ -431,108 +332,25 @@ void read(std::string &output_dir,
     }
 
     times[index].push_back(localchrono.getLastTime_us() / 1000.0);
+    times[index].push_back(nfschrono.getLastTime_us() / 1000.0);
     times[index].push_back(remotechrono.getLastTime_us() / 1000.0);
 }
 
 
-// void crop(std::vector<std::string> &tiff_files,
-//     std::vector<std::string> &tdb_files,
-//     std::vector<int> &heights, std::vector<int> &widths,
-//     std::vector<std::vector<float>> &times, 
-//     bool remote_io, 
-//     VCL::RemoteConnection &remote)
-// {
-//     ChronoCpu crop_tdb("Crop TDB");
-//     ChronoCpu tdb_mat("Read to Mat and Crop TDB");
-//     ChronoCpu tiff("Read and Crop TIFF");
 
-//     // int start_x = 100;
-//     // int start_y = 100;
-//     int start_x = 2235;
-//     int start_y = 1233;
-//     int height = 211;
-//     int width = 81;
-//     // rectangle is x, y, width, height
 
-//     for (int i = 0; i < tdb_files.size(); ++i) {
-//         // int height = (int)(heights[i] / 6.0);
-//         // int width = (int)(widths[i] / 6.0);
-
-//         if (remote_io) {
-//             // Crop the TDB 
-//             std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-//             crop_tdb.tic();
-//             VCL::Image tdb_img(tdb_files[i], remote);
-//             tdb_img.crop(VCL::Rectangle(start_x, start_y, width, height));
-//             int size = height * width * 3;
-//             unsigned char* raw_buffer = new unsigned char[size];
-
-//             tdb_img.get_raw_data(raw_buffer, size);
-//             crop_tdb.tac();
-
-//             delete [] raw_buffer;
-
-//             std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-//             tiff.tic();
-//             std::vector<char> imgdata = remote.read(tiff_files[i]);
-//             if ( !imgdata.empty() ) {
-//                 cv::Mat tifcrop = cv::imdecode(cv::Mat(imgdata), cv::IMREAD_ANYCOLOR);
-//                 cv::Mat croppedtif(tifcrop, VCL::Rectangle(start_x, start_y, width, height));
-//             }
-//             tiff.tac();
-
-//             // Read to CV and Crop the TDB
-//             std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-//             tdb_mat.tic();
-//             VCL::Image img(tdb_files[i], remote);
-//             img.crop(VCL::Rectangle(start_x, start_y, width, height));
-//             cv::Mat crop_mat = img.get_cvmat();
-//             tdb_mat.tac();
-//         }
-//         else {
-//             // Crop the TDB 
-//             std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-//             crop_tdb.tic();
-//             VCL::Image tdb_img(tdb_files[i]);
-//             tdb_img.crop(VCL::Rectangle(start_x, start_y, width, height));
-//             int size = height * width * 3;
-//             unsigned char* raw_buffer = new unsigned char[size];
-
-//             tdb_img.get_raw_data(raw_buffer, size);
-//             crop_tdb.tac();
-
-//             delete [] raw_buffer;
-
-//             std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-//             tiff.tic();
-//             cv::Mat tifcrop = cv::imread(tiff_files[i], cv::IMREAD_ANYCOLOR);
-//             cv::Mat croppedtif(tifcrop, VCL::Rectangle(start_x, start_y, width, height));
-//             tiff.tac();
-
-//             // Read to CV and Crop the TDB
-//             std::system("sync && echo 3 > /proc/sys/vm/drop_caches");
-//             tdb_mat.tic();
-//             VCL::Image img(tdb_files[i]);
-//             img.crop(VCL::Rectangle(start_x, start_y, width, height));
-//             cv::Mat crop_mat = img.get_cvmat();
-//             tdb_mat.tac();
-//         }
-
-//         times[i].push_back(tiff.getLastTime_us() / 1000.0);
-//         times[i].push_back(crop_tdb.getLastTime_us() / 1000.0);
-//         times[i].push_back(tdb_mat.getLastTime_us() / 1000.0);
-//     }
-// }
-
-void crop(std::string &output_dir, 
+void crop(std::string &local_dir,
+    std::string &efs_dir,
+    std::string &remote_dir,
     std::string &base,
-    int height, int width,
     std::string &type,
     VCL::RemoteConnection &remote, 
     std::vector<std::vector<float>> &times, 
-    int index)
+    int index, 
+    cv::Mat &img)
 {
     ChronoCpu localchrono("Crop Local");
+    ChronoCpu nfschrono("Crop NFS");
     ChronoCpu remotechrono("Crop Remote");
 
     int start_x = 2235;
@@ -540,10 +358,9 @@ void crop(std::string &output_dir,
     int height = 211;
     int width = 81;
     
-    std::string outdir = output_dir + "image_results/" + type + "/";
-
-    std::string local_name = outdir + base + "." + type;
-    std::string remote_name = "s3://irlcsrtdbtests/image_results/" + type + "/" + base + "." + type;
+    std::string local_name = local_dir + type + "/" + base + "." + type;
+    std::string efs_name = efs_dir + type + "/" + base + "." + type;
+    std::string remote_name = remote_dir + type + "/" + base + "." + type;
 
     if (type == "tdb") {
         VCL::Image tdbimg(local_name);
@@ -551,6 +368,12 @@ void crop(std::string &output_dir,
         tdbimg.crop(VCL::Rectangle(start_x, start_y, width, height));
         cv::Mat crop_mat = tdbimg.get_cvmat();
         localchrono.tac();
+
+        VCL::Image fsimg(efs_name);
+        nfschrono.tic();
+        fsimg.crop(VCL::Rectangle(start_x, start_y, width, height));
+        cv::Mat fimg = fsimg.get_cvmat();
+        nfschrono.tac();
 
         VCL::Image remotetdb(remote_name, remote);
         remotechrono.tic();
@@ -564,6 +387,11 @@ void crop(std::string &output_dir,
         cv::Mat localcrop(limg, VCL::Rectangle(start_x, start_y, width, height));
         localchrono.tac();
 
+        nfschrono.tic();
+        cv::Mat fimg = cv::imread(efs_name, cv::IMREAD_ANYCOLOR);
+        cv::Mat efscrop(fimg, VCL::Rectangle(start_x, start_y, width, height));
+        nfschrono.tac();
+
         remotechrono.tic();
         std::vector<char> imgdata = remote.read(remote_name);
         if ( !imgdata.empty() ) {
@@ -574,39 +402,27 @@ void crop(std::string &output_dir,
     }
 
     times[index].push_back(localchrono.getLastTime_us() / 1000.0);
+    times[index].push_back(nfschrono.getLastTime_us() / 1000.0);
     times[index].push_back(remotechrono.getLastTime_us() / 1000.0);
 }
 
 int main(int argc, char** argv )
 {
-    if ( argc != 6 )
+    if ( argc != 5 )
     {
-        printf("Usage: image dir, compression type, min tiles, output directory, output file name, remoteIO \n");
+        printf("Usage: image dir, compression type, min tiles output file name \n");
         return -1;
     }
 
     std::string image_dir = argv[1];
     int compression = atoi(argv[2]);
     int min_tiles = atoi(argv[3]);
-    std::string output_dir = argv[4];
-    std::string output_file = argv[5];
-    // std::string io = argv[6];
-    // bool remote_io = false;
-    // if (io == "true")
-    //     remote_io = true;
+    std::string output_file = argv[4];
 
     std::ofstream outfile(output_file);
 
     std::vector<std::string> cameras;
     std::vector<std::string> frames;
-
-    // tbb::concurrent_vector<std::string> tiff_files;
-    // tbb::concurrent_vector<std::string> tdb_files;
-    // tbb::concurrent_vector<int> heights;
-    // tbb::concurrent_vector<int> widths;
-
-    // tbb::concurrent_vector<tbb::concurrent_vector<float>> times;
-    // tbb::concurrent_vector< std::vector<long long int>> sizes;
     std::vector<std::string> tiff_files;
     std::vector<std::string> tdb_files;
     std::vector<int> heights;
@@ -614,12 +430,23 @@ int main(int argc, char** argv )
 
     std::vector<std::vector<float>> tdb_times;
     std::vector<std::vector<float>> tiff_times;
-    std::vector< std::vector<long long int>> sizes;
+    std::vector< std::vector<long long int>> tdb_sizes;
+    std::vector< std::vector<long long int>> tiff_sizes;
 
     cv::Mat cv_img;
+
+    // add parameters to remote_read for where images are being read from 
+    // remote_read(<region>, <accessID>, <secretKey>)
+    VCL::RemoteConnection remote_read();
+    remote_read.start();
+
+    // add parameters to remote_write for where images should be written to 
+    // remote_write(<region>, <accessID>, <secretKey>)
+    VCL::RemoteConnection remote_write();
+    remote_write.start();
     
-    int total_frames = 10;
-    int total_cameras = 10;
+    int total_frames = 1;
+    int total_cameras = 1;
 
     for (int i = 0; i < total_frames; ++i)
     {
@@ -646,18 +473,18 @@ int main(int argc, char** argv )
         cameras.push_back(camera);
     }
 
-    std::string extension = "tdb";
-    // // ChronoCpu tdb("Write TDB");
-    // // ChronoCpu tif("Write TIFF");
+    std::string extension;
+    std::string local_dir = "/data/image_results/";
+    std::string efs_dir = "/efs/image_results/";
+    std::string remote_dir = "s3://image_results/";
 
 
     std::cout << "Writing Individual\n";
-    // #pragma omp parallel for schedule(dynamic) 
     for (int i = 0; i < total_frames; ++i)
     {
         for (int j = 0; j < total_cameras; ++j)
         {    
-            std::string name = frames[i] + "_" + cameras[j];
+            std::string name = frames[i] + "_" + cameras[j]; 
 
             std::string fullpath = image_dir + frames[i] + "/ForReconstruction/" + cameras[j] + ".tif";
             std::cout << fullpath << std::endl;
@@ -666,87 +493,80 @@ int main(int argc, char** argv )
                 cv_img = cv::imdecode(cv::Mat(data), cv::IMREAD_ANYCOLOR);
 
             extension = "tdb";
-            write(output_dir, name, cv_img, extension, compression, min_tiles, remote_write, tdb_times);
+            write(local_dir, efs_dir, remote_dir, name, cv_img, extension, compression, min_tiles, remote_write, tdb_times);
             extension = "tiff";
-            write(output_dir, name, cv_img, extension, compression, min_tiles, remote_write, tiff_times);
+            write(local_dir, efs_dir, remote_dir, name, cv_img, extension, compression, min_tiles, remote_write, tiff_times);
         }
     }
-
-    // std::string extension = "tiff";
-
-    // std::cout << "Writing All\n";
-    // std::string fullpath = image_dir + frames[0] + "/ForReconstruction/" + cameras[0] + ".tif";
-    // std::vector<char> data = remote_read.read(fullpath);
-    // if ( !data.empty() )
-    //     cv_img = cv::imdecode(cv::Mat(data), cv::IMREAD_ANYCOLOR);
-    // // #pragma omp parallel for schedule(dynamic) 
-    // ChronoCpu total("Write Total");
-    // total.tic();
-    // for (int i = 0; i < total_frames; ++i)
-    // {
-    //     for (int j = 0; j < total_cameras; ++j)
-    //     {
-    //         std::string name = frames[i] + "_" + cameras[j];
-    //         write_all(output_dir, name, cv_img, extension, compression, min_tiles, remote_io, remote_write);
-    //     }
-    // }
-    // total.tac();
-    // float total_time = total.getLastTime_us() / 1000.0;
-    // std::cout << total_frames * total_cameras << " frames per  " << total_time << "ms\n";
-    // std::cout << (total_frames * total_cameras) / (total_time / 1000.0) << " frames per second\n"; 
 
     std::cout << "Reading\n";
-    // system("sync && echo 3 > /proc/sys/vm/drop_caches");
-    // read(tiff_files, tdb_files, heights, widths, times, remote_io, remote_write);
+    int index = 0;
     for (int i = 0; i < total_frames; ++i)
     {
         for (int j = 0; j < total_cameras; ++j)
         {    
             std::string name = frames[i] + "_" + cameras[j];
-
-            int index = i + j;
             extension = "tdb";
-            read(output_dir, name, extension, compression, min_tiles, remote_write, tdb_times, index);
+            read(local_dir, efs_dir, remote_dir, name, extension, remote_write, tdb_times, index);
             extension = "tiff";
-            read(output_dir, name, extension, compression, min_tiles, remote_write, tiff_times, index);
-        }
-    }
+            read(local_dir, efs_dir, remote_dir, name, extension, remote_write, tiff_times, index);
+            ++index;
+         }
+     }
+
     std::cout << "Cropping\n";
-    // system("sync && echo 3 > /proc/sys/vm/drop_caches");
-    // crop(tiff_files, tdb_files, heights, widths, times, remote_io, remote_write);
+    index = 0;
     for (int i = 0; i < total_frames; ++i)
     {
         for (int j = 0; j < total_cameras; ++j)
         {    
             std::string name = frames[i] + "_" + cameras[j];
-
-            int index = i + j;
             extension = "tdb";
-            write(output_dir, name, extension, compression, min_tiles, remote_write, tdb_times, index);
+            crop(local_dir, efs_dir, remote_dir, name, extension, remote_write, tdb_times, index, cv_img);
             extension = "tiff";
-            write(output_dir, name, extension, compression, min_tiles, remote_write, tiff_times, index);
+            crop(local_dir, efs_dir, remote_dir, name, extension, remote_write, tiff_times, index, cv_img);
+            ++index;
         }
     }
-    // std::cout << "Getting File Sizes\n";
-    // system("sync && echo 3 > /proc/sys/vm/drop_caches");
-    // get_file_sizes(tiff_files, tdb_files, sizes, remote_io, remote_write);
-    std::cout << "Output to " << output_file << std::endl;
 
+    std::cout << "Getting File Sizes\n";
+    for (int i = 0; i < total_frames; ++i)
+    {
+        for (int j = 0; j < total_cameras; ++j)
+        {
+            std::string name = frames[i] + "_" + cameras[j] + "_" + std::to_string(z);  
+            std::cout << name << std::endl;  
+            extension = "tdb";
+            get_file_sizes(local_dir, efs_dir, remote_dir, name, extension, tdb_sizes, remote_write);
+            extension = "tiff";
+            get_file_sizes(local_dir, efs_dir, remote_dir, name, extension, tiff_sizes, remote_write);
+        }
+    }
+
+    std::cout << "Output to " << output_file << std::endl;
     outfile << "# Image Name, Frame/Camera, ";
-    // outfile << "TIFF Size, TDB Size, "
-    outfile << "TIFF Local Write, TDB Local Write, ";
-    outfile << "TIFF Remote Write, TDB Remote Write, ";
-    
-    // outfile << "TIFF Read, TDB Read, TDB Read to Mat, ";
-    // outfile << "TIFF ROI, TDB ROI, TDB ROI to Mat, ";
+    outfile << "TIFF EBS Size, TDB EBS Size, ";
+    outfile << "TIFF EFS Size, TDB EFS Size, ";
+    outfile << "TIFF S3 Size, TDB S3 Size, ";
+    outfile << "TIFF EBS Write, TDB EBS Write, ";
+    outfile << "TIFF EFS Write, TDB EFS Write, ";
+    outfile << "TIFF S3 Write, TDB S3 Write, ";
+    outfile << "TIFF EBS Read, TDB EBS Read, ";
+    outfile << "TIFF EFS Read, TDB EFS Read, ";
+    outfile << "TIFF S3 Read, TDB S3 Read, ";
+    outfile << "TIFF EBS Crop, TDB EBS Crop, ";
+    outfile << "TIFF EFS Crop, TDB EFS Crop, ";
+    outfile << "TIFF S3 Crop, TDB S3 Crop, ";
     outfile << "\n";
+
 
     for (int i = 0; i < frames.size(); ++i) {
         for (int j = 0; j < cameras.size(); ++j) {
             outfile << frames[i] << ", " << cameras[j] << ", ";
-            // for (int k = 0; k < sizes[i + j].size(); ++k) {
-            //     outfile << sizes[i + j][k] << ", ";
-            // }
+            for (int k = 0; k < tiff_sizes[i + j].size(); ++k) {
+                outfile << tiff_sizes[i + j][k] << ", ";
+                outfile << tdb_sizes[i + j][k] << ", ";
+            }
             for (int x = 0; x < tdb_times[i + j].size(); ++x) {
                 outfile << tiff_times[i + j][x] << ", ";
                 outfile << tdb_times[i + j][x] << ", ";

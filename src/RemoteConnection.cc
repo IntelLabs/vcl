@@ -62,6 +62,8 @@ RemoteConnection::RemoteConnection()
 #ifdef S3_SUPPORT
 RemoteConnection::RemoteConnection(const std::string &region)
 {
+    _remote = false;
+    
     _config.region = Aws::Utils::StringUtils::to_string(region);
     _config.requestTimeoutMs = 3000;
     _config.connectTimeoutMs = 3000;
@@ -70,6 +72,8 @@ RemoteConnection::RemoteConnection(const std::string &region)
 RemoteConnection::RemoteConnection(const std::string &region, const std::string &id, 
     const std::string &key)
 {
+    _remote = false;
+    
     _config.region = Aws::Utils::StringUtils::to_string(region);
     _config.requestTimeoutMs = 3000;
     _config.connectTimeoutMs = 3000;
@@ -289,6 +293,29 @@ std::vector<char> RemoteConnection::read_s3(const std::string &path)
         std::string str_stream = stream.str();
         std::vector<char> data(str_stream.begin(), str_stream.end());
         return data;
+    }
+    else {
+        std::string err = (get_object_outcome.GetError().GetMessage()).c_str();
+        throw VCLException(OperationFailed, err);
+    }
+}
+
+void RemoteConnection::read_to_file(const std::string &path, const std::string &local)
+{
+    std::vector<std::string> divided_path = split_path(path);
+    Aws::String bucket_name = Aws::Utils::StringUtils::to_string(divided_path[5]);
+    Aws::String key_name = Aws::Utils::StringUtils::to_string(divided_path[7]);
+    std::cout << bucket_name << "  " << key_name << std::endl;
+
+    Aws::S3::Model::GetObjectRequest object_request;
+    object_request.WithBucket(bucket_name).WithKey(key_name);
+
+    auto get_object_outcome = _client->GetObject(object_request);
+
+    if (get_object_outcome.IsSuccess()) {
+        Aws::OFStream local_file;
+        local_file.open(local.c_str(), std::ios::out | std::ios::binary);
+        local_file << get_object_outcome.GetResult().GetBody().rdbuf();
     }
     else {
         std::string err = (get_object_outcome.GetError().GetMessage()).c_str();

@@ -51,9 +51,8 @@ test_libs.append('lz4')
 env.Program('test/benchmark_tests/cpu_tests', cputest_source, 
     LIBS=test_libs, LIBPATH=libpath)
 
-iotest_source = ['test/benchmark_tests/aws_io_tests.cc']
-env.Append(CPPPATH=['include', 'src', '/home/crstrong/external_github/vdms/utils/include'])
-test_libs.append('vdms-utils')
-libpath.append('/home/crstrong/external_github/vdms/utils/')
+iotest_source = ['test/benchmark_tests/aws_io_tests.cc', 'src/chrono/Chrono.cc']
+test_libs.append('tiledb')
+env.Append(CPPPATH=['include', 'src', 'include/chrono'])
 env.Program('test/benchmark_tests/io_test', iotest_source, 
     LIBS=test_libs, LIBPATH=libpath)
