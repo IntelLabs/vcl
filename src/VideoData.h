@@ -313,8 +313,8 @@ namespace VCL {
 
 
 
-        std::ifstream* infile ;// (video_id,std::ifstream::binary);
-        std::ofstream* outfile; // (video_id,std::ofstream::binary);
+        std::ifstream* _infile ;// (video_id,std::ifstream::binary);
+        std::ofstream* _outfile; // (video_id,std::ofstream::binary);
 
 
 
@@ -333,7 +333,7 @@ namespace VCL {
         VideoData();
 
         // creates a video from an encoded buffer
-        VideoData(void* buffer, int size);
+        VideoData(char*  buffer, long size);
 
         /**
          *  Creates an VideoData object from the filename

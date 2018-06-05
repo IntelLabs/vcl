@@ -180,32 +180,6 @@ VideoData::VideoData(const VideoData &video)
 VideoData::VideoData( const std::string &video_id)
 {
 
-
-   /*
-
-vector<Mat>load_single_video(string path)
-{
-    vector<Mat> one_video_vector;
-    Mat video_img;
-    VideoCapture Temp_video_capture(path);
-    Temp_video_capture.read(video_img);
-    while (!video_img.empty())
-    {
-        one_video_vector.push_back(video_img);
-        Temp_video_capture.read(video_img);
-    }
-
-    Temp_video_capture.release();
-
-    return one_video_vector;
-}
-
-
-   */
-
-
-
-
      std::cout<< " Hello VidoeData"<<std::endl;
     _inputVideo =  cv::VideoCapture(video_id);
 
@@ -221,7 +195,6 @@ vector<Mat>load_single_video(string path)
     // open the default camera
     if(!_inputVideo.isOpened())  // check if we succeeded
       std::cout<<" Error in Opening the File " <<std::endl;
-
 
     _video_id = video_id;
 
@@ -264,61 +237,18 @@ vector<Mat>load_single_video(string path)
 
 
 }
-void VideoData::read(const std::string &video_id){
 
-infile = new std::ifstream(video_id,std::ifstream::binary);
-infile->seekg (0,infile->end);
-long size = infile->tellg();
-infile->seekg (0);
-
-  // allocate memory for file content
-char* buffer = new char[size];
-
-  // read content of infile
-  infile->read (buffer,size);
-
-   delete[] buffer;
-
-   infile->close();
-
-
-}
-
-void VideoData::write( const std::string &video_id,
-            bool store_metadata)
-{
-infile = new std::ifstream (video_id,std::ifstream::binary);
-outfile = new std::ofstream("v.tex",std::ofstream::binary);
-
-  // get size of file
-  infile->seekg (0,infile->end);
-  long size = infile->tellg();
-  infile->seekg (0);
-
-  // allocate memory for file content
-  char* buffer = new char[size];
-
-  // read content of infile
-  infile->read (buffer,size);
-
-  // write to outfile
-  outfile->write (buffer,size);
-
-  // release dynamically-allocated memory
-  delete[] buffer;
-
-  outfile->close();
-  infile->close();
-
-
-
-}
-
-VideoData::VideoData(void* buffer, int size)
+VideoData::VideoData(char*  buffer, long size)
 {
 
     std::cout<<" This is the blob Constructor"<<std::endl;
     std::cout<< " The BloB size is "<< size << std::endl;
+
+    _outfile->write(buffer, size);
+
+    delete[] buffer;
+
+    _outfile->close();
 
 }
 
@@ -345,12 +275,12 @@ VideoData::VideoData(const cv::VideoCapture &cv_video )
       std::cout<< " Frame Height is" << _frame_height<<std::endl;
     }
 
-    /*
 
-  std::vector<cv::Mat> one_video_vector;
+
+    std::vector<cv::Mat> one_video_vector;
 
     cv::Mat video_img;
-    cv::VideoCapture Temp_video_capture(video_id);
+    cv::VideoCapture Temp_video_capture=_inputVideo;
     Temp_video_capture.read(video_img);
     while (!video_img.empty())
     {
@@ -360,10 +290,10 @@ VideoData::VideoData(const cv::VideoCapture &cv_video )
 
     Temp_video_capture.release();
 
-    std::cout<< " the number of the frames is " <<one_video_vector.size();
+    std::cout<< " The number of the frames is " <<one_video_vector.size();
 
 
-    */
+
     // _format = img._format;
     // _compress = img._compress;
     // _Video_id = img._Video_id;
@@ -390,6 +320,58 @@ VideoData::VideoData(const cv::VideoCapture &cv_video )
     //         _operations.push_back(img._operations[i]);
     // }
 }
+
+void VideoData::read(const std::string &video_id){
+
+_infile = new std::ifstream(video_id,std::ifstream::binary);
+_infile->seekg (0,_infile->end);
+long size = _infile->tellg();
+_infile->seekg (0);
+
+  // allocate memory for file content
+char* buffer = new char[size];
+
+  // read content of infile
+  _infile->read (buffer,size);
+
+   delete[] buffer;
+
+   _infile->close();
+
+
+}
+
+void VideoData::write( const std::string &video_id,
+            bool store_metadata)
+{
+_infile = new std::ifstream (video_id,std::ifstream::binary);
+_outfile = new std::ofstream("output.txt",std::ofstream::binary);
+
+  // get size of file
+  _infile->seekg (0,_infile->end);
+  long size = _infile->tellg();
+  _infile->seekg (0);
+
+  // allocate memory for file content
+  char* buffer = new char[size];
+
+  // read content of infile
+  _infile->read (buffer,size);
+
+  // write to outfile
+  _outfile->write (buffer,size);
+
+  // release dynamically-allocated memory
+  delete[] buffer;
+
+  _outfile->close();
+  _infile->close();
+
+
+
+}
+
+
 
 void VideoData::operator=(const VideoData &img)
 {
