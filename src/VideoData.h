@@ -196,6 +196,41 @@ namespace VCL {
             OperationType get_type() { return RESIZE; };
         };
 
+
+                    /*  *********************** */
+                    /*      Interval Operation  */
+                    /*  *********************** */
+        class Interval : public Operation {
+         private:
+            /** Gives the height and width to resize the Video to */
+          int _from;
+          int _to;
+
+        public:
+            /**
+             *  Constructor, sets the size to resize to and the format
+             *
+             *  @param rect  Contains height and width to resize to
+             *  @param format  The current format of the Video data
+             *  @see Video.h for more details on VideoFormat and Rectangle
+             */
+            Interval(const int value1 , const int value2, VideoFormat format)
+                : Operation(format),
+                  _from(value1),
+                  _to(value2)
+            {
+            };
+
+            /**
+             *  Resizes an Video to the given dimensions
+             *
+             *  @param img  A pointer to the current VideoData object
+             */
+            void operator()(VideoData *video);
+
+            OperationType get_type() { return INTERVAL; };
+        };
+
     /*  *********************** */
     /*       CROP OPERATION     */
     /*  *********************** */
@@ -278,23 +313,26 @@ namespace VCL {
     std::string _file_name;
     std::string _path;
 
+
+    //Vidoe Hieght, width, length
+
+    uint _length,  _height, _width;
     int _start_frame = 0 ;
     int _end_frame = INT_MAX;
     int _scale_num = 8 ;
     const float scale_stride = sqrt(3) ;
 
-    int _frame_width;
-    int _frame_height;
+    uint _frame_width;
+    uint _frame_height;
 
     float _fps;
     float _frame_count;
     cv::Size _size;
-    int _length;
-    uint _height, _width;
-    int _video_time;
+    int _video_time ;
 
-        // Type of Video (OpenCV definition) and number of channels
-        int _cv_type, _channels;
+
+
+
 
         // Maintains order of operations requested
         std::vector<std::shared_ptr<Operation>> _operations;
@@ -302,6 +340,7 @@ namespace VCL {
         // Video format and compression type
         VideoFormat _format;
         int _format1;
+        int _cv_type;
 
 
         // Full path to Video
@@ -332,10 +371,7 @@ namespace VCL {
          */
         VideoData();
 
-        // creates a video from an encoded buffer
-        VideoData(char*  buffer, long size);
-
-        /**
+               /**
          *  Creates an VideoData object from the filename
          *
          *  @param Video_id  A string indicating where the Video is on disk
@@ -363,6 +399,9 @@ namespace VCL {
          */
         VideoData(const VideoData &video);
 
+         // creates a video from an encoded buffer
+        VideoData(char*  buffer, long size);
+
         /**
          *  Sets an VideoData object equal to another VideoData object
          *
@@ -381,7 +420,7 @@ namespace VCL {
          *
          *  @return The string containing the full path to the VideoData object
          */
-        std::string get_Video_id() const;
+        std::string get_video_id() const;
 
         /**
          *  Gets the format of the VideoData object
@@ -389,7 +428,7 @@ namespace VCL {
          *  @return The VideoFormat of the VideoData object
          *  @see Video.h for more details on VideoFormat
          */
-        VideoFormat get_Video_format() const;
+        VideoFormat get_video_format() const;
 
         /**
          *  Gets the OpenCV type of the Video
@@ -428,9 +467,8 @@ namespace VCL {
          *
          *  @return An OpenCV Mat
          */
-        cv::Mat get_cvmat();
-
-        /**
+        cv::VideoCapture get_cv_video_capture();
+      /**
          *  Gets a specific area of the Video, indicated by the Rectangle
          *    parameters
          *
@@ -474,7 +512,7 @@ namespace VCL {
          *
          *  @param Video_id  The full path to the Video location
          */
-        void set_Video_id(const std::string &Video_id);
+        void set_video_id(const std::string &Video_id);
 
         /**
          *  Sets the format of the VideoData object
@@ -557,7 +595,7 @@ namespace VCL {
          *    metadata in TileDB or not. Defaults to true
          *  @see Video.h for more details on VideoFormat
          */
-        void write(const std::string &video_id,  bool store_metadata=true);
+        void write(const std::string &video_id,  VideoFormat video_format,  bool store_metadata=true);
 
         // void remove(const std::string &Video_id);
 
@@ -569,6 +607,8 @@ namespace VCL {
          *  @param columns  The number of columns in the resized Video
          */
         void resize(int rows, int columns);
+
+         void interval(int from, int to);
 
         /**
          *  Stores a Crop Operation in the list of operations
@@ -606,7 +646,7 @@ namespace VCL {
          *
          *  @param cv_img  An existing OpenCV Mat
          */
-        void copy_cv(const cv::Mat &cv_video);
+        void copy_cv(const cv::VideoCapture &cv_video);
 
         /**
          *  Copies the VideoData OpenCV Mat into a buffer

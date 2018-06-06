@@ -32,7 +32,6 @@ env.SharedLibrary('libvcl.so', source_files,
              'faiss',
              ],
 
-
     LIBPATH = ['/usr/local/lib',
                '/usr/lib',
               ],

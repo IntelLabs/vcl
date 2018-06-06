@@ -27,7 +27,7 @@ Video::Video(const std::string &fileName)
 
 
 
-Video:: Video (void* buffer, int size )
+Video::Video (void* buffer, int size )
 {
 // _video = new VideoData( buffer, size);
 }
@@ -51,6 +51,35 @@ std::string Video::get_video_id() const
 {
   return "id";
 
+}
+
+void Video::delete_video()
+{
+    //_video->delete_object();
+
+  //  delete _video;
+
+   // _video = new VideoData;
+}
+
+void Video::resize(int new_height, int new_width)
+{
+ //   _video->resize(new_height, new_width);
+}
+
+void Video::interval(int from, int to)
+{
+  //  _video->interval(from, to);
+}
+
+void Video::crop(const Rectangle &rect)
+{
+  //  _video->crop(rect);
+}
+
+void Video::threshold(int value)
+{
+   //_video->threshold(value);
 }
 
 

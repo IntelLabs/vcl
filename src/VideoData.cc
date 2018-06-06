@@ -9,6 +9,7 @@ using namespace std;
 
 #include "VideoData.h"
 
+#include "utils.h"
 using namespace VCL;
 
 VideoData::Read::Read(const std::string& filename, VideoFormat format)
@@ -17,24 +18,14 @@ VideoData::Read::Read(const std::string& filename, VideoFormat format)
 {
 }
 
-void VideoData::Read::operator()(VideoData *img)
+void VideoData::Read::operator()(VideoData *video)
 {
-    // if ( _format == VCL::TDB ) {
-    //     if ( img->_tdb == NULL )
-    //         throw VCLException(TileDBNotFound, "VideoFormat indicates Video \
-    //             stored in TDB format, but no data was found");
 
-    //     img->_tdb->read();
-    //     img->_height = img->_tdb->get_Video_height();
-    //     img->_width = img->_tdb->get_Video_width();
-    //     img->_channels = img->_tdb->get_Video_channels();
-    // }
-    // else {
-    //     img->copy_cv(cv::imread(_fullpath, cv::IMREAD_ANYCOLOR));
-    //     if ( img->_cv_img.empty() )
-    //         throw VCLException(ObjectEmpty, _fullpath + " could not be read, \
-    //             object is empty");
-    // }
+        video->copy_cv(video->_inputVideo);
+        if ( !(video->_inputVideo.isOpened()) )
+            throw VCLException(ObjectEmpty, _fullpath + " could not be read, \
+                object is empty");
+
 }
 
     /*  *********************** */
@@ -81,7 +72,7 @@ void VideoData::Write::operator()(VideoData *img)
     /*       RESIZE OPERATION   */
     /*  *********************** */
 
-void VideoData::Resize::operator()(VideoData *img)
+void VideoData::Resize::operator()(VideoData *video)
 {
     // if ( _format == VCL::TDB ) {
     //     img->_tdb->resize(_rect);
@@ -104,7 +95,7 @@ void VideoData::Resize::operator()(VideoData *img)
     /*       CROP OPERATION     */
     /*  *********************** */
 
-void VideoData::Crop::operator()(VideoData *img)
+void VideoData::Crop::operator()(VideoData *video)
 {
     // if ( _format == VCL::TDB ) {
     //     img->_tdb->read(_rect);
@@ -128,7 +119,7 @@ void VideoData::Crop::operator()(VideoData *img)
     /*    THRESHOLD OPERATION   */
     /*  *********************** */
 
-void VideoData::Threshold::operator()(VideoData *img)
+void VideoData::Threshold::operator()(VideoData *video)
 {
     // if ( _format == VCL::TDB )
     //     img->_tdb->threshold(_threshold);
@@ -139,6 +130,14 @@ void VideoData::Threshold::operator()(VideoData *img)
     //     else
     //         throw VCLException(ObjectEmpty, "Video object is empty");
     // }
+}
+                    /*  *********************** */
+                    /*      Interval Operation  */
+                    /*  *********************** */
+
+void VideoData::Interval::operator()(VideoData *video)
+{
+
 }
 
 
@@ -154,27 +153,29 @@ VideoData::VideoData()
 {
 
     std::cout<< "Hello"<<std::endl;
-    // _channels = 0;
-    // _height = 0;
-    // _width = 0;
-    // _cv_type = CV_8UC3;
+    _width = 0;
+    _height =0;
+    _length=0;
+    _start_frame =0;
+    _end_frame =0;
+    _fps=0;
+    _frame_width=0;
+    _frame_height=0;
+    _format1 =NONE1;
+    _video_id ="";
 
-    // _format = VCL::NONE;
-    // _compress = VCL::CompressionType::LZ4;
 
-    // _tdb = NULL;
-    // _Video_id = "";
 }
 
 VideoData::VideoData(const VideoData &video)
 {
-    // copy_cv(cv_img);
+     copy_cv(_inputVideo);
 
-    // _format = VCL::NONE;
+     _format = VCL::NONE1;
     // _compress = VCL::CompressionType::LZ4;
-    // _Video_id = "";
+     _video_id = "";
 
-    // _tdb = NULL;
+
 }
 
 VideoData::VideoData( const std::string &video_id)
@@ -182,6 +183,7 @@ VideoData::VideoData( const std::string &video_id)
 
      std::cout<< " Hello VidoeData"<<std::endl;
     _inputVideo =  cv::VideoCapture(video_id);
+
 
     _fps = _inputVideo.get(CV_CAP_PROP_FPS);
     _frame_count= _inputVideo.get(CV_CAP_PROP_FRAME_COUNT);
@@ -241,14 +243,15 @@ VideoData::VideoData( const std::string &video_id)
 VideoData::VideoData(char*  buffer, long size)
 {
 
-    std::cout<<" This is the blob Constructor"<<std::endl;
-    std::cout<< " The BloB size is "<< size << std::endl;
+    // std::cout<<" This is the blob Constructor"<<std::endl;
+    // std::cout<< " The BloB size is "<< size << std::endl;
+
+     _outfile->open(_video_id, std::ofstream::binary);
 
     _outfile->write(buffer, size);
 
-    delete[] buffer;
-
-    _outfile->close();
+     _outfile->close();
+    // delete[] buffer;
 
 }
 
@@ -323,49 +326,38 @@ VideoData::VideoData(const cv::VideoCapture &cv_video )
 
 void VideoData::read(const std::string &video_id){
 
-_infile = new std::ifstream(video_id,std::ifstream::binary);
-_infile->seekg (0,_infile->end);
-long size = _infile->tellg();
-_infile->seekg (0);
 
-  // allocate memory for file content
-char* buffer = new char[size];
+    //video_id = create_fullpath(video_id, _format);
 
-  // read content of infile
-  _infile->read (buffer,size);
+    _operations.push_back(std::make_shared<Read> (_video_id, _format));
 
-   delete[] buffer;
 
-   _infile->close();
+
+// _infile = new std::ifstream(video_id,std::ifstream::binary);
+// _infile->seekg (0,_infile->end);
+// long size = _infile->tellg();
+// _infile->seekg (0);
+
+//   // allocate memory for file content
+// char* buffer = new char[size];
+
+//   // read content of infile
+//   _infile->read (buffer,size);
+
+//    delete[] buffer;
+
+//    _infile->close();
 
 
 }
 
-void VideoData::write( const std::string &video_id,
+void VideoData::write( const std::string &video_id, VideoFormat video_format,
             bool store_metadata)
 {
-_infile = new std::ifstream (video_id,std::ifstream::binary);
-_outfile = new std::ofstream("output.txt",std::ofstream::binary);
 
-  // get size of file
-  _infile->seekg (0,_infile->end);
-  long size = _infile->tellg();
-  _infile->seekg (0);
 
-  // allocate memory for file content
-  char* buffer = new char[size];
-
-  // read content of infile
-  _infile->read (buffer,size);
-
-  // write to outfile
-  _outfile->write (buffer,size);
-
-  // release dynamically-allocated memory
-  delete[] buffer;
-
-  _outfile->close();
-  _infile->close();
+     _operations.push_back(std::make_shared<Write> (create_fullpath(video_id, video_format),
+        video_format, _format, store_metadata));
 
 
 
@@ -394,12 +386,12 @@ VideoData::~VideoData()
     /*        GET FUNCTIONS     */
     /*  *********************** */
 
-std::string VideoData::get_Video_id() const
+std::string VideoData::get_video_id() const
 {
     return _video_id;
 }
 
-VideoFormat VideoData::get_Video_format() const
+VideoFormat VideoData::get_video_format() const
 {
     return _format;
 }
@@ -433,7 +425,7 @@ void VideoData::get_buffer(void* buffer, int buffer_size)
 }
 
 
-cv::Mat VideoData::get_cvmat()
+cv::VideoCapture VideoData::get_cv_video_capture()
 {
     // perform_operations();
 
@@ -463,12 +455,30 @@ std::vector<unsigned char> VideoData::get_encoded(VideoFormat format,
 void VideoData::create_unique(const std::string &path,
     VideoFormat format)
 {
+   std::string unique_id;
+    std::string name;
 
+    std::string extension = format_to_string(format);
+
+    const char& last = path.back();
+
+    do {
+        uint64_t id = get_uint64();
+        std::stringstream ss;
+        ss << std::hex << id;
+        unique_id = ss.str();
+        if (last != '/')
+            name = path + "/" + unique_id + "." + extension;
+        else
+            name = path + unique_id + "." + extension;
+    } while ( exists(name) );
+
+    _video_id = name;
 }
 
-void VideoData::set_Video_id(const std::string &video_id)
+void VideoData::set_video_id(const std::string &video_id)
 {
-  _video_id =video_id;
+  _video_id = video_id;
 }
 
 void VideoData::set_format(const std::string &extension)
@@ -497,7 +507,6 @@ void VideoData::set_dimensions(cv::Size dimensions)
 {
     _frame_height = dimensions.height;
     _frame_width = dimensions.width;
-
 
 }
 
@@ -529,12 +538,18 @@ void VideoData::perform_operations()
 
 void VideoData::resize(int rows, int columns)
 {
+    std::cout<< " Hello VidoeData"<<std::endl;
+    _operations.push_back(std::make_shared<Resize> (Rectangle(0, 0, columns, rows), _format));
+}
 
+void VideoData::interval(int from, int to)
+{
+ _operations.push_back(std::make_shared<Interval> (from, to, _format));
 }
 
 void VideoData::crop(const Rectangle &rect)
 {
-
+ _operations.push_back(std::make_shared<Crop> (rect, _format));
 }
 
 void VideoData::threshold(int value)
@@ -554,8 +569,18 @@ void VideoData::delete_object()
     /*      COPY FUNCTIONS      */
     /*  *********************** */
 
-void VideoData::copy_cv(const cv::Mat &cv_img)
+void VideoData::copy_cv(const cv::VideoCapture &video_id)
 {
+
+    _inputVideo =  cv::VideoCapture(video_id);
+
+
+    _fps = _inputVideo.get(CV_CAP_PROP_FPS);
+    _frame_count= _inputVideo.get(CV_CAP_PROP_FRAME_COUNT);
+    _frame_width = _inputVideo.get(CV_CAP_PROP_FRAME_WIDTH);
+    _frame_height = _inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT);
+
+
 
 }
 
@@ -594,7 +619,19 @@ std::string VideoData::create_fullpath(const std::string &filename,
     VideoFormat format)
 {
 
-    return "id";
+
+    if ( filename == "" )
+        throw VCLException(ObjectNotFound, "Location to write object is undefined");
+
+    std::string extension = get_extension(filename);
+    std::string ext = format_to_string(format);
+
+    if ( ext.compare(extension) == 0 || ext == "" )
+        return filename;
+    else
+        return filename + "." + ext;
+
+
 }
 
 bool VideoData::exists(const std::string &name)
