@@ -15,7 +15,7 @@ class VideoTest : public ::testing::Test {
 protected:
     virtual void SetUp() {
 
-		filename = "/home/ragaad/newVCL/vcl/test/videos/pedestrian1.avi";
+		filename = "test/videos/pedestrian1.avi";
     }
 
 
@@ -30,9 +30,8 @@ TEST_F(VideoTest, DefaultConstructor)
 
     std::cout << " Video Test  " << filename << std::endl;
 
-    VCL::Video video;
+    VCL::Video video (filename);
 
-    // cv::Size dims = img_data.get_dimensions();
 
     // EXPECT_EQ(0, dims.height);
     // EXPECT_EQ(0, dims.width);

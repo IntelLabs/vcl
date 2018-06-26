@@ -52,7 +52,7 @@ long GetFileSize(std::string filename)
 class VideoDataTest : public ::testing::Test {
  protected:
     virtual void SetUp() {
-        _video = "videos/pedestrian1.avi";
+        _video = "test/videos/pedestrian1.avi";
         _inputVideo = cv::VideoCapture("test/videos/pedestrian1.avi");
     }
 
@@ -73,22 +73,22 @@ TEST_F(VideoDataTest, DefaultConstructor)
 
 
 
-// TEST_F(VideoDataTest, StringConstructor)
-// {
-//     std::cout<< " String Constructor" << std::endl;
-//    // VCL::VideoData video_data(_video);
-// }
+TEST_F(VideoDataTest, StringConstructor)
+{
+    std::cout<< " String Constructor" << std::endl;
+    VCL::VideoData video_data(_video);
+}
 
 
-// TEST_F(VideoDataTest, ObjectConstructor)
-// {
-//     std::cout<< " CVCapture Object Constructor" << std::endl;
+TEST_F(VideoDataTest, ObjectConstructor)
+{
+    std::cout<< " CVCapture Object Constructor" << std::endl;
 
-//     VCL::VideoData video_data(_inputVideo); //
-//     std::cout<< " The Video Size is " << video_data.get_size();
+    VCL::VideoData video_data(_inputVideo); //
+    std::cout<< " The Video Size is " << video_data.get_size();
 
 
-// }
+}
 
 // TEST_F(VideoDataTest, BlobConstructor)
 // {
@@ -113,23 +113,35 @@ TEST_F(VideoDataTest, DefaultConstructor)
 
 // }
 
-// TEST_F(VideoDataTest, Read)
-// {
-//     std::cout<< " Read OPeration" << std::endl;
+TEST_F(VideoDataTest, Read)
+{
+    std::cout<< " Read OPeration" << std::endl;
 
-//     VCL::VideoData video_data(_video); //
-//     std::cout<< " The Video Size is " << video_data.get_size();
-//     video_data.read(_video);
+    VCL::VideoData video_data(_video); //
 
-
-// }
-
-// TEST_F(VideoDataTest, Write)
-// {
-//     std::cout<< " Write OPeration" << std::endl;
-
-//     VCL::VideoData video_data(_video); //
-//     video_data.write(_video,true);
+    video_data.read(_video);
+     std::cout<< " The Video Size is " << video_data.get_size();
 
 
-// }
+ }
+
+TEST_F(VideoDataTest, Write)
+{
+    std::cout<< " Write Operation" << std::endl;
+
+    VCL::VideoData video_data(_video); //
+    video_data.write(_video, VCL::MP4, true);
+
+
+}
+
+TEST_F(VideoDataTest, CreateUnique)
+{
+     VCL::VideoData video_data(_inputVideo); //
+
+    video_data.create_unique("tests/videos/", VCL::MP4);
+    std::cout<<video_data.get_video_id() <<std::endl;
+
+    video_data.write(video_data.get_video_id(), VCL::MP4);
+    //video_data.perform_operations();
+}

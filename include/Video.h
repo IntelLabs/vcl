@@ -44,7 +44,7 @@
 
 
 namespace VCL {
-    class VideoData; // To hide the implementation details
+    class VideoData; // To hide the Video implementation details
 
     /* VideoFormat*/
     enum VideoFormat { NONE1, MP4 , AVI, MPEG  };
@@ -171,7 +171,7 @@ namespace VCL {
          */
         void threshold(int value);
 
-        void interval (int from, int to );
+        void interval (int from, int to);
 
 
 
