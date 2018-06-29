@@ -39,6 +39,7 @@
 
 
 #include "Exception.h"
+#include "utils.h"
 
 //#include "VideoUtils.h"
 
@@ -47,7 +48,7 @@ namespace VCL {
     class VideoData; // To hide the Video implementation details
 
     /* VideoFormat*/
-    enum VideoFormat { NONE1, MP4 , AVI, MPEG  };
+    // enum VideoFormat {  MP4 , AVI, MPEG  };
 
     typedef cv::Rect Rectangle; // spcifiy an ROI inside a video
 
@@ -91,14 +92,14 @@ namespace VCL {
 
         cv::Size get_dimensions() const; //instead of get dimension
 
-        VideoFormat get_video_format() const;
+        Format get_video_format() const;
 
         int get_raw_dat_size() const;
 
         void get_raw_data(void* buffer, int buffer_size) const;
 
         std::string create_unique(const std::string &path,
-                VideoFormat format);
+                Format format);
         /**
          *  Sets the size of the image in pixels (width, height) using
          *    an OpenCV Size object
@@ -131,7 +132,7 @@ namespace VCL {
          *    image metadata. Defaults to true (assuming no other metadata
          *    storage)
          */
-        void store(const std::string &video_id, VideoFormat video_format,
+        void store(const std::string &video_id, Format video_format,
             bool store_metadata=true);
 
         /**
@@ -158,7 +159,7 @@ namespace VCL {
          *    starting y coordinate, height, width) the image should be
          *    cropped to
          */
-        void crop(const Rectangle &rect);
+        void crop(const Rectangle &rect, int start, int stop);
 
         /**
          *  Performs a thresholding operation on the Video. Discards the pixel

@@ -3,19 +3,26 @@
 #include <iostream>
 
 #include "Video.h"
+#include "VideoData.h"
 
 
 using namespace VCL;
 
- using namespace cv; // OpenCV namespace
-void VCL::Video::store(const std::string &video_id, VideoFormat video_format,
+using namespace cv; // OpenCV namespace
+
+void Video::store(const std::string &video_id, Format video_format,
             bool store_metadata)
 {
-
-
+  _video->write(video_id, video_format, store_metadata);
+  _video->perform_operations();
 }
 
-
+std::string Video::create_unique(const std::string &path,
+                Format format)
+{
+  _video->create_unique(path, format);
+  return _video->get_video_id();
+}
 
 
 Video::Video(const std::string &fileName)
@@ -27,9 +34,9 @@ Video::Video(const std::string &fileName)
 
 
 
-Video::Video (void* buffer, int size )
+Video::Video(void* buffer, int size )
 {
-// _video = new VideoData( buffer, size);
+  _video = new VideoData(buffer, size);
 }
 
  void Video::operator=(const Video &vid){
@@ -64,17 +71,17 @@ void Video::delete_video()
 
 void Video::resize(int new_height, int new_width)
 {
- //   _video->resize(new_height, new_width);
+    _video->resize(new_height, new_width);
 }
 
 void Video::interval(int from, int to)
 {
-  //  _video->interval(from, to);
+    _video->interval(from, to);
 }
 
-void Video::crop(const Rectangle &rect)
+void Video::crop(const Rectangle &rect, int start, int stop)
 {
-  //  _video->crop(rect);
+    _video->crop(rect, start, stop);
 }
 
 void Video::threshold(int value)

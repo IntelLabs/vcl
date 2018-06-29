@@ -90,28 +90,28 @@ TEST_F(VideoDataTest, ObjectConstructor)
 
 }
 
-// TEST_F(VideoDataTest, BlobConstructor)
-// {
-//     std::cout<< " Blob Object Constructor" << std::endl;
-//     std::ifstream ifile;
-//     ifile.open(_video, std::ifstream::in);
-//     ASSERT_FALSE(ifile.fail());
+TEST_F(VideoDataTest, BlobConstructor)
+{
+    std::cout<< " Blob Object Constructor" << std::endl;
+    std::ifstream ifile;
+    ifile.open(_video, std::ifstream::in);
+    ASSERT_FALSE(ifile.fail());
 
-//     int fsize;
-//     char * inBuf;
-//     ifile.seekg(0, std::ios::end);
-//     fsize = (long)ifile.tellg();
-//     ifile.seekg(0, std::ios::beg);
-//     inBuf = new char[fsize];
-//     ifile.read(inBuf, fsize);
-//     // std::string json_query = std::string(inBuf);
-//     ifile.close();
+    int fsize;
+    char* inBuf;
+    ifile.seekg(0, std::ios::end);
+    fsize = (long)ifile.tellg();
+    ifile.seekg(0, std::ios::beg);
+    inBuf = new char[fsize];
+    ifile.read(inBuf, fsize);
+    // std::string json_query = std::string(inBuf);
+    ifile.close();
 
-//     VCL::VideoData video_data(inBuf, fsize); //
-//     std::cout<< " The Video Size is " << fsize <<"\t"<< sizeof(inBuf)<<std::endl;
-//     delete[] inBuf;
+    VCL::VideoData video_data(inBuf, fsize); //
+    std::cout<< " The Video Size is " << fsize <<"\t"<< sizeof(inBuf)<<std::endl;
+    delete[] inBuf;
 
-// }
+}
 
 TEST_F(VideoDataTest, Read)
 {
@@ -130,7 +130,7 @@ TEST_F(VideoDataTest, Write)
     std::cout<< " Write Operation" << std::endl;
 
     VCL::VideoData video_data(_video); //
-    video_data.write(_video, VCL::MP4, true);
+    video_data.write(_video, VCL::Format::MP4, true);
 
 
 }
@@ -139,9 +139,9 @@ TEST_F(VideoDataTest, CreateUnique)
 {
      VCL::VideoData video_data(_inputVideo); //
 
-    video_data.create_unique("tests/videos/", VCL::MP4);
+    video_data.create_unique("tests/videos/", VCL::Format::MP4);
     std::cout<<video_data.get_video_id() <<std::endl;
 
-    video_data.write(video_data.get_video_id(), VCL::MP4);
+    video_data.write(video_data.get_video_id(), VCL::Format::MP4);
     //video_data.perform_operations();
 }
