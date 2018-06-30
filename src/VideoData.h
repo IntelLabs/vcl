@@ -42,6 +42,7 @@
 // #include "Image.h"
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 namespace VCL {
 
@@ -100,6 +101,9 @@ namespace VCL {
         private:
             /** The full path to the object to read */
             std::string _fullpath;
+            int _start; // specify the starting reading point of the video
+            int _stop;  //specify the ending point of the reading it represnet sa frame index
+
 
         public:
             /**
@@ -109,7 +113,7 @@ namespace VCL {
              *  @param format  The format to read the Video from
              *  @see Video.h for more details on Format
              */
-            Read(const std::string& filename, Format format);
+            Read(const std::string& filename, Format format, int start, int stop);
 
             /**
              *  Reads an Video from the file system (based on the format
@@ -171,6 +175,8 @@ namespace VCL {
          private:
             /** Gives the height and width to resize the Video to */
             Rectangle _rect;
+            int _start;
+            int _stop;
 
         public:
             /**
@@ -180,9 +186,11 @@ namespace VCL {
              *  @param format  The current format of the Video data
              *  @see Video.h for more details on Format and Rectangle
              */
-            Resize(const Rectangle &rect, Format format)
+            Resize(const Rectangle &rect, Format format, int start, int stop)
                 : Operation(format),
-                  _rect(rect)
+                  _rect(rect),
+                  _start(start),
+                  _stop(stop)
             {
             };
 
@@ -282,6 +290,8 @@ namespace VCL {
         private:
             /** Minimum value pixels should be */
             int _threshold;
+            int _start;
+            int _stop;
 
         public:
             /**
@@ -291,9 +301,11 @@ namespace VCL {
              *  @param format  The current format of the Video data
              *  @see Video.h for more details on Format
              */
-            Threshold(const int value, Format format)
+            Threshold(const int value, Format format, int start, int stop)
                 : Operation(format),
-                  _threshold(value)
+                  _threshold(value),
+                  _start(start),
+                  _stop(stop)
             {
             };
 
@@ -346,14 +358,14 @@ namespace VCL {
     // Full path to Video
     std::string _video_id;
 
-    // Video data (OpenCV Mat or TDBVideo)
     cv::VideoCapture _inputVideo;
     cv::VideoWriter _outputVideo;
 
-    std::string _temporary_path = "db/videos/temp";
+    std::string _temporary_path;
+    bool _temp_exist = false;
 
-    std::ifstream* _infile ;// (video_id,std::ifstream::binary);
-    std::ofstream* _outfile; // (video_id,std::ofstream::binary);
+    // std::ifstream* _infile = nullptr;// (video_id,std::ifstream::binary);
+    // std::ofstream* _outfile = nullptr; // (video_id,std::ofstream::binary);
 
     // unsigned char* _encoded_video;
     // long _encoded_size;
@@ -400,7 +412,7 @@ namespace VCL {
         VideoData(const VideoData &video);
 
          // creates a video from an encoded buffer
-        VideoData(void*  buffer, long size);
+        VideoData(void*  buffer, long size, const std::string &path = "temp/");
 
         /**
          *  Sets an VideoData object equal to another VideoData object
@@ -525,6 +537,7 @@ namespace VCL {
 
         void set_format(int form);
 
+        void set_temporary_directory(const std::string &path);
 
         /**
          *  Sets the type of the VideoData object using OpenCV types
@@ -585,7 +598,7 @@ namespace VCL {
          *
          *  @param Video_id  The full path to the Video to be read
          */
-        void read(const std::string &video_id);
+        void read(const std::string &video_id, int start, int stop );
 
         /**
          *  Stores a Write Operation in the list of operations
@@ -609,7 +622,7 @@ namespace VCL {
          *  @param rows  The number of rows in the resized Video
          *  @param columns  The number of columns in the resized Video
          */
-        void resize(int rows, int columns);
+        void resize(int rows, int columns, int start, int stop);
 
         void interval(int from, int to);
 
@@ -630,7 +643,7 @@ namespace VCL {
          *
          *  @param value  The threshold value
          */
-        void threshold(int value);
+        void threshold(int value, int start, int stop);
 
         /**
          *  Deletes the VideoData as well as removes file from system if

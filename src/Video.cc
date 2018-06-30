@@ -71,7 +71,7 @@ void Video::delete_video()
 
 void Video::resize(int new_height, int new_width)
 {
-    _video->resize(new_height, new_width);
+    _video->resize(new_height, new_width, 10, 100);
 }
 
 void Video::interval(int from, int to)
