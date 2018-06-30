@@ -107,7 +107,7 @@ TEST_F(VideoDataTest, BlobConstructor)
     // std::string json_query = std::string(inBuf);
     ifile.close();
 
-    VCL::VideoData video_data(inBuf, fsize); //
+    VCL::VideoData video_data(inBuf, fsize, "test/temp/"); //
     std::cout<< " The Video Size is " << fsize <<"\t"<< sizeof(inBuf)<<std::endl;
     delete[] inBuf;
 
@@ -119,7 +119,9 @@ TEST_F(VideoDataTest, Read)
 
     VCL::VideoData video_data(_video); //
 
-    video_data.read(_video);
+    video_data.read(_video, 10, 200);
+
+    video_data.perform_operations();
      std::cout<< " The Video Size is " << video_data.get_size();
 
 
@@ -131,17 +133,54 @@ TEST_F(VideoDataTest, Write)
 
     VCL::VideoData video_data(_video); //
     video_data.write(_video, VCL::Format::MP4, true);
+  //  video_data.perform_operations();
 
 
 }
 
-TEST_F(VideoDataTest, CreateUnique)
+TEST_F(VideoDataTest, Resize)
 {
-     VCL::VideoData video_data(_inputVideo); //
+    std::cout<< "Resize Operation" << std::endl;
 
-    video_data.create_unique("tests/videos/", VCL::Format::MP4);
-    std::cout<<video_data.get_video_id() <<std::endl;
+   VCL::VideoData video_data(_inputVideo); //
+    video_data.resize( 100,100, 10, 200);
+    video_data.set_temporary_directory("test/temp/");
+    video_data.perform_operations();
+}
 
-    video_data.write(video_data.get_video_id(), VCL::Format::MP4);
-    //video_data.perform_operations();
+TEST_F(VideoDataTest, Threshold)
+{
+    std::cout<< "threshold Operation" << std::endl;
+
+   VCL::VideoData video_data(_inputVideo); //
+    video_data.threshold( 200, 10, 100);
+    video_data.set_temporary_directory("test/temp/");
+    video_data.perform_operations();
+
+
+}
+
+// TEST_F(VideoDataTest, CreateUnique)
+// {
+//      VCL::VideoData video_data(_inputVideo); //
+
+//     video_data.create_unique("test/videos/", VCL::Format::MP4);
+//     std::cout<<video_data.get_video_id() <<std::endl;
+
+//     video_data.write(video_data.get_video_id(), VCL::Format::MP4);
+//     video_data.perform_operations();
+// }
+
+TEST_F(VideoDataTest, Crop)
+{
+    try {
+    VCL::VideoData video_data(_inputVideo);
+    video_data.set_temporary_directory("test/temp/");
+
+    video_data.crop(VCL::Rectangle(0, 0, 50, 50), 100, 150);
+    video_data.perform_operations();
+    }
+    catch(VCL::Exception &e) {
+        print_exception(e);
+    }
 }
