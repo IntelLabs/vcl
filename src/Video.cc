@@ -64,29 +64,33 @@ void Video::delete_video()
 {
     //_video->delete_object();
 
-  //  delete _video;
+    delete _video;
 
    // _video = new VideoData;
 }
 
-void Video::resize(int new_height, int new_width)
+void Video::resize(int new_height, int new_width, int start, int stop)
 {
-    _video->resize(new_height, new_width, 10, 100);
+    _video->resize(new_height, new_width, start, stop);
+    _video->perform_operations();
 }
 
 void Video::interval(int from, int to)
 {
     _video->interval(from, to);
+    _video->perform_operations();
 }
 
 void Video::crop(const Rectangle &rect, int start, int stop)
 {
     _video->crop(rect, start, stop);
+    _video->perform_operations();
 }
 
-void Video::threshold(int value)
+void Video::threshold(int value, int start, int stop)
 {
-   //_video->threshold(value);
+   _video->threshold(value, start, stop);
+   _video->perform_operations();
 }
 
 
