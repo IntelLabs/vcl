@@ -148,7 +148,7 @@ namespace VCL {
          *  @param new_height  Number of rows
          *  @param new_width  Number of columns
          */
-        void resize(int new_height, int new_width);
+        void resize(int new_height, int new_width, int start, int stop);
 
         /**
          *  Crops the Video to the area specified. This operation is not
@@ -170,7 +170,7 @@ namespace VCL {
          *
          *  @param value  The threshold value
          */
-        void threshold(int value);
+        void threshold(int value, int start, int stop);
 
         void interval (int from, int to);
 
