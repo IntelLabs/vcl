@@ -103,7 +103,7 @@ namespace VCL {
             std::string _fullpath;
             int _start; // specify the starting reading point of the video
             int _stop;  //specify the ending point of the reading it represnet sa frame index
-
+            int _step;  // specifiy the number of the skipped frames in the reading operation
 
         public:
             /**
@@ -113,7 +113,7 @@ namespace VCL {
              *  @param format  The format to read the Video from
              *  @see Video.h for more details on Format
              */
-            Read(const std::string& filename, Format format, int start, int stop);
+            Read(const std::string& filename, Format format, int start, int stop, int step);
 
             /**
              *  Reads an Video from the file system (based on the format
@@ -142,6 +142,10 @@ namespace VCL {
             Format _old_format;
             /** Whether to store the metadata */
             bool _metadata;
+            int _start;
+            int _stop;
+            int _step;
+
 
         public:
             /**
@@ -153,7 +157,8 @@ namespace VCL {
              *  @see Video.h for more details on Format
              */
             Write(const std::string& filename, Format format,
-                Format old_format, bool metadata);
+                Format old_format, bool metadata, int start, int stop, int step);
+
             /**
              *  Writes an Video to the file system (based on the format
              *    and file path indicated)
@@ -177,6 +182,7 @@ namespace VCL {
             Rectangle _rect;
             int _start;
             int _stop;
+            int _step;
 
         public:
             /**
@@ -186,11 +192,13 @@ namespace VCL {
              *  @param format  The current format of the Video data
              *  @see Video.h for more details on Format and Rectangle
              */
-            Resize(const Rectangle &rect, Format format, int start, int stop)
+            Resize(const Rectangle &rect, Format format, int start, int stop, int step)
                 : Operation(format),
                   _rect(rect),
                   _start(start),
-                  _stop(stop)
+                  _stop(stop),
+                  _step(step)
+
             {
             };
 
@@ -211,8 +219,9 @@ namespace VCL {
         class Interval : public Operation {
          private:
             /** Gives the height and width to resize the Video to */
-          int _from;
-          int _to;
+          int _start;
+          int _stop;
+          int _step;
 
         public:
             /**
@@ -222,10 +231,11 @@ namespace VCL {
              *  @param format  The current format of the Video data
              *  @see Video.h for more details on Format and Rectangle
              */
-            Interval(const int value1 , const int value2, Format format)
+            Interval(const int start , const int stop, int step, Format format)
                 : Operation(format),
-                  _from(value1),
-                  _to(value2)
+                  _start(start),
+                  _stop(stop),
+                  _step(step)
             {
             };
 
@@ -251,6 +261,7 @@ namespace VCL {
             Rectangle _rect;
             int _start;
             int _stop;
+            int _step;
 
         public:
             /**
@@ -261,11 +272,12 @@ namespace VCL {
              *  @param format  The current format of the Video data
              *  @see Video.h for more details on Format and Rectangle
              */
-            Crop(const Rectangle &rect, Format format , int start, int stop)
+            Crop(const Rectangle &rect, Format format , int start, int stop, int step)
                 : Operation(format),
                   _rect(rect),
                   _start(start),
-                  _stop(stop)
+                  _stop(stop),
+                  _step(step)
             {
             };
 
@@ -292,6 +304,7 @@ namespace VCL {
             int _threshold;
             int _start;
             int _stop;
+            int _step;
 
         public:
             /**
@@ -301,11 +314,12 @@ namespace VCL {
              *  @param format  The current format of the Video data
              *  @see Video.h for more details on Format
              */
-            Threshold(const int value, Format format, int start, int stop)
+            Threshold(const int value, Format format, int start, int stop, int step)
                 : Operation(format),
                   _threshold(value),
                   _start(start),
-                  _stop(stop)
+                  _stop(stop),
+                  _step(step)
             {
             };
 
@@ -352,6 +366,7 @@ namespace VCL {
 
     // Video format and compression type
     Format _format;
+    CompressionType _compress;
     int _cv_type;
 
 
@@ -554,6 +569,7 @@ namespace VCL {
          *  @param comp  The compression type
          *  @see Video.h for details on CompressionType
          */
+         void set_compression(CompressionType comp) ;
 
 
         /**
@@ -598,7 +614,7 @@ namespace VCL {
          *
          *  @param Video_id  The full path to the Video to be read
          */
-        void read(const std::string &video_id, int start, int stop );
+        void read(const std::string &video_id, int start, int stop, int step );
 
         /**
          *  Stores a Write Operation in the list of operations
@@ -611,7 +627,7 @@ namespace VCL {
          *    metadata in TileDB or not. Defaults to true
          *  @see Video.h for more details on Format
          */
-        void write(const std::string &video_id,  Format video_format,  bool store_metadata=true);
+        void write(const std::string &video_id,  Format video_format,  bool store_metadata=true, int start=0, int stop=1000, int step=5);
 
         // void remove(const std::string &Video_id);
 
@@ -622,9 +638,9 @@ namespace VCL {
          *  @param rows  The number of rows in the resized Video
          *  @param columns  The number of columns in the resized Video
          */
-        void resize(int rows, int columns, int start, int stop);
+        void resize(int rows, int columns, int start, int stop, int step);
 
-        void interval(int from, int to);
+        void interval(int start, int stop, int step);
 
         /**
          *  Stores a Crop Operation in the list of operations
@@ -635,7 +651,7 @@ namespace VCL {
          *    cropped to
          *  @see Video.h for more details about Rectangle
          */
-        void crop(const Rectangle &rect, int start, int stop);
+        void crop(const Rectangle &rect, int start, int stop, int step);
 
         /**
          *  Stores a Threshold Operation in the list of operations
@@ -643,7 +659,7 @@ namespace VCL {
          *
          *  @param value  The threshold value
          */
-        void threshold(int value, int start, int stop);
+        void threshold(int value, int start, int stop, int step);
 
         /**
          *  Deletes the VideoData as well as removes file from system if

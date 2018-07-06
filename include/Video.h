@@ -47,8 +47,6 @@
 namespace VCL {
     class VideoData; // To hide the Video implementation details
 
-    /* VideoFormat*/
-    // enum VideoFormat {  MP4 , AVI, MPEG  };
 
     typedef cv::Rect Rectangle; // spcifiy an ROI inside a video
 
@@ -71,12 +69,14 @@ namespace VCL {
          *
          *  @param video_id  The full path to the video
          */
-       // Video(const std::string &video_id);
+
         Video(const std::string &fileName); // fileName is the full path to the video
 
+        Video(const cv::VideoCapture video);
 
         Video(void* buffer, int size); // creates a video from an encoded buffer
 
+         Video ( const Video &video);
 
         void operator=(const Video &video);
 
@@ -94,9 +94,12 @@ namespace VCL {
 
         Format get_video_format() const;
 
+        int get_video_type() const;
+
+
         int get_raw_dat_size() const;
 
-        void get_raw_data(void* buffer, int buffer_size) const;
+        void get_raw_data(void* buffer, long buffer_size) const;
 
         std::string create_unique(const std::string &path,
                 Format format);
@@ -108,6 +111,15 @@ namespace VCL {
          *  @see OpenCV documentation on Size for more details
          */
         void set_dimensions(cv::Size dims);
+
+        /**
+         *  Sets the type of compression to be used when compressing. Currently
+         *    applicable only to TileDB
+         *
+         *  @param comp  The compression type
+         */
+        void set_compression(CompressionType comp);
+
 
         /**
          *  Sets the OpenCV type of the image
@@ -147,8 +159,11 @@ namespace VCL {
          *
          *  @param new_height  Number of rows
          *  @param new_width  Number of columns
+          * start is the starting time
+          * stop is the stopping time
+          * step is the step length
          */
-        void resize(int new_height, int new_width, int start, int stop);
+        void resize(int new_height, int new_width, int start, int stop, int step);
 
         /**
          *  Crops the Video to the area specified. This operation is not
@@ -159,7 +174,7 @@ namespace VCL {
          *    starting y coordinate, height, width) the image should be
          *    cropped to
          */
-        void crop(const Rectangle &rect, int start, int stop);
+        void crop(const Rectangle &rect, int start, int stop, int step);
 
         /**
          *  Performs a thresholding operation on the Video. Discards the pixel
@@ -170,9 +185,9 @@ namespace VCL {
          *
          *  @param value  The threshold value
          */
-        void threshold(int value, int start, int stop);
+        void threshold(int value, int start, int stop, int step);
 
-        void interval (int from, int to);
+        void interval (int start, int stop, int step);
 
 
 

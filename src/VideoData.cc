@@ -14,11 +14,12 @@ using namespace std;
 
 using namespace VCL;
 
-VideoData::Read::Read(const std::string& filename, Format format, int start = 0, int stop = 100)
+VideoData::Read::Read(const std::string& filename, Format format, int start, int stop, int step)
     : Operation(format),
       _fullpath(filename),
       _start(start),
-      _stop(stop)
+      _stop(stop),
+      _step(step)
 {
 }
 
@@ -58,11 +59,14 @@ void VideoData::Read::operator()(VideoData *video)
     /*       WRITE OPERATION    */
     /*  *********************** */
 VideoData::Write::Write(const std::string& filename, Format format,
-    Format old_format, bool metadata)
+    Format old_format, bool metadata, int start, int stop, int step)
     : Operation(format),
       _old_format(old_format),
       _metadata(metadata),
-      _fullpath(filename)
+      _fullpath(filename),
+      _start(start),
+      _stop(stop),
+      _step(step)
 {
 }
 
@@ -451,12 +455,12 @@ VideoData::VideoData(const cv::VideoCapture &cv_video )
     // }
 }
 
-void VideoData::read(const std::string &video_id, int start , int stop){
+void VideoData::read(const std::string &video_id, int start , int stop, int step){
 
 
     //video_id = create_fullpath(video_id, _format);
 
-    _operations.push_back(std::make_shared<Read> (_video_id, _format, start, stop));
+    _operations.push_back(std::make_shared<Read> (_video_id, _format, start, stop, step));
 
 
 
@@ -479,10 +483,10 @@ void VideoData::read(const std::string &video_id, int start , int stop){
 }
 
 void VideoData::write( const std::string &video_id, Format video_format,
-            bool store_metadata)
+            bool store_metadata, int start, int stop, int step)
 {
     _operations.push_back(std::make_shared<Write> (create_fullpath(video_id, video_format),
-        video_format, _format, store_metadata));
+        video_format, _format, store_metadata, start, stop, step));
 }
 
 
@@ -551,7 +555,9 @@ cv::Size VideoData::get_size()
 void VideoData::get_buffer(void* buffer, int buffer_size)
 {
 
-    // perform_operations();
+    perform_operations();
+
+    //copy_to_buffer(static_cast<unsigned short*>(buffer));
 }
 
 
@@ -670,6 +676,13 @@ void VideoData::set_minimum(int dimension)
 }
 
 
+
+
+void VideoData::set_compression(CompressionType comp)
+{
+    _compress = comp;
+}
+
     /*  *********************** */
     /*   VideoDATA INTERACTION  */
     /*  *********************** */
@@ -689,25 +702,25 @@ void VideoData::perform_operations()
 
 }
 
-void VideoData::resize(int rows, int columns, int start, int stop)
+void VideoData::resize(int rows, int columns, int start, int stop, int step)
 {
     std::cout<< " Hello VidoeData"<<std::endl;
-    _operations.push_back(std::make_shared<Resize> (Rectangle(0, 0, columns, rows), _format, start, stop));
+    _operations.push_back(std::make_shared<Resize> (Rectangle(0, 0, columns, rows), _format, start, stop,step));
 }
 
-void VideoData::interval(int from, int to)
+void VideoData::interval(int start, int stop, int step)
 {
- _operations.push_back(std::make_shared<Interval> (from, to, _format));
+ _operations.push_back(std::make_shared<Interval> (start, stop, step, _format));
 }
 
-void VideoData::crop(const Rectangle &rect, int start, int stop)
+void VideoData::crop(const Rectangle &rect, int start, int stop, int step)
 {
- _operations.push_back(std::make_shared<Crop> (rect, _format, start, stop));
+ _operations.push_back(std::make_shared<Crop> (rect, _format, start, stop, step));
 }
 
-void VideoData::threshold(int value, int start, int stop)
+void VideoData::threshold(int value, int start, int stop, int step)
 {
-_operations.push_back(std::make_shared<Threshold> (value, _format, start, stop));
+_operations.push_back(std::make_shared<Threshold> (value, _format, start, stop, step));
 }
 
 void VideoData::delete_object()
