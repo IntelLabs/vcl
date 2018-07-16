@@ -25,12 +25,14 @@ VideoData::Read::Read(const std::string& filename, Format format, int start, int
 
 void VideoData::Read::operator()(VideoData *video)
 {
-
+     std::cout<<" Read Operation Inside"<<std::endl;
      video->_inputVideo.set(CV_CAP_PROP_POS_FRAMES, _start - 1);
-    int count = 0;
+     std::cout<<"After set operation"<<std::endl;
+    int count = _start;
 
     while ( count < _stop ) {
         cv::Mat frame;
+        std::cout<<" Inside Reading Loop"<<std::endl;
         if ( video->_inputVideo.read(frame) ) {
             if ( !frame.empty() ) {
                 cv::imshow( "Frame", frame );
@@ -44,7 +46,7 @@ void VideoData::Read::operator()(VideoData *video)
         }
         else
             throw VCLException(ObjectEmpty, "Frame not retrieved");
-        ++count;
+        count+=_step;
     }
 
     video->_temp_exist = true;
@@ -76,7 +78,9 @@ void VideoData::Write::operator()(VideoData *video)
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     video->_fps,
                     cv::Size(video->_frame_width, video->_frame_height));
-    while(1)
+    int count=_start;
+
+    while (count <=_stop)
     {
         cv::Mat frame;
 
@@ -97,6 +101,7 @@ void VideoData::Write::operator()(VideoData *video)
         // char c = (char)cv::waitKey(1);
         // if( c == 27 )
         //     break;
+        count+=_step;
   }
 
     // if (_format == VCL::TDB) {
@@ -133,7 +138,7 @@ void VideoData::Resize::operator()(VideoData *video)
 {
      std::cout<<" Hello I am in the Resize";
     video->create_unique(video->_temporary_path, VCL::Format::AVI);
-    std::string cropped_vid = video->_video_id +"resized.avi" ;
+    std::string cropped_vid = video->remove_extention(video->_video_id) + "resized.avi" ;
     std::cout << cropped_vid << std::endl;
     video->_outputVideo = cv::VideoWriter(cropped_vid,
                     CV_FOURCC('X', 'V', 'I', 'D'),
@@ -141,7 +146,7 @@ void VideoData::Resize::operator()(VideoData *video)
                     cv::Size(_rect.width, _rect.height));
 
     video->_inputVideo.set(CV_CAP_PROP_POS_FRAMES, _start - 1);
-    int count = 0;
+    int count = _start;
 
     while ( count < _stop ) {
         cv::Mat frame;
@@ -157,7 +162,7 @@ void VideoData::Resize::operator()(VideoData *video)
         }
         else
             throw VCLException(ObjectEmpty, "Frame not retrieved");
-        ++count;
+        count+=_step;
     }
 
     video->_temp_exist = true;
@@ -174,7 +179,7 @@ void VideoData::Crop::operator()(VideoData *video)
 {
     video->create_unique(video->_temporary_path, VCL::Format::AVI);
 
-    std::string cropped_vid = video->_video_id +"_cropped.avi" ;
+    std::string cropped_vid = video->remove_extention(video->_video_id) + "_cropped.avi" ;
     std::cout << cropped_vid << std::endl;
     video->_outputVideo = cv::VideoWriter(cropped_vid,
                     CV_FOURCC('X', 'V', 'I', 'D'),
@@ -182,7 +187,7 @@ void VideoData::Crop::operator()(VideoData *video)
                     cv::Size(_rect.width, _rect.height));
 
     video->_inputVideo.set(CV_CAP_PROP_POS_FRAMES, _start - 1);
-    int count = 0;
+    int count = _start;
 
     while ( count < _stop ) {
         cv::Mat frame;
@@ -198,7 +203,7 @@ void VideoData::Crop::operator()(VideoData *video)
         }
         else
             throw VCLException(ObjectEmpty, "Frame not retrieved");
-        ++count;
+        count+=_step;
     }
 
     video->_temp_exist = true;
@@ -211,7 +216,7 @@ void VideoData::Crop::operator()(VideoData *video)
 void VideoData::Threshold::operator()(VideoData *video)
 {
     video->create_unique(video->_temporary_path, VCL::Format::AVI);
-    std::string cropped_vid = video->_video_id +"threshold.avi" ;
+    std::string cropped_vid = video->remove_extention(video->_video_id) + "threshold.avi" ;
     std::cout << cropped_vid << std::endl;
     video->_outputVideo = cv::VideoWriter(cropped_vid,
                     CV_FOURCC('X', 'V', 'I', 'D'),
@@ -219,7 +224,7 @@ void VideoData::Threshold::operator()(VideoData *video)
                     cv::Size(video->_frame_width, video->_frame_height));
 
     video->_inputVideo.set(CV_CAP_PROP_POS_FRAMES, _start - 1);
-    int count = 0;
+    int count = _start;
 
     while ( count < _stop ) {
         cv::Mat frame;
@@ -235,7 +240,7 @@ void VideoData::Threshold::operator()(VideoData *video)
         }
         else
             throw VCLException(ObjectEmpty, "Frame not retrieved");
-        ++count;
+        count+=_step;
     }
 
     video->_temp_exist = true;
@@ -275,6 +280,7 @@ VideoData::VideoData()
     _temporary_path = "temp/";
 }
 
+
 VideoData::VideoData(const VideoData &video)
 {
      copy_cv(_inputVideo);
@@ -289,7 +295,7 @@ VideoData::VideoData(const VideoData &video)
 VideoData::VideoData( const std::string &video_id )
 {
 
-    std::cout<< " Hello VideoData"<<std::endl;
+    std::cout<< " Hello String-Based VideoData"<<std::endl;
     _video_id = video_id;
     _inputVideo =  cv::VideoCapture(video_id);
 
@@ -375,7 +381,7 @@ VideoData::VideoData(void* buffer, long size, const std::string &path)
     _video_time = _frame_count/_fps;
     _length = _frame_count;
 
-    std::cout<<" Video time in minutes " << _video_time/60.0 <<std::endl;
+   // std::cout<<" Video time in minutes " << _video_time/60.0 <<std::endl;
 
     // open the default camera
     if(!_inputVideo.isOpened()) {  // check if we succeeded
@@ -458,26 +464,9 @@ VideoData::VideoData(const cv::VideoCapture &cv_video )
 void VideoData::read(const std::string &video_id, int start , int stop, int step){
 
 
-    //video_id = create_fullpath(video_id, _format);
+   // video_id = create_fullpath(video_id, _format);
 
     _operations.push_back(std::make_shared<Read> (_video_id, _format, start, stop, step));
-
-
-
-// _infile = new std::ifstream(video_id,std::ifstream::binary);
-// _infile->seekg (0,_infile->end);
-// long size = _infile->tellg();
-// _infile->seekg (0);
-
-//   // allocate memory for file content
-// char* buffer = new char[size];
-
-//   // read content of infile
-//   _infile->read (buffer,size);
-
-//    delete[] buffer;
-
-//    _infile->close();
 
 
 }
@@ -501,7 +490,6 @@ VideoData::~VideoData()
     /** FIX ME **/
     // Delete the temp file we created
     _inputVideo.release();
-    _outputVideo.release();
     // if ( _infile != nullptr && _infile->is_open() )
     //     _infile->close();
     // if ( _outfile != nullptr && _outfile->is_open() )
@@ -588,6 +576,12 @@ std::vector<unsigned char> VideoData::get_encoded(Format format,
     /*  *********************** */
     /*        SET FUNCTIONS     */
     /*  *********************** */
+std::string VideoData::remove_extention(const std::string old_name)
+{
+
+    _video_id = VCL::remove_extention(old_name);
+    return _video_id;
+}
 void VideoData::create_unique(const std::string &path,
     Format format)
 {
@@ -702,9 +696,9 @@ void VideoData::perform_operations()
 
 }
 
-void VideoData::resize(int rows, int columns, int start, int stop, int step)
+void VideoData::resize(int rows, int columns, int start , int stop, int step)
 {
-    std::cout<< " Hello VidoeData"<<std::endl;
+
     _operations.push_back(std::make_shared<Resize> (Rectangle(0, 0, columns, rows), _format, start, stop,step));
 }
 
@@ -718,7 +712,7 @@ void VideoData::crop(const Rectangle &rect, int start, int stop, int step)
  _operations.push_back(std::make_shared<Crop> (rect, _format, start, stop, step));
 }
 
-void VideoData::threshold(int value, int start, int stop, int step)
+void VideoData::threshold(int value, int start, int stop , int step )
 {
 _operations.push_back(std::make_shared<Threshold> (value, _format, start, stop, step));
 }

@@ -356,9 +356,10 @@ namespace VCL {
     uint _frame_height;
 
     float _fps;
-    float _frame_count;
+
     cv::Size _size;
     int _video_time ;
+
 
 
     // Maintains order of operations requested
@@ -378,6 +379,7 @@ namespace VCL {
 
     std::string _temporary_path;
     bool _temp_exist = false;
+    int  _frame_count;
 
     // std::ifstream* _infile = nullptr;// (video_id,std::ifstream::binary);
     // std::ofstream* _outfile = nullptr; // (video_id,std::ofstream::binary);
@@ -389,6 +391,8 @@ namespace VCL {
 
 
     public:
+
+
     /*  *********************** */
     /*        CONSTRUCTORS      */
     /*  *********************** */
@@ -448,6 +452,9 @@ namespace VCL {
          *  @return The string containing the full path to the VideoData object
          */
         std::string get_video_id() const;
+        int get_frame_count(void){return _frame_count;} const
+
+          int default_ending = get_frame_count();
 
         /**
          *  Gets the format of the VideoData object
@@ -478,6 +485,9 @@ namespace VCL {
          *  @return The size of the Video in pixels
          */
         cv::Size get_size();
+
+
+
 
         /**
          *  Gets the Video data in a buffer
@@ -532,6 +542,8 @@ namespace VCL {
          */
         void create_unique(const std::string &path,
                 Format format);
+
+        std::string remove_extention(const std::string path);
 
         /**
          *  Sets the file system location of where the Video
@@ -638,7 +650,7 @@ namespace VCL {
          *  @param rows  The number of rows in the resized Video
          *  @param columns  The number of columns in the resized Video
          */
-        void resize(int rows, int columns, int start, int stop, int step);
+        void resize(int rows, int columns, int start, int stop , int step);
 
         void interval(int start, int stop, int step);
 
