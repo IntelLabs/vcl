@@ -83,6 +83,8 @@ namespace VCL {
      */
     std::string create_unique(const std::string &path, Format format);
 
+    std::string remove_extention(std::string old_name);
+
     /**
      *  Converts Format to string
      *

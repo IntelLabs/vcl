@@ -72,7 +72,6 @@ TEST_F(VideoDataTest, DefaultConstructor)
 
 
 
-
 TEST_F(VideoDataTest, StringConstructor)
 {
     std::cout<< " String Constructor" << std::endl;
@@ -115,61 +114,86 @@ TEST_F(VideoDataTest, BlobConstructor)
 
 TEST_F(VideoDataTest, Read)
 {
-    std::cout<< " Read OPeration" << std::endl;
+   try {
+    std::cout<< " Read Operation" << _video<< std::endl;
 
-    VCL::VideoData video_data(_video); //
-
-    video_data.read(_video, 10, 200,1);
+    VCL::VideoData video_data(_video);
+    video_data.read(_video, 100, 200, 1);
 
     video_data.perform_operations();
-     std::cout<< " The Video Size is " << video_data.get_size();
+}
+catch(VCL::Exception &e) {
+        print_exception(e);
+    }
+    // std::cout<< " The Video Size is " << video_data.get_size();
 
 
  }
 
 TEST_F(VideoDataTest, Write)
 {
+    try{
     std::cout<< " Write Operation" << std::endl;
 
     VCL::VideoData video_data(_video); //
-    video_data.write(_video, VCL::Format::MP4, true, 10, 200, 1);
-  //  video_data.perform_operations();
-
+    video_data.write(_video, VCL::Format::XVID, true, 10, 200, 10);
+    video_data.perform_operations();
+}
+catch(VCL::Exception &e) {
+        print_exception(e);
+    }
 
 }
 
-TEST_F(VideoDataTest, Resize)
+ TEST_F(VideoDataTest, Resize)
 {
+    try{
     std::cout<< "Resize Operation" << std::endl;
 
-   VCL::VideoData video_data(_inputVideo); //
-    video_data.resize( 100,100, 10, 200,1);
-    video_data.set_temporary_directory("test/temp/");
+   VCL::VideoData video_data(_inputVideo);
+   video_data.set_temporary_directory("test/temp/");
+   video_data.resize( 100,100, 10, 2000, 2);
+
     video_data.perform_operations();
+   }
+    catch(VCL::Exception &e) {
+        print_exception(e);
+    }
+
 }
 
 TEST_F(VideoDataTest, Threshold)
 {
+   try{
     std::cout<< "threshold Operation" << std::endl;
 
-   VCL::VideoData video_data(_inputVideo); //
-    video_data.threshold( 200, 10, 100,1);
-    video_data.set_temporary_directory("test/temp/");
+   VCL::VideoData video_data(_inputVideo);
+   video_data.set_temporary_directory("test/temp/");
+    video_data.threshold( 100, 50, 1000,10);
+   // video_data.set_temporary_directory("test/temp/");
     video_data.perform_operations();
-
+}
+catch(VCL::Exception &e) {
+        print_exception(e);
+    }
 
 }
 
-// TEST_F(VideoDataTest, CreateUnique)
-// {
-//      VCL::VideoData video_data(_inputVideo); //
+TEST_F(VideoDataTest, CreateUnique)
+{
+     try{
+     VCL::VideoData video_data(_inputVideo); //
 
-//     video_data.create_unique("test/videos/", VCL::Format::MP4);
-//     std::cout<<video_data.get_video_id() <<std::endl;
+    video_data.create_unique("test/temp/", VCL::Format::MP4);
+    std::cout<<video_data.get_video_id() <<std::endl;
+    video_data.write(video_data.get_video_id(), VCL::Format::MP4);
+    video_data.perform_operations();}
+catch(VCL::Exception &e) {
+        print_exception(e);
+    }
 
-//     video_data.write(video_data.get_video_id(), VCL::Format::MP4);
-//     video_data.perform_operations();
-// }
+
+}
 
 TEST_F(VideoDataTest, Crop)
 {
@@ -177,7 +201,7 @@ TEST_F(VideoDataTest, Crop)
     VCL::VideoData video_data(_inputVideo);
     video_data.set_temporary_directory("test/temp/");
 
-    video_data.crop(VCL::Rectangle(0, 0, 50, 50), 100, 150,1);
+    video_data.crop(VCL::Rectangle(0, 0, 50, 50), 100, 1500,10);
     video_data.perform_operations();
     }
     catch(VCL::Exception &e) {
