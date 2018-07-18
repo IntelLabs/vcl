@@ -147,6 +147,7 @@ void VideoData::Resize::operator()(VideoData *video)
 
     video->_inputVideo.set(CV_CAP_PROP_POS_FRAMES, _start - 1);
     int count = _start;
+    std::cout<<" the Start valae is #####"<<_start <<"\t"<< _stop <<"\t"<<_step<<std::endl;
 
     while ( count < _stop ) {
         cv::Mat frame;
@@ -177,6 +178,7 @@ void VideoData::Resize::operator()(VideoData *video)
 
 void VideoData::Crop::operator()(VideoData *video)
 {
+   std::cout<<video->_temporary_path<<std::endl;
     video->create_unique(video->_temporary_path, VCL::Format::AVI);
 
     std::string cropped_vid = video->remove_extention(video->_video_id) + "_cropped.avi" ;
@@ -278,7 +280,7 @@ VideoData::VideoData()
     _frame_height=0;
     _video_id ="";
     _format = VCL::Format::NONE;
-    _temporary_path = "temp/";
+    _temporary_path = "tests/db/tmp";
 }
 
 
@@ -322,7 +324,7 @@ VideoData::VideoData( const std::string &video_id )
     char EXT[] = {(char)(ex & 0XFF) , (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
     set_format_from_extension(EXT);
     // std::cout<< (int)_format <<"\t"<< _length<<std::endl;
-    _temporary_path = "temp/";
+    _temporary_path = "tests/db/tmp";
 
  // while(1)
  //  {
@@ -367,9 +369,13 @@ VideoData::VideoData(void* buffer, long size, const std::string &path)
 
     //open the outfile inorder to store the buffer data
     outfile.open(temp, std::ios::out);
+    if (outfile.is_open())
+    {
     outfile.write(reinterpret_cast<char*>(buffer), size);
     outfile.close();
     _temp_exist = true; // to check the path
+    }
+    else std::cout<< " The Blob was not opened!"<<std::endl;
 
  //after we recieved the video file, we create a VideoCapture out of it in-order toget the vide details.
     _inputVideo =  cv::VideoCapture(temp);
@@ -382,16 +388,17 @@ VideoData::VideoData(void* buffer, long size, const std::string &path)
     _video_time = _frame_count/_fps;
     _length = _frame_count;
 
-   // std::cout<<" Video time in minutes " << _video_time/60.0 <<std::endl;
-
+    std::cout<<" Video time in minutes " << _video_time/60.0 <<std::endl;
+    std::cout<<" the Frame rate is"<<_fps<<std::endl;
+    std::cout<< " The frame count is "<< _frame_count<<std::endl;
     // open the default camera
     if(!_inputVideo.isOpened()) {  // check if we succeeded
       std::cout<<" Error in Opening the Video File " <<std::endl;
       throw VCLException(OpenFailed, "Could not open " + temp);
     }
-
+     std::cout<<"At the End of the Blob constructor"<<std::endl;
     int ex = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FOURCC));     // Get Codec Type- Int form
-
+     _temporary_path = "tests/db/tmp";
     // // Transform from int to char via Bitwise operators
     char EXT[] = {(char)(ex & 0XFF) , (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
     set_format_from_extension(EXT); // to get the current extention of the video file
@@ -417,7 +424,7 @@ VideoData::VideoData(const cv::VideoCapture &cv_video )
 
         }
 
-    _temporary_path = "temp/";
+    _temporary_path = "tests/db/tmp";
     std::vector<cv::Mat> one_video_vector;
 
     // cv::Mat video_img;
