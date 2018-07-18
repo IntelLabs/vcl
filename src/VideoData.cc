@@ -266,12 +266,13 @@ void VideoData::Interval::operator()(VideoData *video)
 VideoData::VideoData()
 {
 
-    std::cout<< "Hello"<<std::endl;
+    std::cout<< "Hello Empty"<<std::endl;
     _width = 0;
     _height =0;
     _length=0;
     _start_frame =0;
     _end_frame =0;
+    _frame_count =0;
     _fps=0;
     _frame_width=0;
     _frame_height=0;
@@ -283,7 +284,7 @@ VideoData::VideoData()
 
 VideoData::VideoData(const VideoData &video)
 {
-     copy_cv(_inputVideo);
+     copy_cv(_inputVideo); // TODO
 
      _format = video._format;
     // _compress = VCL::CompressionType::LZ4;
@@ -295,7 +296,7 @@ VideoData::VideoData(const VideoData &video)
 VideoData::VideoData( const std::string &video_id )
 {
 
-    std::cout<< " Hello String-Based VideoData"<<std::endl;
+    //std::cout<< " Hello String-Based VideoData"<<std::endl;
     _video_id = video_id;
     _inputVideo =  cv::VideoCapture(video_id);
 
@@ -516,6 +517,11 @@ std::string VideoData::get_video_id() const
 Format VideoData::get_video_format() const
 {
     return _format;
+}
+
+long VideoData::get_frame_count() const
+{
+    return _frame_count;
 }
 
 int VideoData::get_type() const
@@ -771,3 +777,4 @@ std::string VideoData::create_fullpath(const std::string &filename,
 
 
 }
+

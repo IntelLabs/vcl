@@ -26,7 +26,7 @@ gtest_source = ['test/unit_tests/main_test.cc'
 #         , 'test/unit_tests/ImageData_test.cc'
 #         , 'test/unit_tests/Image_test.cc'
 	     , 'test/unit_tests/Video_test.cc'
-        , 'test/unit_tests/VideoData_test.cc'
+ #       , 'test/unit_tests/VideoData_test.cc'
 ]
 
 env.ParseConfig('pkg-config --cflags --libs opencv')

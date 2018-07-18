@@ -452,7 +452,7 @@ namespace VCL {
          *  @return The string containing the full path to the VideoData object
          */
         std::string get_video_id() const;
-        int get_frame_count(void){return _frame_count;} const
+        long get_frame_count(void) const;
 
           int default_ending = get_frame_count();
 
