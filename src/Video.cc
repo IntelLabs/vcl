@@ -11,9 +11,9 @@ using namespace VCL;
 using namespace cv; // OpenCV namespace
 
 void Video::store(const std::string &video_id, Format video_format,
-            bool store_metadata)
+            bool store_metadata, int start, int stop, int step=1)
 {
-  _video->write(video_id, video_format, store_metadata);
+  _video->write(video_id, video_format, store_metadata, start, stop, step );
   _video->perform_operations();
 }
 
@@ -24,6 +24,12 @@ std::string Video::create_unique(const std::string &path,
   return _video->get_video_id();
 }
 
+Video::Video()
+{
+  std::cout<<"Empty Constructor"<<std::endl;
+
+  _video = new VideoData();
+}
 
 Video::Video(const std::string &fileName)
 {
@@ -44,9 +50,9 @@ Video::Video(const cv::VideoCapture video)
 }
 
 
-Video::Video(void* buffer, int size )
+Video::Video(void* buffer, int size , const std::string &path)
 {
-  _video = new VideoData(buffer, size);
+  _video = new VideoData(buffer, size, path);
 }
 
 Video::Video( const Video &video){
@@ -76,6 +82,10 @@ std::string Video::get_video_id() const
 {
   return _video->get_video_id();
 
+}
+long Video::get_frame_count() const
+{
+  return _video->get_frame_count();
 }
 
 cv::Size Video::get_dimensions() const

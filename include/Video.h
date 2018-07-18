@@ -69,12 +69,12 @@ namespace VCL {
          *
          *  @param video_id  The full path to the video
          */
-
+        Video();
         Video(const std::string &fileName); // fileName is the full path to the video
 
         Video(const cv::VideoCapture video);
 
-        Video(void* buffer, int size); // creates a video from an encoded buffer
+        Video(void* buffer, int size, const std::string &path = "temp/"); // creates a video from an encoded buffer
 
          Video ( const Video &video);
 
@@ -145,7 +145,7 @@ namespace VCL {
          *    storage)
          */
         void store(const std::string &video_id, Format video_format,
-            bool store_metadata=true);
+            bool store_metadata=true, int start =0, int stop=100, int step=1);
 
         /**
          *  Deletes the Video
@@ -163,7 +163,7 @@ namespace VCL {
           * stop is the stopping time
           * step is the step length
          */
-        void resize(int new_height, int new_width, int start, int stop, int step);
+        void resize(int new_height, int new_width, int start, int stop, int step=1);
 
         /**
          *  Crops the Video to the area specified. This operation is not
@@ -174,7 +174,7 @@ namespace VCL {
          *    starting y coordinate, height, width) the image should be
          *    cropped to
          */
-        void crop(const Rectangle &rect, int start, int stop, int step);
+        void crop(const Rectangle &rect, int start, int stop, int step=1);
 
         /**
          *  Performs a thresholding operation on the Video. Discards the pixel
@@ -185,9 +185,10 @@ namespace VCL {
          *
          *  @param value  The threshold value
          */
-        void threshold(int value, int start, int stop, int step);
+        void threshold(int value, int start, int stop, int step=1);
 
-        void interval (int start, int stop, int step);
+        void interval (int start, int stop, int step=1);
+        long get_frame_count(void) const;
 
 
 
