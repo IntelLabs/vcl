@@ -11,7 +11,7 @@ using namespace VCL;
 using namespace cv; // OpenCV namespace
 
 void Video::store(const std::string &video_id, Format video_format,
-            bool store_metadata, int start, int stop, int step=1)
+            bool store_metadata, int start, int stop, int step)
 {
   _video->write(video_id, video_format, store_metadata, start, stop, step );
   _video->perform_operations();

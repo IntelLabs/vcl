@@ -74,7 +74,7 @@ namespace VCL {
 
         Video(const cv::VideoCapture video);
 
-        Video(void* buffer, int size, const std::string &path = "temp/"); // creates a video from an encoded buffer
+        Video(void* buffer, int size, const std::string &path = "tests/db/tmp"); // creates a video from an encoded buffer
 
          Video ( const Video &video);
 
@@ -145,7 +145,7 @@ namespace VCL {
          *    storage)
          */
         void store(const std::string &video_id, Format video_format,
-            bool store_metadata=true, int start =0, int stop=100, int step=1);
+            bool store_metadata=true, int start =1, int stop=100, int step=1);
 
         /**
          *  Deletes the Video

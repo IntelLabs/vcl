@@ -431,7 +431,7 @@ namespace VCL {
         VideoData(const VideoData &video);
 
          // creates a video from an encoded buffer
-        VideoData(void*  buffer, long size, const std::string &path = "temp/");
+        VideoData(void*  buffer, long size, const std::string &path = "/tmps");
 
         /**
          *  Sets an VideoData object equal to another VideoData object
