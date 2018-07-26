@@ -65,7 +65,7 @@ RemoteConnection::RemoteConnection(const std::string &region)
     _remote = false;
     
     _config.region = Aws::Utils::StringUtils::to_string(region);
-    _config.requestTimeoutMs = 3000;
+    _config.requestTimeoutMs = 400;
     _config.connectTimeoutMs = 3000;
 }
 
@@ -75,7 +75,7 @@ RemoteConnection::RemoteConnection(const std::string &region, const std::string 
     _remote = false;
     
     _config.region = Aws::Utils::StringUtils::to_string(region);
-    _config.requestTimeoutMs = 3000;
+    _config.requestTimeoutMs = 400;
     _config.connectTimeoutMs = 3000;
 
     set_s3_credentials(id, key);
@@ -108,9 +108,6 @@ RemoteConnection::~RemoteConnection()
 {
     if (!_remote)
         end();
-    #ifdef S3_SUPPORT
-        delete _client;
-    #endif
 }
 
 void RemoteConnection::start()
@@ -126,6 +123,7 @@ void RemoteConnection::end()
 {
     #ifdef S3_SUPPORT
         Aws::ShutdownAPI(_options);
+        delete _client;
     #endif
     _remote = false;
 }

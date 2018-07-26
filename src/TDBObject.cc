@@ -272,6 +272,8 @@ void TDBObject::set_config(RemoteConnection &remote)
         std::string region = remote.get_s3_region();
         std::string connect_timeout = std::to_string(remote.get_s3_connect_timeout());
         std::string result_timeout = std::to_string(remote.get_s3_result_timeout());
+        // std::string multipart_size = std::to_string(11250000);
+        // std::string multipart_size = std::to_string(90000000);
 
         if ( setenv("AWS_ACCESS_KEY_ID", remote.get_s3_access_id().c_str(), 1) < 0 )
             throw VCLException(IncorrectConfiguration, "Failed to set environment variable for TileDB");
@@ -287,6 +289,9 @@ void TDBObject::set_config(RemoteConnection &remote)
         Error_Check(
             tiledb_config_set(_config, "vfs.s3.result_timeout_ms", result_timeout.c_str(), &_error),
             _ctx, "Setting the S3 result timeout in the TileDB config failed\n");
+        // Error_Check(
+        //     tiledb_config_set(_config, "vfs.s3.multipart_part_size", multipart_size.c_str(), &_error),
+        //     _ctx, "Setting the S3 multipart_size in the TileDB config failed\n");
     #endif
 
     tiledb_ctx_free(&_ctx);

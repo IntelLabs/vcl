@@ -46,13 +46,13 @@ env.Program('test/unit_test', gtest_source,
         LIBPATH = libpath)
 
 
-cputest_source = ['test/benchmark_tests/cpu_tests.cc']
-test_libs.append('lz4')
-env.Program('test/benchmark_tests/cpu_tests', cputest_source, 
-    LIBS=test_libs, LIBPATH=libpath)
+#cputest_source = ['test/benchmark_tests/cpu_tests.cc']
+#test_libs.append('lz4')
+#env.Program('test/benchmark_tests/cpu_tests', cputest_source, 
+#    LIBS=test_libs, LIBPATH=libpath)
 
-iotest_source = ['test/benchmark_tests/aws_io_tests.cc', 'src/chrono/Chrono.cc']
-test_libs.append('tiledb')
-env.Append(CPPPATH=['include', 'src', 'include/chrono'])
-env.Program('test/benchmark_tests/io_test', iotest_source, 
-    LIBS=test_libs, LIBPATH=libpath)
+#iotest_source = ['test/benchmark_tests/aws_io_tests.cc', 'src/chrono/Chrono.cc']
+#test_libs.append('tiledb')
+#env.Append(CPPPATH=['include', 'src', 'include/chrono'])
+#env.Program('test/benchmark_tests/io_test', iotest_source, 
+#    LIBS=test_libs, LIBPATH=libpath)

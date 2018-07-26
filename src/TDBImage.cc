@@ -201,7 +201,7 @@ int TDBImage::get_image_height()
 {
     if (_img_height == 0 && _name == "")
         throw VCLException(TileDBNotFound, "No data in TileDB object yet");
-    else if ( _img_height == 0 && _name != "")
+    else if ( _img_height == 0 && _name != "") 
         read_metadata();
 
     return _img_height;
@@ -533,8 +533,7 @@ void TDBImage::write(const cv::Mat &cv_img, bool metadata)
 
 void TDBImage::read()
 {
-    if ( _raw_data == NULL )
-    {
+    if ( _raw_data == NULL ) {
         if ( _img_height == 0 )
             read_metadata();
 
@@ -845,9 +844,6 @@ void TDBImage::read_metadata()
         _ctx,
         "TileDB cannot retrieve metadata object");
 
-    if (kv_item == nullptr)
-        std::cout << "kv item is null" << std::endl;
-
     const void *h, *w, *c;
     tiledb_datatype_t h_type, w_type, c_type;
     uint64_t h_size, w_size, c_size;
@@ -890,46 +886,44 @@ void TDBImage::read_metadata()
 void TDBImage::read_from_tdb(int64_t* subarray)
 {
     std::string array_name = _group + _name;
-
-    size_t buffer_size = _img_size;
-    _raw_data = new unsigned char[buffer_size];
-
     _tile_order = true;
 
     set_from_schema(array_name);
 
     tiledb_array_t* array;
-
     Error_Check(
         tiledb_array_alloc(_ctx, array_name.c_str(), &array), 
         _ctx,
         "TileDB array was not allocated");
-
     Error_Check(
         tiledb_array_open(_ctx, array, TILEDB_READ), 
         _ctx, 
         "TileDB array failed to open");
 
     tiledb_query_t* read_query;
-
     Error_Check(
         tiledb_query_alloc(_ctx, array, TILEDB_READ, &read_query), 
         _ctx,
         "Failed to initialize TileDB array for reading");
-
     Error_Check(
         tiledb_query_set_layout(_ctx, read_query, TILEDB_GLOBAL_ORDER), 
         _ctx,
         "Failed to initialize TileDB array layout for reading");
 
-
     if ( _num_attributes == 1 ) {
+        uint64_t buffer_size;
+        Error_Check(
+            tiledb_array_max_buffer_size(_ctx, array, _attributes[0], subarray, 
+                &buffer_size), 
+            _ctx, 
+            "Failed to set maximum buffer size");
+
         unsigned char* buffer = new unsigned char[buffer_size];
-        size_t buffer_sizes[] = { buffer_size };
+        _raw_data = new unsigned char[buffer_size];
 
         Error_Check(
-            tiledb_query_set_buffer(_ctx, read_query,  _attributes[0], 
-                buffer, &buffer_sizes[0]),
+            tiledb_query_set_buffer(_ctx, read_query, _attributes[0], 
+                buffer, &buffer_size),
             _ctx,
             "Failed to set buffers for reading from TileDB array");
 
@@ -937,13 +931,12 @@ void TDBImage::read_from_tdb(int64_t* subarray)
             tiledb_query_submit(_ctx, read_query), 
             _ctx,
             "Failed to read from TileDB array");
-
-        std::memcpy(_raw_data, buffer, buffer_size);
-
         Error_Check(
             tiledb_query_finalize(_ctx, read_query),
             _ctx,
             "Failed to finalize TileDB read");
+
+        std::memcpy(_raw_data, buffer, buffer_size);
 
         tiledb_query_free(&read_query);
 
@@ -951,29 +944,32 @@ void TDBImage::read_from_tdb(int64_t* subarray)
     }
 
     else {
-        size_t size = _img_height * _img_width;
-        unsigned char* blue_buffer = new unsigned char[size];
-        unsigned char* green_buffer = new unsigned char[size];
-        unsigned char* red_buffer = new unsigned char[size];
+        uint64_t buffer_size;
+        Error_Check(
+            tiledb_array_max_buffer_size(_ctx, array, _attributes[0], subarray, 
+                &buffer_size), 
+            _ctx, 
+            "Failed to set maximum buffer size");
 
-        // Size of buffers is equal to the number of attributes
-        size_t buffer_sizes[] = { size };
+        unsigned char* buffer = new unsigned char[buffer_size*3];
+        _raw_data = new unsigned char[buffer_size*3];
+        unsigned char* blue_buffer = new unsigned char[buffer_size];
+        unsigned char* green_buffer = new unsigned char[buffer_size];
+        unsigned char* red_buffer = new unsigned char[buffer_size];
 
         Error_Check(
             tiledb_query_set_buffer(_ctx, read_query, _attributes[0], 
-                blue_buffer, &buffer_sizes[0]),
+                blue_buffer, &buffer_size),
             _ctx,
             "Failed to set buffers for reading from TileDB array");
-
         Error_Check(
             tiledb_query_set_buffer(_ctx, read_query, _attributes[1], 
-                green_buffer, &buffer_sizes[0]),
+                green_buffer, &buffer_size),
             _ctx,
             "Failed to set buffers for reading from TileDB array");
-
         Error_Check(
             tiledb_query_set_buffer(_ctx, read_query, _attributes[2], 
-                red_buffer, &buffer_sizes[0]),
+                red_buffer, &buffer_size),
             _ctx,
             "Failed to set buffers for reading from TileDB array");   
 
@@ -983,7 +979,7 @@ void TDBImage::read_from_tdb(int64_t* subarray)
             "Failed to read from TileDB array");
 
         int count = 0;
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < buffer_size; ++i) {
             _raw_data[count] = blue_buffer[i];
             _raw_data[count + 1] = green_buffer[i];
             _raw_data[count + 2] = red_buffer[i];
@@ -995,13 +991,21 @@ void TDBImage::read_from_tdb(int64_t* subarray)
             _ctx,
             "Failed to finalize TileDB read");
 
+        std::memcpy(_raw_data, buffer, buffer_size);
+        
         tiledb_query_free(&read_query);
 
         delete [] blue_buffer;
         delete [] green_buffer;
         delete [] red_buffer;
-
     }
+
+    Error_Check(
+        tiledb_array_close(_ctx, array),
+        _ctx,
+        "Failed to close TileDB array");
+
+    tiledb_array_free(&array);
 }
 
 

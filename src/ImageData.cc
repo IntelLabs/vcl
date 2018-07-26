@@ -632,6 +632,7 @@ void ImageData::set_dimensions(cv::Size dimensions)
 {
     _height = dimensions.height;
     _width = dimensions.width;
+    _channels = 3;
 
     if ( _format == VCL::TDB ) {
         if ( _tdb == NULL )
