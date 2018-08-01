@@ -1,30 +1,36 @@
 ## Compile and Build Library ##
 
-env = Environment(CPPPATH=['include', 'src'], CXXFLAGS="-std=c++11 -fopenmp -O3")
+env = Environment(CPPPATH=['include', 'src',
+                           '/usr/local/include/'],
+                  CXXFLAGS="-std=c++11 -O3 -fopenmp")
 
-source_files = ['src/Image.cc', 'src/ImageData.cc', 'src/TDBObject.cc',
-    'src/TDBImage.cc',
-    'src/Exception.cc',
-    'src/utils.cc'
-    ]
+source_files = [
+                'src/utils.cc',
+                'src/Exception.cc',
+                'src/TDBObject.cc',
+                'src/Image.cc',
+                'src/ImageData.cc',
+                'src/TDBImage.cc',
+                'src/DescriptorSet.cc',
+                'src/DescriptorSetData.cc',
+                'src/FaissDescriptorSet.cc',
+                'src/TDBDescriptorSet.cc',
+                'src/TDBDenseDescriptorSet.cc',
+                'src/TDBSparseDescriptorSet.cc',
+                ]
 
 env.SharedLibrary('libvcl.so', source_files,
-    LIBS = [ 'tiledb', 'opencv_core', 'opencv_imgproc', 'opencv_imgcodecs', 'gomp'],
-    LIBPATH = ['/usr/local/lib', '/usr/lib'])
+    LIBS = [ 'tiledb',
+             'opencv_core',
+             'opencv_imgproc',
+             'opencv_imgcodecs',
+             'gomp',
+             'faiss',
+             ],
 
-## Compile and Run Tests ##
+    LIBPATH = ['/usr/local/lib',
+               '/usr/lib',
+              ],
 
-gtest_source = ['test/unit_tests/main_test.cc'
-         , 'test/unit_tests/TDBImage_test.cc'
-         , 'test/unit_tests/ImageData_test.cc'
-         ,'test/unit_tests/Image_test.cc'
-]
-
-env.Program('test/unit_test', gtest_source,
-        LIBS = ['vcl', 'gtest', 'pthread'
-                ,'opencv_core'
-                , 'opencv_imgcodecs'
-                , 'opencv_highgui'
-                , 'opencv_imgproc'
-        ],
-        LIBPATH = ['.', '/usr/local/lib', '/usr/lib'])
+    LINKFLAGS="-Wl,--no-as-needed",
+    )
