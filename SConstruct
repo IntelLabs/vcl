@@ -15,7 +15,7 @@ source_files = [
     # 'src/Globals.cpp'
     ]
 
-env.SharedLibrary('libvcl.so', source_files,
+env.SharedLibrary('libvclv.so', source_files,
     LIBS = [ 'tiledb', 'opencv_core', 'opencv_imgproc', 'opencv_imgcodecs', 'gomp', 'opencv_videoio', 'opencv_highgui', 'boost_system' ,'boost_filesystem'],
     LIBPATH = ['/usr/lib', '/usr/local/lib'])
 
@@ -24,14 +24,16 @@ env.SharedLibrary('libvcl.so', source_files,
 gtest_source = ['test/unit_tests/main_test.cc'
 #         , 'test/unit_tests/TDBImage_test.cc'
 #         , 'test/unit_tests/ImageData_test.cc'
-#         , 'test/unit_tests/Image_test.cc'
+        # , 'test/unit_tests/Image_test.cc'
 	     , 'test/unit_tests/Video_test.cc'
        , 'test/unit_tests/VideoData_test.cc'
 ]
 
-env.ParseConfig('pkg-config --cflags --libs opencv')
+#env.ParseConfig('pkg-config --cflags --libs opencv')
 env.Program('test/unit_test', gtest_source,
-        LIBS = ['vcl', 'gtest', 'pthread'
+        LIBS = ['vclv'
+                , 'gtest'
+                , 'pthread'
                 ,'opencv_core'
                 , 'opencv_imgcodecs'
                 , 'opencv_highgui'
