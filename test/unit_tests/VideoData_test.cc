@@ -35,6 +35,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #include <string>
 #include <iostream>
@@ -111,6 +112,21 @@ TEST_F(VideoDataTest, BlobConstructor)
     delete[] inBuf;
 
 }
+TEST_F(VideoDataTest, Interval)
+{
+    try{
+    std::cout<< " Interval Operation" << std::endl;
+
+    VCL::VideoData video_data(_video); //
+    video_data.interval("frames",10, 200, 5);
+    video_data.perform_operations();
+}
+catch(VCL::Exception &e) {
+        print_exception(e);
+    }
+
+}
+
 
 TEST_F(VideoDataTest, Read)
 {
@@ -118,7 +134,8 @@ TEST_F(VideoDataTest, Read)
     std::cout<< " Read Operation" << _video<< std::endl;
 
     VCL::VideoData video_data(_video);
-    video_data.read(_video, 100, 200, 1);
+    video_data.interval("frames",10, 200, 5);
+    video_data.read(_video);
 
     video_data.perform_operations();
 }
@@ -136,7 +153,8 @@ TEST_F(VideoDataTest, Write)
     std::cout<< " Write Operation" << std::endl;
 
     VCL::VideoData video_data(_video); //
-    video_data.write(_video, VCL::Format::XVID, true, 10, 200, 10);
+    video_data.interval("frames", 10, 200, 5);
+    video_data.write(_video, VCL::Format::XVID, true);
     video_data.perform_operations();
 }
 catch(VCL::Exception &e) {
@@ -150,9 +168,11 @@ catch(VCL::Exception &e) {
     try{
     std::cout<< "Resize Operation" << std::endl;
 
+
    VCL::VideoData video_data(_inputVideo);
+   video_data.interval("frames",10, 200, 5);
    video_data.set_temporary_directory("test/temp/");
-   video_data.resize( 100,100, 10, 2000, 2);
+   video_data.resize( 100,100);
 
     video_data.perform_operations();
    }
@@ -169,7 +189,8 @@ TEST_F(VideoDataTest, Threshold)
 
    VCL::VideoData video_data(_inputVideo);
    video_data.set_temporary_directory("test/temp/");
-    video_data.threshold( 100, 50, 1000,10);
+   video_data.interval("frames",10, 200, 5);
+    video_data.threshold( 100);
    // video_data.set_temporary_directory("test/temp/");
     video_data.perform_operations();
 }
@@ -186,7 +207,8 @@ TEST_F(VideoDataTest, CreateUnique)
 
     video_data.create_unique("test/temp/", VCL::Format::MP4);
     std::cout<<video_data.get_video_id() <<std::endl;
-    video_data.write(video_data.get_video_id(), VCL::Format::MP4);
+    video_data.interval("frames",10, 200, 5);
+    video_data.write(video_data.get_video_id(), VCL::Format::MP4, true);
     video_data.perform_operations();}
 catch(VCL::Exception &e) {
         print_exception(e);
@@ -200,8 +222,9 @@ TEST_F(VideoDataTest, Crop)
     try {
     VCL::VideoData video_data(_inputVideo);
     video_data.set_temporary_directory("test/temp/");
+    video_data.interval("frames", 10, 200, 5);
 
-    video_data.crop(VCL::Rectangle(0, 0, 50, 50), 100, 1500,10);
+    video_data.crop(VCL::Rectangle(0, 0, 50, 50));
     video_data.perform_operations();
     }
     catch(VCL::Exception &e) {

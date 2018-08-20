@@ -7,24 +7,25 @@
 #include <fstream>
 #include <cstring>
 #include <stdlib.h>
-
+#include "VCL.h"
 using namespace std;
 
 #include "VideoData.h"
 
 using namespace VCL;
 
-VideoData::Read::Read(const std::string& filename, Format format, int start, int stop, int step)
+VideoData::Read::Read(const std::string& filename, Format format)
     : Operation(format),
-      _fullpath(filename),
-      _start(start),
-      _stop(stop),
-      _step(step)
+      _fullpath(filename)
 {
 }
 
 void VideoData::Read::operator()(VideoData *video)
 {
+    _start = video->_start_frame;
+    _stop = video->_end_frame;
+    _step = video->_step;
+
      std::cout<<" Read Operation Inside"<<std::endl;
      video->_inputVideo.set(CV_CAP_PROP_POS_FRAMES, _start - 1);
      std::cout<<"After set operation"<<std::endl;
@@ -32,10 +33,10 @@ void VideoData::Read::operator()(VideoData *video)
 
     while ( count < _stop ) {
         cv::Mat frame;
-        std::cout<<" Inside Reading Loop"<<std::endl;
+        std::cout<<count<<" Inside Reading Loop"<<std::endl;
         if ( video->_inputVideo.read(frame) ) {
             if ( !frame.empty() ) {
-                cv::imshow( "Frame", frame );
+               // cv::imshow( "Frame", frame );
                 // Press  ESC on keyboard to  exit
                  char c = (char)cv::waitKey(1);
                  if( c == 27 )
@@ -61,19 +62,19 @@ void VideoData::Read::operator()(VideoData *video)
     /*       WRITE OPERATION    */
     /*  *********************** */
 VideoData::Write::Write(const std::string& filename, Format format,
-    Format old_format, bool metadata, int start, int stop, int step)
+    Format old_format, bool metadata)
     : Operation(format),
       _old_format(old_format),
       _metadata(metadata),
-      _fullpath(filename),
-      _start(start),
-      _stop(stop),
-      _step(step)
+      _fullpath(filename)
 {
 }
 
 void VideoData::Write::operator()(VideoData *video)
 {
+    _start = video->_start_frame;
+    _stop = video->_end_frame;
+    _step = video->_step;
     cv::VideoWriter _outputVideo(_fullpath,
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     video->_fps,
@@ -92,6 +93,7 @@ void VideoData::Write::operator()(VideoData *video)
             break; // probably want to throw if the frame is empty
 
         // Write the frame into the file 'outcpp.avi'
+        std::cout<<count<<" Inside writing Loop"<<std::endl;
         _outputVideo.write(frame);
 
         // Display the resulting frame
@@ -136,6 +138,10 @@ void VideoData::Write::operator()(VideoData *video)
 
 void VideoData::Resize::operator()(VideoData *video)
 {
+    _start = video->_start_frame;
+    _stop = video->_end_frame;
+    _step = video->_step;
+
      std::cout<<" Hello I am in the Resize";
     video->create_unique(video->_temporary_path, VCL::Format::AVI);
     std::string cropped_vid = video->remove_extention(video->_video_id) + "resized.avi" ;
@@ -178,6 +184,10 @@ void VideoData::Resize::operator()(VideoData *video)
 
 void VideoData::Crop::operator()(VideoData *video)
 {
+    _start = video->_start_frame;
+    _stop = video->_end_frame;
+    _step = video->_step;
+
    std::cout<<video->_temporary_path<<std::endl;
     video->create_unique(video->_temporary_path, VCL::Format::AVI);
 
@@ -217,8 +227,12 @@ void VideoData::Crop::operator()(VideoData *video)
 
 void VideoData::Threshold::operator()(VideoData *video)
 {
+    _start = video->_start_frame;
+    _stop = video->_end_frame;
+    _step = video->_step;
+
     video->create_unique(video->_temporary_path, VCL::Format::AVI);
-    std::string cropped_vid = video->remove_extention(video->_video_id) + "threshold.avi" ;
+    std::string cropped_vid = video->remove_extention(video->_video_id) + "_threshold.avi" ;
     std::cout << cropped_vid << std::endl;
     video->_outputVideo = cv::VideoWriter(cropped_vid,
                     CV_FOURCC('X', 'V', 'I', 'D'),
@@ -280,7 +294,8 @@ VideoData::VideoData()
     _frame_height=0;
     _video_id ="";
     _format = VCL::Format::NONE;
-    _temporary_path = "tests/db/tmp";
+    _temporary_path ="/home/ragaad/vdms-video/tests/db/videos";
+;
 }
 
 
@@ -309,6 +324,7 @@ VideoData::VideoData( const std::string &video_id )
 
     _video_time = _frame_count/_fps;
     _length = _frame_count;
+    _end_frame = _frame_count;
 
     std::cout<<" Video time in minutes" << _video_time/60<<std::endl;
 
@@ -324,7 +340,7 @@ VideoData::VideoData( const std::string &video_id )
     char EXT[] = {(char)(ex & 0XFF) , (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
     set_format_from_extension(EXT);
     // std::cout<< (int)_format <<"\t"<< _length<<std::endl;
-    _temporary_path = "tests/db/tmp";
+    _temporary_path = "/home/ragaad/vdms-video/tests/db/videos";
 
  // while(1)
  //  {
@@ -387,6 +403,7 @@ VideoData::VideoData(void* buffer, long size, const std::string &path)
 
     _video_time = _frame_count/_fps;
     _length = _frame_count;
+    _end_frame = _frame_count;
 
     std::cout<<" Video time in minutes " << _video_time/60.0 <<std::endl;
     std::cout<<" the Frame rate is"<<_fps<<std::endl;
@@ -398,7 +415,7 @@ VideoData::VideoData(void* buffer, long size, const std::string &path)
     }
      std::cout<<"At the End of the Blob constructor"<<std::endl;
     int ex = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FOURCC));     // Get Codec Type- Int form
-     _temporary_path = "tests/db/tmp";
+     _temporary_path = "/home/ragaad/vdms-video/tests/db/videos";
     // // Transform from int to char via Bitwise operators
     char EXT[] = {(char)(ex & 0XFF) , (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
     set_format_from_extension(EXT); // to get the current extention of the video file
@@ -414,17 +431,17 @@ VideoData::VideoData(const cv::VideoCapture &cv_video )
     if(!_inputVideo.isOpened())  // check if we succeeded
         std::cout<<" Error in Opening the File " <<std::endl;
     else {
-        _length = (int) _inputVideo.get(CV_CAP_PROP_FRAME_COUNT);
+        _frame_count = (int) _inputVideo.get(CV_CAP_PROP_FRAME_COUNT);
         _fps = static_cast<float>(_inputVideo.get(CV_CAP_PROP_FPS));
         int ex = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FOURCC));
         char EXT[] = {(char)(ex & 0XFF) , (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
         set_format_from_extension(EXT);
         _frame_width = _inputVideo.get(CV_CAP_PROP_FRAME_WIDTH);
         _frame_height = _inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT);
-
+        _end_frame = _frame_count;
         }
 
-    _temporary_path = "tests/db/tmp";
+    _temporary_path ="/home/ragaad/vdms-video/tests/db/videos";
     std::vector<cv::Mat> one_video_vector;
 
     // cv::Mat video_img;
@@ -469,21 +486,21 @@ VideoData::VideoData(const cv::VideoCapture &cv_video )
     // }
 }
 
-void VideoData::read(const std::string &video_id, int start , int stop, int step){
+void VideoData::read(const std::string &video_id){
 
 
    // video_id = create_fullpath(video_id, _format);
 
-    _operations.push_back(std::make_shared<Read> (_video_id, _format, start, stop, step));
+    _operations.push_back(std::make_shared<Read> (_video_id, _format));
 
 
 }
 
 void VideoData::write( const std::string &video_id, Format video_format,
-            bool store_metadata, int start, int stop, int step)
+            bool store_metadata)
 {
     _operations.push_back(std::make_shared<Write> (create_fullpath(video_id, video_format),
-        video_format, _format, store_metadata, start, stop, step));
+        video_format, _format, store_metadata));
 }
 
 
@@ -709,25 +726,29 @@ void VideoData::perform_operations()
 
 }
 
-void VideoData::resize(int rows, int columns, int start , int stop, int step)
+void VideoData::resize(int rows, int columns)
 {
 
-    _operations.push_back(std::make_shared<Resize> (Rectangle(0, 0, columns, rows), _format, start, stop,step));
+    _operations.push_back(std::make_shared<Resize> (Rectangle(0, 0, columns, rows), _format));
 }
 
-void VideoData::interval(int start, int stop, int step)
+void VideoData::interval(std::string unit, int start, int stop, int step)
 {
- _operations.push_back(std::make_shared<Interval> (start, stop, step, _format));
+ // _operations.push_back(std::make_shared<Interval> (start, stop, step, _format));
+    _video_unit=unit;
+    _start_frame = start;
+    _end_frame = stop;
+    _step = step;
 }
 
-void VideoData::crop(const Rectangle &rect, int start, int stop, int step)
+void VideoData::crop(const Rectangle &rect)
 {
- _operations.push_back(std::make_shared<Crop> (rect, _format, start, stop, step));
+ _operations.push_back(std::make_shared<Crop> (rect, _format));
 }
 
-void VideoData::threshold(int value, int start, int stop , int step )
+void VideoData::threshold(int value)
 {
-_operations.push_back(std::make_shared<Threshold> (value, _format, start, stop, step));
+_operations.push_back(std::make_shared<Threshold> (value, _format));
 }
 
 void VideoData::delete_object()

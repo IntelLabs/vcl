@@ -11,9 +11,9 @@ using namespace VCL;
 using namespace cv; // OpenCV namespace
 
 void Video::store(const std::string &video_id, Format video_format,
-            bool store_metadata, int start, int stop, int step)
+            bool store_metadata)
 {
-  _video->write(video_id, video_format, store_metadata, start, stop, step );
+  _video->write(video_id, video_format, store_metadata);
   _video->perform_operations();
 }
 
@@ -140,28 +140,28 @@ void Video::set_minimum_dimension(int dimension)
 }
 
 /********************OPERATIONS ***********************/
-void Video::resize(int new_height, int new_width, int start, int stop, int step)
+void Video::resize(int new_height, int new_width)
 {
-    _video->resize(new_height, new_width, start, stop, step);
-    _video->perform_operations();
+    _video->resize(new_height, new_width);
+    // _video->perform_operations();
 }
 
-void Video::interval(int start, int stop, int step)
+void Video::interval(std::string unit, int start, int stop, int step)
 {
-    _video->interval(start, stop, step);
-    _video->perform_operations();
+    _video->interval(unit, start, stop, step);
+    // _video->perform_operations();
 }
 
-void Video::crop(const Rectangle &rect, int start, int stop, int step)
+void Video::crop(const Rectangle &rect)
 {
-    _video->crop(rect, start, stop, step);
-    _video->perform_operations();
+    _video->crop(rect);
+    // _video->perform_operations();
 }
 
-void Video::threshold(int value, int start, int stop, int step)
+void Video::threshold(int value)
 {
-   _video->threshold(value, start, stop, step);
-   _video->perform_operations();
+   _video->threshold(value);
+   // _video->perform_operations();
 }
 
 
