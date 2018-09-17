@@ -54,6 +54,15 @@ namespace VCL {
                     BZSTD = 9,
                     RLE = 10, };
 
+    enum class Format : int { NONE = 0,
+                    JPG = 1,
+                    PNG = 2,
+                    TDB = 3,
+                    MP4 = 4,
+                    AVI = 5,
+                    MPEG = 6,
+                    XVID = 7, };
+
 
     static const struct init_rand_t { init_rand_t() { srand(time(NULL)); } } init_rand;
 
@@ -63,4 +72,41 @@ namespace VCL {
 
     uint64_t get_uint64();
 
+    /**
+     *  Creates a unique ID in the path given with the given extension
+     *
+     *  @param path  A string with the path to where the object should be
+     *                  stored
+     *  @param format The Format the object should be stored as
+     *  @return The string containing the full path to the object (path
+     *    + unique id + format)
+     */
+    std::string create_unique(const std::string &path, Format format);
+
+    std::string remove_extention(std::string old_name);
+
+    /**
+     *  Converts Format to string
+     *
+     *  @param image_format The Format of the object
+     *  @return The string containing the extension
+     */
+    std::string format_to_string(Format format);
+
+    /**
+     *  Gets the extension of a filename
+     *
+     *  @param filename  The path to the file
+     *  @return The string containing the extension
+     */
+    std::string get_extension(const std::string &filename);
+
+    /**
+     *  Checks to see if the file name is unique by attempting
+     *    to open the file
+     *
+     *  @param name  Full path to the theoretically unique ID
+     *  @return True if the file does not exist, false if it does
+     */
+    bool exists(const std::string &name);
 };

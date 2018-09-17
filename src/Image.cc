@@ -107,7 +107,7 @@ cv::Size Image::get_dimensions() const
     return _image->get_dimensions();
 }
 
-ImageFormat Image::get_image_format() const
+Format Image::get_image_format() const
 {
     return _image->get_image_format();
 }
@@ -144,7 +144,7 @@ void Image::get_raw_data(void* buffer, long buffer_size ) const
 }
 
 
-std::vector<unsigned char> Image::get_encoded_image(ImageFormat format,
+std::vector<unsigned char> Image::get_encoded_image(Format format,
                 const std::vector<int>& params) const
 {
     return _image->get_encoded(format, params);
@@ -156,7 +156,7 @@ std::vector<unsigned char> Image::get_encoded_image(ImageFormat format,
     /*        SET FUNCTIONS     */
     /*  *********************** */
 
-std::string Image::create_unique(const std::string &path, ImageFormat format)
+std::string Image::create_unique(const std::string &path, Format format)
 {
     _image->create_unique(path, format);
     return _image->get_image_id();
@@ -186,7 +186,7 @@ void Image::set_minimum_dimension(int dimension)
     /*    IMAGE INTERACTIONS    */
     /*  *********************** */
 
-void Image::store(const std::string &filename, ImageFormat image_format,
+void Image::store(const std::string &filename, Format image_format,
     bool store_metadata)
 {
     _image->write(filename, image_format, store_metadata);

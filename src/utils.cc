@@ -30,6 +30,7 @@
 #include <cpuid.h>
 #include <string>
 #include <sstream>
+#include <sys/stat.h>
 
 #include "utils.h"
 #include "Exception.h"
@@ -83,5 +84,82 @@ namespace VCL {
             return combine(rand(), rand());
         }
     }
+
+    std::string create_unique(const std::string &path, Format format)
+    {
+        std::string unique_id;
+        std::string name;
+
+        std::string extension = format_to_string(format);
+
+        const char& last = path.back();
+
+        do {
+            uint64_t id = get_uint64();
+            std::stringstream ss;
+            ss << std::hex << id;
+            unique_id = ss.str();
+            if (last != '/')
+                name = path + "/" + unique_id + "." + extension;
+            else
+                name = path + unique_id + "." + extension;
+        } while ( exists(name) );
+
+        return name;
+    }
+
+    std::string format_to_string(Format format)
+    {
+        switch( format )
+        {
+            case VCL::Format::NONE:
+                return "";
+            case VCL::Format::JPG:
+                return "jpg";
+            case VCL::Format::PNG:
+                return "png";
+            case VCL::Format::TDB:
+                return "tdb";
+            case VCL::Format::MP4:
+                return "mp4";
+            case VCL::Format::AVI:
+                return "avi";
+            case VCL::Format::MPEG:
+                return "mpeg";
+            case VCL::Format::XVID:
+                return "xvid";
+            default:
+                throw VCLException(UnsupportedFormat, (int)format + " is not a \
+                    valid format");
+        }
+    }
+
+    std::string get_extension(const std::string &object_id)
+    {
+        size_t file_ext = object_id.find_last_of(".");
+        size_t dir_ext = object_id.find_last_of("/");
+
+        if ( file_ext != std::string::npos ) {
+            if ( file_ext > dir_ext + 2 )
+                return object_id.substr(file_ext + 1);
+            else
+                throw VCLException(ObjectEmpty, object_id + " does not have a valid extension");
+        }
+        else
+            return "";
+    }
+
+    bool exists(const std::string &name)
+    {
+        struct stat filestatus;
+
+        return (stat (name.c_str(), &filestatus) == 0);
+    }
+
+    std::string remove_extention(std::string old_name)
+    {
+
+    return old_name.erase(old_name.find_last_of("."), std::string::npos);
+}
 
 }

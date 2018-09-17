@@ -1,5 +1,5 @@
 /**
- * @file   ImageData.h
+ * @file   VideoData.h
  *
  * @section LICENSE
  *
@@ -27,8 +27,8 @@
  *
  * @section DESCRIPTION
  *
- * This file declares the C++ API for ImageData. ImageData contains all of the
- *  messy details about the Image that aren't visible in Image.h/Image.cc. It
+ * This file declares the C++ API for VideoData. VideoData contains all of the
+ *  messy details about the Video that aren't visible in Video.h/Video.cc. It
  *  keeps track of which operations to perform (and in what order), as well as
  *  the raw data if it is in a CV Mat, and a pointer to the TDB raw data if it is
  *  in TDB format.
@@ -38,37 +38,41 @@
 
 #include <memory>
 
-#include "Image.h"
-#include "TDBImage.h"
+#include "Video.h"
+// #include "Image.h"
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 namespace VCL {
 
-    class ImageData {
+    class VideoData {
 
     /*  *********************** */
     /*        OPERATION         */
     /*  *********************** */
-        enum OperationType { READ, WRITE, RESIZE, CROP, THRESHOLD };
+        enum OperationType { READ, WRITE, RESIZE, CROP, THRESHOLD, INTERVAL };
 
         /**
          *  Provides a way to keep track of what operations should
          *   be performed on the data when it is needed
          *
          *  Operation is the base class, it keeps track of the format
-         *   of the image data, defines a way to convert Format to
+         *   of the Video data, defines a way to convert Format to
          *   a string, and defines a virtual function that overloads the
          *   () operator
          */
         class Operation {
+
         protected:
-            /** The format of the image for this operation */
+            /** The format of the Video for this operation */
             Format _format;
 
             /**
              *  Constructor, sets the format
              *
              *  @param format  The format for the operation
-             *  @see Image.h for more details on Format
+             *  @see Video.h for more details on Format
              */
             Operation(Format format)
                 : _format(format)
@@ -80,9 +84,9 @@ namespace VCL {
              *  Implemented by the specific operation, performs what
              *    the operation is supposed to do
              *
-             *  @param img  A pointer to the current ImageData object
+             *  @param img  A pointer to the current VideoData object
              */
-            virtual void operator()(ImageData *img) = 0;
+            virtual void operator()(VideoData *video) = 0;
 
             virtual OperationType get_type() = 0;
         };
@@ -91,30 +95,33 @@ namespace VCL {
     /*       READ OPERATION     */
     /*  *********************** */
         /**
-         *  Extends Operation, reads image from the file system
+         *  Extends Operation, reads Video from the file system
          */
         class Read : public Operation {
         private:
             /** The full path to the object to read */
             std::string _fullpath;
+            int _start; // specify the starting reading point of the video
+            int _stop;  //specify the ending point of the reading it represnet sa frame index
+            int _step;  // specifiy the number of the skipped frames in the reading operation
 
         public:
             /**
              *  Constructor, sets the format and path for reading
              *
              *  @param filename  The full path to read from
-             *  @param format  The format to read the image from
-             *  @see Image.h for more details on Format
+             *  @param format  The format to read the Video from
+             *  @see Video.h for more details on Format
              */
             Read(const std::string& filename, Format format);
 
             /**
-             *  Reads an image from the file system (based on the format
+             *  Reads an Video from the file system (based on the format
              *    and file path indicated)
              *
-             *  @param img  A pointer to the current ImageData object
+             *  @param img  A pointer to the current VideoData object
              */
-            void operator()(ImageData *img);
+            void operator()(VideoData *video);
 
 
             OperationType get_type() { return READ; };
@@ -129,31 +136,36 @@ namespace VCL {
          */
         class Write : public Operation {
         private:
-            /** The full path of where to write the image */
+            /** The full path of where to write the Video */
             std::string _fullpath;
-            /** The format the image used to be stored as */
+            /** The format the Video used to be stored as */
             Format _old_format;
             /** Whether to store the metadata */
             bool _metadata;
+            int _start;
+            int _stop;
+            int _step;
+
 
         public:
             /**
              *  Constructor, sets the formats and path for writing
              *
              *  @param filename  The full path to write to
-             *  @param format  The format to store the image in
-             *  @param old_format  The format the image was stored in
-             *  @see Image.h for more details on Format
+             *  @param format  The format to store the Video in
+             *  @param old_format  The format the Video was stored in
+             *  @see Video.h for more details on Format
              */
             Write(const std::string& filename, Format format,
                 Format old_format, bool metadata);
+
             /**
-             *  Writes an image to the file system (based on the format
+             *  Writes an Video to the file system (based on the format
              *    and file path indicated)
              *
-             *  @param img  A pointer to the current ImageData object
+             *  @param img  A pointer to the current VideoData object
              */
-            void operator()(ImageData *img);
+            void operator()(VideoData *video);
 
             OperationType get_type() { return WRITE; };
         };
@@ -162,47 +174,92 @@ namespace VCL {
     /*       RESIZE OPERATION   */
     /*  *********************** */
         /**
-         *  Extends Operation, resizes the image to the specified size
+         *  Extends Operation, resizes the Video to the specified size
          */
          class Resize : public Operation {
          private:
-            /** Gives the height and width to resize the image to */
+            /** Gives the height and width to resize the Video to */
             Rectangle _rect;
+            int _start;
+            int _stop;
+            int _step;
 
         public:
             /**
              *  Constructor, sets the size to resize to and the format
              *
              *  @param rect  Contains height and width to resize to
-             *  @param format  The current format of the image data
-             *  @see Image.h for more details on Format and Rectangle
+             *  @param format  The current format of the Video data
+             *  @see Video.h for more details on Format and Rectangle
              */
             Resize(const Rectangle &rect, Format format)
                 : Operation(format),
                   _rect(rect)
+
+
             {
             };
 
             /**
-             *  Resizes an image to the given dimensions
+             *  Resizes an Video to the given dimensions
              *
-             *  @param img  A pointer to the current ImageData object
+             *  @param img  A pointer to the current VideoData object
              */
-            void operator()(ImageData *img);
+            void operator()(VideoData *video);
 
             OperationType get_type() { return RESIZE; };
+        };
+
+
+                    /*  *********************** */
+                    /*      Interval Operation  */
+                    /*  *********************** */
+        class Interval : public Operation {
+         private:
+            /** Gives the height and width to resize the Video to */
+          int _start;
+          int _stop;
+          int _step;
+
+        public:
+            /**
+             *  Constructor, sets the size to resize to and the format
+             *
+             *  @param rect  Contains height and width to resize to
+             *  @param format  The current format of the Video data
+             *  @see Video.h for more details on Format and Rectangle
+             */
+            Interval(const int start , const int stop, int step, Format format)
+                : Operation(format),
+                  _start(start),
+                  _stop(stop),
+                  _step(step)
+            {
+            };
+
+            /**
+             *  Resizes an Video to the given dimensions
+             *
+             *  @param img  A pointer to the current VideoData object
+             */
+            void operator()(VideoData *video);
+
+            OperationType get_type() { return INTERVAL; };
         };
 
     /*  *********************** */
     /*       CROP OPERATION     */
     /*  *********************** */
         /**
-         *  Extends Operation, crops the image to the specified area
+         *  Extends Operation, crops the Video to the specified area
          */
          class Crop : public Operation {
          private:
             /** Gives the dimensions and coordinates of the desired area */
             Rectangle _rect;
+            int _start;
+            int _stop;
+            int _step;
 
         public:
             /**
@@ -210,21 +267,22 @@ namespace VCL {
              *
              *  @param rect  Contains dimensions and coordinates of
              *    desired area
-             *  @param format  The current format of the image data
-             *  @see Image.h for more details on Format and Rectangle
+             *  @param format  The current format of the Video data
+             *  @see Video.h for more details on Format and Rectangle
              */
-            Crop(const Rectangle &rect, Format format)
+            Crop(const Rectangle &rect, Format format )
                 : Operation(format),
                   _rect(rect)
+
             {
             };
 
             /**
-             *  Crops the image to the given area
+             *  Crops the Video to the given area
              *
-             *  @param img  A pointer to the current ImageData object
+             *  @param img  A pointer to the current VideoData object
              */
-            void operator()(ImageData *img);
+            void operator()(VideoData *video);
 
             OperationType get_type() { return CROP; };
         };
@@ -240,27 +298,31 @@ namespace VCL {
         private:
             /** Minimum value pixels should be */
             int _threshold;
+            int _start;
+            int _stop;
+            int _step;
 
         public:
             /**
              *  Constructor, sets the threshold value and format
              *
              *  @param value  Minimum value pixels should be
-             *  @param format  The current format of the image data
-             *  @see Image.h for more details on Format
+             *  @param format  The current format of the Video data
+             *  @see Video.h for more details on Format
              */
             Threshold(const int value, Format format)
                 : Operation(format),
                   _threshold(value)
+
             {
             };
 
             /**
              *  Performs the thresholding operation
              *
-             *  @param img  A pointer to the current ImageData object
+             *  @param img  A pointer to the current VideoData object
              */
-            void operator()(ImageData *img);
+            void operator()(VideoData *video);
 
             OperationType get_type() { return THRESHOLD; };
         };
@@ -270,99 +332,136 @@ namespace VCL {
     /*  *********************** */
     /*        VARIABLES         */
     /*  *********************** */
-        // Image height and width
-        uint _height, _width;
+        // Video height and width
 
-        // Type of image (OpenCV definition) and number of channels
-        int _cv_type, _channels;
+    std::string _file_name;
+    std::string _path;
+    std::string _video_unit;
 
-        // Maintains order of operations requested
-        std::vector<std::shared_ptr<Operation>> _operations;
 
-        // Image format and compression type
-        Format _format;
-        CompressionType _compress;
+    //Vidoe Hieght, width, length
 
-        // Full path to image
-        std::string _image_id;
+    uint _length,  _height, _width;
+    int _start_frame = 0;
+    int _end_frame = INT_MAX;
+    int _step = 1;
+    int _scale_num = 8 ;
+    const float scale_stride = sqrt(3) ;
 
-        // Image data (OpenCV Mat or TDBImage)
-        cv::Mat _cv_img;
-        TDBImage *_tdb;
+    uint _frame_width;
+    uint _frame_height;
+
+    float _fps;
+
+    cv::Size _size;
+    int _video_time ;
+
+
+
+    // Maintains order of operations requested
+    std::vector<std::shared_ptr<Operation>> _operations;
+
+    // Video format and compression type
+    Format _format;
+    CompressionType _compress;
+    int _cv_type;
+
+
+    // Full path to Video
+    std::string _video_id;
+
+    cv::VideoCapture _inputVideo;
+    cv::VideoWriter _outputVideo;
+
+    std::string _temporary_path;
+    bool _temp_exist = false;
+    int  _frame_count;
+
+    // std::ifstream* _infile = nullptr;// (video_id,std::ifstream::binary);
+    // std::ofstream* _outfile = nullptr; // (video_id,std::ofstream::binary);
+
+    // unsigned char* _encoded_video;
+    // long _encoded_size;
+
+        // std::vector<Image> _frames;
+
 
     public:
+
+
     /*  *********************** */
     /*        CONSTRUCTORS      */
     /*  *********************** */
         /**
-         *  Default constructor, creates an empty ImageData object.
+         *  Default constructor, creates an empty VideoData object.
          *    Used when reading from the file system
          */
-        ImageData();
+        VideoData();
+
+               /**
+         *  Creates an VideoData object from the filename
+         *
+         *  @param Video_id  A string indicating where the Video is on disk
+         */
+        VideoData(const std::string &video_id);
+
+        VideoData(const cv::VideoCapture &cv_video );
+
 
        /**
-         *  Creates an ImageData object from the OpenCV Mat.
+         *  Creates an VideoData object from the given parameters
          *
-         *  @param cv_img  An OpenCV Mat that contains an image
-         */
-        ImageData(const cv::Mat &cv_img);
-
-        /**
-         *  Creates an ImageData object from the filename
-         *
-         *  @param image_id  A string indicating where the image is on disk
-         */
-        ImageData(const std::string &image_id);
-
-       /**
-         *  Creates an ImageData object from the given parameters
-         *
-         *  @param buffer  An buffer that contains the image data in raw pixels
+         *  @param buffer  An buffer that contains the Video data in raw pixels
          *  @param dimensions  An OpenCV Size object that contains the height
-         *    and width of the image
-         *  @param type  The OpenCV type of the image
+         *    and width of the Video
+         *  @param type  The OpenCV type of the Video
          *  @see OpenCV documentation for more information on type and Size
          */
-        ImageData(void* buffer, cv::Size dimensions,
-            int cv_type);
+        //VideoData(void* buffer, cv::Size dimensions);
 
         /**
-         *  Creates an ImageData object from an existing ImageData object
+         *  Creates an VideoData object from an existing VideoData object
          *
-         *  @param img  A reference to an existing ImageData object
+         *  @param img  A reference to an existing VideoData object
          */
-        ImageData(const ImageData &img);
+        VideoData(const VideoData &video);
+
+         // creates a video from an encoded buffer
+        VideoData(void*  buffer, long size, const std::string &path = "/tmps");
 
         /**
-         *  Sets an ImageData object equal to another ImageData object
+         *  Sets an VideoData object equal to another VideoData object
          *
-         *  @param img  A reference to an existing ImageData object
+         *  @param img  A reference to an existing VideoData object
          */
-        void operator=(const ImageData &img);
+        void operator=(const VideoData &video);
 
-        ~ImageData();
+        ~VideoData();
 
 
     /*  *********************** */
     /*        GET FUNCTIONS     */
     /*  *********************** */
         /**
-         *  Gets the image id of the ImageData object
+         *  Gets the Video id of the VideoData object
          *
-         *  @return The string containing the full path to the ImageData object
+         *  @return The string containing the full path to the VideoData object
          */
-        std::string get_image_id() const;
+        std::string get_video_id() const;
+        long get_frame_count(void) const;
+
+          int default_ending = get_frame_count();
 
         /**
-         *  Gets the format of the ImageData object
+         *  Gets the format of the VideoData object
          *
-         *  @return The Format of the ImageData object
-         *  @see Image.h for more details on Format
+         *  @return The Format of the VideoData object
+         *  @see Video.h for more details on Format
          */
-        Format get_image_format() const;
+        Format get_video_format() const;
 
         /**
-         *  Gets the OpenCV type of the image
+         *  Gets the OpenCV type of the Video
          *
          *  @return The OpenCV type (CV_8UC3, etc)
          *  @see OpenCV documentation on types for more details
@@ -370,52 +469,54 @@ namespace VCL {
         int get_type() const;
 
         /**
-         *  Gets the dimensions (height and width) of the image
+         *  Gets the dimensions (height and width) of the Video
          *
-         *  @return The height and width of the image as an OpenCV Size object
+         *  @return The height and width of the Video as an OpenCV Size object
          */
         cv::Size get_dimensions();
 
         /**
-         *  Gets the size of the image in pixels (height * width * channels)
+         *  Gets the size of the Video in pixels (height * width * channels)
          *
-         *  @return The size of the image in pixels
+         *  @return The size of the Video in pixels
          */
-        long get_size();
+        cv::Size get_size();
+
+
+
 
         /**
-         *  Gets the image data in a buffer
+         *  Gets the Video data in a buffer
          *
-         *  @param  buffer  A buffer (of any type) that will contain the image
+         *  @param  buffer  A buffer (of any type) that will contain the Video
          *     data when the function ends
-         *  @param  buffer_size  The pixel size of the image (length of
+         *  @param  buffer_size  The pixel size of the Video (length of
          *     the buffer, not bytes)
          */
-        void get_buffer(void* buffer, long buffer_size);
+        void get_buffer(void* buffer, int buffer_size);
 
         /**
-         *  Gets an OpenCV Mat that contains the image data
+         *  Gets an OpenCV Mat that contains the Video data
          *
          *  @return An OpenCV Mat
          */
-        cv::Mat get_cvmat();
-
-        /**
-         *  Gets a specific area of the image, indicated by the Rectangle
+        cv::VideoCapture get_cv_video_capture();
+      /**
+         *  Gets a specific area of the Video, indicated by the Rectangle
          *    parameters
          *
          *  @param roi  The region of interest (starting x coordinate, starting
          *    y coordinate, height, width)
-         *  @return ImageData of the area
-         *  @see Image.h for more details about Rectangle
+         *  @return VideoData of the area
+         *  @see Video.h for more details about Rectangle
          */
-        ImageData get_area(const Rectangle &roi);
+        VideoData get_area(const Rectangle &roi);
 
         /**
-         *  Gets encoded image data in a buffer
+         *  Gets encoded Video data in a buffer
          *
-         *  @param format  The Format the image should be encoded as
-         *  @param buffer  The buffer the encoded image will be stored in
+         *  @param format  The Format the Video should be encoded as
+         *  @param buffer  The buffer the encoded Video will be stored in
          *  @param params  Optional parameters
          *  @see OpenCV documentation for imencode for more details
          */
@@ -429,34 +530,40 @@ namespace VCL {
         /**
          *  Creates a unique ID in the path given with the given extension
          *
-         *  @param path  A string with the path to where the Image should be
+         *  @param path  A string with the path to where the Video should be
          *                  stored
-         *  @param format The Format the Image should be stored as
-         *  @return The string containing the full path to the Image (path
+         *  @param format The Format the Video should be stored as
+         *  @return The string containing the full path to the Video (path
          *    + unique id + format)
          */
         void create_unique(const std::string &path,
                 Format format);
 
-        /**
-         *  Sets the file system location of where the image
-         *    can be found
-         *
-         *  @param image_id  The full path to the image location
-         */
-        void set_image_id(const std::string &image_id);
+        std::string remove_extention(const std::string path);
 
         /**
-         *  Sets the format of the ImageData object
+         *  Sets the file system location of where the Video
+         *    can be found
+         *
+         *  @param Video_id  The full path to the Video location
+         */
+        void set_video_id(const std::string &Video_id);
+
+        /**
+         *  Sets the format of the VideoData object
          *
          *  @param extension  A string containing the file system
          *    extension corresponding to the desired Format
-         *  @see Image.h for more details on Format
+         *  @see Video.h for more details on Format
          */
-        void set_format(const std::string &extension);
+        void set_format_from_extension(const std::string &extension);
+
+        void set_format(int form);
+
+        void set_temporary_directory(const std::string &path);
 
         /**
-         *  Sets the type of the ImageData object using OpenCV types
+         *  Sets the type of the VideoData object using OpenCV types
          *
          *  @param cv_type  The OpenCV type of the object
          *  @see OpenCV documentation on types for more details
@@ -465,33 +572,34 @@ namespace VCL {
 
         /**
          *  Sets the type of compression to be used when compressing
-         *    the TDBImage
+         *    the TDBVideo
          *
          *  @param comp  The compression type
-         *  @see Image.h for details on CompressionType
+         *  @see Video.h for details on CompressionType
          */
-        void set_compression(CompressionType comp);
+         void set_compression(CompressionType comp) ;
+
 
         /**
-         *  Sets the height and width of the image
+         *  Sets the height and width of the Video
          *
-         *  @param dimensions  The height and width of the image
+         *  @param dimensions  The height and width of the Video
          *  @see OpenCV documentation for more details on Size
          */
         void set_dimensions(cv::Size dimensions);
 
         /**
-         *  Sets the Image object to contain raw pixel data
+         *  Sets the Video object to contain raw pixel data
          *    from a buffer of raw pixel data (stored in a TDB object)
          *
          *  @param buffer  The buffer containing the raw pixel data
          *  @param size  The size of the buffer
          */
-        void set_data_from_raw(void* buffer, long size);
+        void set_data_from_raw(void* buffer, int size);
 
         /**
-         *  Sets the Image object to contain raw pixel data
-         *    from an encoded image buffer (stored in a CV Mat)
+         *  Sets the Video object to contain raw pixel data
+         *    from an encoded Video buffer (stored in a CV Mat)
          *
          *  @param buffer  The buffer containing the encoded pixel data
          */
@@ -500,11 +608,11 @@ namespace VCL {
         void set_minimum(int dimension);
 
     /*  *********************** */
-    /*   IMAGEDATA INTERACTION  */
+    /*   VideoDATA INTERACTION  */
     /*  *********************** */
         /**
          *  Performs the set of operations that have been requested
-         *    on the ImageData
+         *    on the VideoData
          */
         void perform_operations();
 
@@ -512,43 +620,44 @@ namespace VCL {
          *  Stores a Read Operation in the list of operations
          *    to perform
          *
-         *  @param image_id  The full path to the image to be read
+         *  @param Video_id  The full path to the Video to be read
          */
-        void read(const std::string &image_id);
+        void read(const std::string &video_id );
 
         /**
          *  Stores a Write Operation in the list of operations
          *    to perform
          *
-         *  @param image_id  The full path to where the image should
+         *  @param Video_id  The full path to where the Video should
          *    be written
-         *  @param image_format  The Format to write the image in
+         *  @param Video_format  The Format to write the Video in
          *  @param store_metadata  A flag to indicate whether to store the
          *    metadata in TileDB or not. Defaults to true
-         *  @see Image.h for more details on Format
+         *  @see Video.h for more details on Format
          */
-        void write(const std::string &image_id, Format image_format,
-            bool store_metadata=true);
+        void write(const std::string &video_id,  Format video_format,  bool store_metadata=true);
 
-        // void remove(const std::string &image_id);
+        // void remove(const std::string &Video_id);
 
         /**
          *  Stores a Resize Operation in the list of operations
          *    to perform
          *
-         *  @param rows  The number of rows in the resized image
-         *  @param columns  The number of columns in the resized image
+         *  @param rows  The number of rows in the resized Video
+         *  @param columns  The number of columns in the resized Video
          */
         void resize(int rows, int columns);
+
+        void interval(std::string unit, int start, int stop, int step);
 
         /**
          *  Stores a Crop Operation in the list of operations
          *    to perform
          *
          *  @param rect  The region of interest (starting x coordinate,
-         *    starting y coordinate, height, width) the image should be
+         *    starting y coordinate, height, width) the Video should be
          *    cropped to
-         *  @see Image.h for more details about Rectangle
+         *  @see Video.h for more details about Rectangle
          */
         void crop(const Rectangle &rect);
 
@@ -561,7 +670,7 @@ namespace VCL {
         void threshold(int value);
 
         /**
-         *  Deletes the ImageData as well as removes file from system if
+         *  Deletes the VideoData as well as removes file from system if
          *    it exists
          */
         void delete_object();
@@ -573,16 +682,16 @@ namespace VCL {
     /*      COPY FUNCTIONS      */
     /*  *********************** */
         /**
-         *  Copies an OpenCV Mat into the ImageData OpenCV Mat
+         *  Copies an OpenCV Mat into the VideoData OpenCV Mat
          *
          *  @param cv_img  An existing OpenCV Mat
          */
-        void copy_cv(const cv::Mat &cv_img);
+        void copy_cv(const cv::VideoCapture &cv_video);
 
         /**
-         *  Copies the ImageData OpenCV Mat into a buffer
+         *  Copies the VideoData OpenCV Mat into a buffer
          *
-         *  @param buffer  The buffer that will contain the image
+         *  @param buffer  The buffer that will contain the Video
          *    data
          */
         template <class T> void copy_to_buffer(T* buffer);
@@ -591,19 +700,16 @@ namespace VCL {
     /*      UTIL FUNCTIONS      */
     /*  *********************** */
 
-
         /**
-         *  Creates full path to Image with appropriate extension based
+         *  Creates full path to Video with appropriate extension based
          *    on the Format
          *
-         *  @param filename The path to the Image object
-         *  @param format  The Format of the Image object
+         *  @param filename The path to the Video object
+         *  @param format  The Format of the Video object
          *  @return Full path to the object including extension
          */
         std::string create_fullpath(const std::string &filename,
             Format format);
-
-
     };
 
 }

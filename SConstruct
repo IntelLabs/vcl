@@ -11,6 +11,8 @@ source_files = [
                 'src/Image.cc',
                 'src/ImageData.cc',
                 'src/TDBImage.cc',
+                'src/VideoData.cc',
+                'src/Video.cc',
                 'src/DescriptorSet.cc',
                 'src/DescriptorSetData.cc',
                 'src/FaissDescriptorSet.cc',
@@ -19,10 +21,13 @@ source_files = [
                 'src/TDBSparseDescriptorSet.cc',
                 ]
 
-env.SharedLibrary('libvcl.so', source_files,
+env.SharedLibrary('libvclv.so', source_files,
     LIBS = [ 'tiledb',
              'opencv_core',
              'opencv_imgproc',
+             'opencv_imgcodecs',
+             'opencv_highgui',
+             'opencv_videoio',
              'opencv_imgcodecs',
              'gomp',
              'faiss',
