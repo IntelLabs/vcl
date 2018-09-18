@@ -1,7 +1,9 @@
 # Cleanup
 rm -r tdb
 rm -r dbs
-mkdir dbs # necessary for Descriptors
+rm -r temp
+mkdir dbs  # necessary for Descriptors
+mkdir temp # necessary for Videos
 
 # Compile and run tests
 scons -j16

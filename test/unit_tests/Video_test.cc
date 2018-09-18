@@ -16,8 +16,8 @@
 class VideoTest : public ::testing::Test {
     protected:
     virtual void SetUp() {
-        _video = "test/videos/pedestrian1.avi";
-        _inputVideo = cv::VideoCapture("test/videos/pedestrian1.avi");
+        _video = "videos/pedestrian1.avi";
+        _inputVideo = cv::VideoCapture("videos/pedestrian1.avi");
     }
 
 
@@ -88,7 +88,7 @@ TEST_F(VideoTest, BlobConstructor)
     // std::string json_query = std::string(inBuf);
     ifile.close();
 
-    VCL::Video video_data(inBuf, fsize, "test/temp/"); //
+    VCL::Video video_data(inBuf, fsize, "temp/"); //
     std::cout<< " The Video Size is " << fsize <<"\t"<< sizeof(inBuf)<<std::endl;
     delete[] inBuf;
 
@@ -164,7 +164,7 @@ TEST_F(VideoTest, CreateUnique)
      try{
      VCL::Video video(_inputVideo); //
 
-    video.create_unique("test/temp/", VCL::Format::MP4);
+    video.create_unique("temp/", VCL::Format::MP4);
     std::cout<< video.get_video_id() <<std::endl;
     video.store(video.get_video_id(), VCL::Format::MP4, true, 0, 100, 1);
     }

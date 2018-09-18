@@ -53,8 +53,8 @@ long GetFileSize(std::string filename)
 class VideoDataTest : public ::testing::Test {
  protected:
     virtual void SetUp() {
-        _video = "test/videos/pedestrian1.avi";
-        _inputVideo = cv::VideoCapture("test/videos/pedestrian1.avi");
+        _video = "videos/pedestrian1.avi";
+        _inputVideo = cv::VideoCapture("videos/pedestrian1.avi");
     }
 
 
@@ -107,7 +107,7 @@ TEST_F(VideoDataTest, BlobConstructor)
     // std::string json_query = std::string(inBuf);
     ifile.close();
 
-    VCL::VideoData video_data(inBuf, fsize, "test/temp/"); //
+    VCL::VideoData video_data(inBuf, fsize, "temp/"); //
     std::cout<< " The Video Size is " << fsize <<"\t"<< sizeof(inBuf)<<std::endl;
     delete[] inBuf;
 
@@ -171,7 +171,7 @@ catch(VCL::Exception &e) {
 
    VCL::VideoData video_data(_inputVideo);
    video_data.interval("frames",10, 200, 5);
-   video_data.set_temporary_directory("test/temp/");
+   video_data.set_temporary_directory("temp/");
    video_data.resize( 100,100);
 
     video_data.perform_operations();
@@ -188,10 +188,10 @@ TEST_F(VideoDataTest, Threshold)
     std::cout<< "threshold Operation" << std::endl;
 
    VCL::VideoData video_data(_inputVideo);
-   video_data.set_temporary_directory("test/temp/");
+   video_data.set_temporary_directory("temp/");
    video_data.interval("frames",10, 200, 5);
     video_data.threshold( 100);
-   // video_data.set_temporary_directory("test/temp/");
+   // video_data.set_temporary_directory("temp/");
     video_data.perform_operations();
 }
 catch(VCL::Exception &e) {
@@ -205,7 +205,7 @@ TEST_F(VideoDataTest, CreateUnique)
      try{
      VCL::VideoData video_data(_inputVideo); //
 
-    video_data.create_unique("test/temp/", VCL::Format::MP4);
+    video_data.create_unique("temp/", VCL::Format::MP4);
     std::cout<<video_data.get_video_id() <<std::endl;
     video_data.interval("frames",10, 200, 5);
     video_data.write(video_data.get_video_id(), VCL::Format::MP4, true);
@@ -221,7 +221,7 @@ TEST_F(VideoDataTest, Crop)
 {
     try {
     VCL::VideoData video_data(_inputVideo);
-    video_data.set_temporary_directory("test/temp/");
+    video_data.set_temporary_directory("temp/");
     video_data.interval("frames", 10, 200, 5);
 
     video_data.crop(VCL::Rectangle(0, 0, 50, 50));

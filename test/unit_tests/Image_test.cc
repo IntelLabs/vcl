@@ -129,7 +129,7 @@ TEST_F(ImageTest, StringConstructor)
 {
     VCL::Image img(img_);
 
-    EXPECT_EQ(VCL::JPG, img.get_image_format());
+    EXPECT_EQ(VCL::Format::JPG, img.get_image_format());
     EXPECT_EQ(img_, img.get_image_id());
 }
 
@@ -246,7 +246,7 @@ TEST_F(ImageTest, GetMatFromTDB)
     VCL::Image img(tdb_img_);
 
     EXPECT_EQ(tdb_img_, img.get_image_id());
-    EXPECT_EQ(VCL::TDB, img.get_image_format());
+    EXPECT_EQ(VCL::Format::TDB, img.get_image_format());
 
     cv::Mat cv_img = img.get_cvmat();
 
@@ -340,7 +340,7 @@ TEST_F(ImageTest, GetRectangleFromMat)
 TEST_F(ImageTest, WriteMatToJPG)
 {
     VCL::Image img(cv_img_);
-    img.store("images/test_image", VCL::JPG);
+    img.store("images/test_image", VCL::Format::JPG);
 
     cv::Mat test = cv::imread("images/test_image.jpg");
 
@@ -350,13 +350,13 @@ TEST_F(ImageTest, WriteMatToJPG)
 TEST_F(ImageTest, WriteMatToTDB)
 {
     VCL::Image img(cv_img_);
-    img.store("tdb/mat_to_tdb", VCL::TDB);
+    img.store("tdb/mat_to_tdb", VCL::Format::TDB);
 }
 
 TEST_F(ImageTest, WriteStringToTDB)
 {
     VCL::Image img(img_);
-    img.store("tdb/png_to_tdb.png", VCL::TDB);
+    img.store("tdb/png_to_tdb.png", VCL::Format::TDB);
 }
 
 TEST_F(ImageTest, ResizeMat)
@@ -436,21 +436,21 @@ TEST_F(ImageTest, TDBToPNG)
 {
     VCL::Image img(tdb_img_);
 
-    img.store("images/tdb_to_png", VCL::PNG);
+    img.store("images/tdb_to_png", VCL::Format::PNG);
 }
 
 TEST_F(ImageTest, TDBToJPG)
 {
     VCL::Image img(tdb_img_);
 
-    img.store("images/tdb_to_jpg", VCL::JPG);
+    img.store("images/tdb_to_jpg", VCL::Format::JPG);
 }
 
 TEST_F(ImageTest, EncodedImage)
 {
     VCL::Image img(tdb_img_);
 
-    std::vector<unsigned char> buffer = img.get_encoded_image(VCL::PNG);
+    std::vector<unsigned char> buffer = img.get_encoded_image(VCL::Format::PNG);
 
     cv::Mat mat = cv::imdecode(buffer, cv::IMREAD_ANYCOLOR);
     compare_mat_mat(cv_img_, mat);
@@ -461,16 +461,16 @@ TEST_F(ImageTest, CreateName)
     VCL::Image img(cv_img_);
 
     for ( int i = 0; i < 10; ++i ) {
-        std::string name = img.create_unique("tdb/", VCL::TDB);
-        img.store(name, VCL::TDB);
+        std::string name = img.create_unique("tdb/", VCL::Format::TDB);
+        img.store(name, VCL::Format::TDB);
     }
 }
 
 TEST_F(ImageTest, NoMetadata){
     VCL::Image img(cv_img_);
 
-    std::string name = img.create_unique("tdb/", VCL::TDB);
-    img.store(name, VCL::TDB, false);
+    std::string name = img.create_unique("tdb/", VCL::Format::TDB);
+    img.store(name, VCL::Format::TDB, false);
 
     cv::Size dims = img.get_dimensions();
     int cv_type = img.get_image_type();
