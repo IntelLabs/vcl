@@ -37,6 +37,8 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <string>
 
 class ImageTest : public ::testing::Test {
@@ -398,6 +400,91 @@ TEST_F(ImageTest, CropMat)
 
     EXPECT_FALSE(cv_img.empty());
     EXPECT_EQ(rect_.height, cv_img.rows);
+}
+
+TEST_F(ImageTest, FlipVertical)
+{
+    VCL::Image img(img_);
+    cv::Mat cv_img = img.get_cvmat();
+    cv::Mat cv_img_flipped = cv::Mat(cv_img.rows, cv_img.cols, cv_img.type());
+    cv::flip(cv_img, cv_img_flipped, 0);
+
+    img.flip(0);
+    cv::Mat vcl_img_flipped = img.get_cvmat();
+
+    EXPECT_FALSE(vcl_img_flipped.empty());
+    compare_mat_mat(vcl_img_flipped, cv_img_flipped);
+}
+
+TEST_F(ImageTest, FlipHorizontal)
+{
+    VCL::Image img(img_);
+    cv::Mat cv_img = img.get_cvmat();
+    cv::Mat cv_img_flipped = cv::Mat(cv_img.rows, cv_img.cols, cv_img.type());
+    cv::flip(cv_img, cv_img_flipped, 1);
+
+    img.flip(1);
+    cv::Mat vcl_img_flipped = img.get_cvmat();
+
+    EXPECT_FALSE(vcl_img_flipped.empty());
+    compare_mat_mat(vcl_img_flipped, cv_img_flipped);
+}
+
+TEST_F(ImageTest, FlipBoth)
+{
+    VCL::Image img(img_);
+    cv::Mat cv_img = img.get_cvmat();
+    cv::Mat cv_img_flipped = cv::Mat(cv_img.rows, cv_img.cols, cv_img.type());
+    cv::flip(cv_img, cv_img_flipped, -1);
+
+    img.flip(-1);
+    cv::Mat vcl_img_flipped = img.get_cvmat();
+
+    EXPECT_FALSE(vcl_img_flipped.empty());
+    compare_mat_mat(vcl_img_flipped, cv_img_flipped);
+}
+
+TEST_F(ImageTest, Rotate)
+{
+    float angle = 30;
+    VCL::Image img(img_);
+    cv::Mat cv_img = img.get_cvmat();
+    cv::Mat cv_img_rot = cv::Mat(cv_img.rows, cv_img.cols, cv_img.type());
+
+    cv::Point2f pc(cv_img.cols/2., cv_img.rows/2.);
+    cv::Mat r = cv::getRotationMatrix2D(pc, angle, 1.0);
+    cv::warpAffine(cv_img, cv_img_rot, r, cv_img.size());
+
+    img.rotate(angle, true);
+    cv::Mat vcl_img_rot = img.get_cvmat();
+
+    EXPECT_FALSE(vcl_img_rot.empty());
+    compare_mat_mat(vcl_img_rot, cv_img_rot);
+}
+
+TEST_F(ImageTest, RotateResize)
+{
+    float angle = 30;
+    VCL::Image img(img_);
+    cv::Mat cv_img = img.get_cvmat();
+
+    cv::Point2f im_c((cv_img.cols-1)/2.0, (cv_img.rows-1)/2.0);
+    cv::Mat r = cv::getRotationMatrix2D(im_c, angle, 1.0);
+
+    cv::Rect2f bbox = cv::RotatedRect(cv::Point2f(), cv_img.size(),
+                                      angle).boundingRect2f();
+    // Transformation Matrix
+    r.at<double>(0,2) += bbox.width/2.0  - cv_img.cols/2.0;
+    r.at<double>(1,2) += bbox.height/2.0 - cv_img.rows/2.0;
+
+    cv::Mat cv_img_rot;
+    cv::warpAffine(cv_img, cv_img_rot, r, bbox.size());
+
+    img.rotate(angle, false);
+    cv::Mat vcl_img_rot = img.get_cvmat();
+
+    EXPECT_FALSE(vcl_img_rot.empty());
+    compare_mat_mat(vcl_img_rot, cv_img_rot);
 }
 
 TEST_F(ImageTest, TDBMatThrow)

@@ -43,6 +43,7 @@ namespace VCL {
 
       ObjectNotFound,
       OpenFailed,
+      NotImplemented,
 
       ObjectEmpty,
 
