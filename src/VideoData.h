@@ -374,14 +374,15 @@ namespace VCL {
     cv::VideoWriter _outputVideo;
 
     std::string _temporary_path;
+    std::string _temporary_video;
     bool _temp_exist = false;
     int  _frame_count;
 
     // std::ifstream* _infile = nullptr;// (video_id,std::ifstream::binary);
     // std::ofstream* _outfile = nullptr; // (video_id,std::ofstream::binary);
 
-    // unsigned char* _encoded_video;
-    // long _encoded_size;
+     unsigned char* _encoded_video;
+     long _encoded_size;
 
         // std::vector<Image> _frames;
 
@@ -427,7 +428,7 @@ namespace VCL {
         VideoData(const VideoData &video);
 
          // creates a video from an encoded buffer
-        VideoData(void*  buffer, long size, const std::string &path = "/tmps");
+        VideoData(void*  buffer, long size, const std::string &path = "db/videos");
 
         /**
          *  Sets an VideoData object equal to another VideoData object
@@ -520,8 +521,10 @@ namespace VCL {
          *  @param params  Optional parameters
          *  @see OpenCV documentation for imencode for more details
          */
-        std::vector<unsigned char> get_encoded(Format format,
-            const std::vector<int>& params=std::vector<int>());
+        char*  get_encoded(VCL::Format format,
+                                     const std::vector<int>& params=std::vector<int>());
+
+        long get_size_encoded();
 
 
     /*  *********************** */

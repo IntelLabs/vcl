@@ -101,6 +101,11 @@ namespace VCL {
 
         void get_raw_data(void* buffer, long buffer_size) const;
 
+        char* get_encoded_video(VCL::Format format,
+                const std::vector<int>& params=std::vector<int>()) const;
+
+        long get_encoded_size();
+
         std::string create_unique(const std::string &path,
                 Format format);
         /**

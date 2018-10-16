@@ -50,6 +50,17 @@ Video::Video(const cv::VideoCapture video)
 }
 
 
+char* Video::get_encoded_video(VCL::Format format,
+                const std::vector<int>& params) const
+{
+  return _video->get_encoded(format, params);
+}
+
+long Video::get_encoded_size()
+{
+  return _video->get_size_encoded();
+}
+
 Video::Video(void* buffer, int size , const std::string &path)
 {
   _video = new VideoData(buffer, size, path);
