@@ -35,6 +35,7 @@
 #include <iomanip>
 #include <cmath>
 #include <cstring>
+#include <numeric>
 
 #include "TDBDescriptorSet.h"
 
