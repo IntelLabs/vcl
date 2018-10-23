@@ -52,6 +52,8 @@ namespace VCL {
       TileDBNotFound,
       TileDBError,
 
+      OpenCVError,
+
     };
 
     struct Exception {

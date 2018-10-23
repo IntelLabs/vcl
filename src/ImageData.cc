@@ -185,7 +185,7 @@ void ImageData::Flip::operator()(ImageData *img)
     if ( _format == VCL::TDB ) {
         // Not implemented
         throw VCLException(NotImplemented,
-                           "Operation Not supported for this format");
+                           "Operation not supported for this format");
     }
     else {
         if ( !img->_cv_img.empty() ) {
@@ -208,7 +208,7 @@ void ImageData::Rotate::operator()(ImageData *img)
     if ( _format == VCL::TDB ) {
         // Not implemented
         throw VCLException(NotImplemented,
-                           "Operation Not supported for this format");
+                           "Operation not supported for this format");
     }
     else {
         if ( !img->_cv_img.empty() ) {
@@ -680,11 +680,16 @@ void ImageData::set_minimum(int dimension)
 
 void ImageData::perform_operations()
 {
-    for (int x = 0; x < _operations.size(); ++x) {
-        std::shared_ptr<Operation> op = _operations[x];
-        if ( op == NULL )
-            throw VCLException(ObjectEmpty, "Nothing to be done");
-        (*op)(this);
+    try
+    {
+        for (int x = 0; x < _operations.size(); ++x) {
+            std::shared_ptr<Operation> op = _operations[x];
+            if ( op == NULL )
+                throw VCLException(ObjectEmpty, "Nothing to be done");
+            (*op)(this);
+        }
+    } catch( cv::Exception& e ) {
+        throw VCLException(OpenCVError, e.what());
     }
 
     _operations.clear();
