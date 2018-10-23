@@ -216,3 +216,13 @@ void Image::threshold(int value)
 {
     _image->threshold(value);
 }
+
+void Image::flip(int code)
+{
+    _image->flip(code);
+}
+
+void Image::rotate(float angle, bool keep_size)
+{
+    _image->rotate(angle, keep_size);
+}

@@ -300,6 +300,26 @@ namespace VCL {
         void threshold(int value);
 
         /**
+         *  Flips the image either vertically, horizontally, or both, depending
+         *  on code, following OpenCV convention:
+         *  0 means flip vertically
+         *  positive value means flip horizontally
+         *  negative value means flip both vertically and horizontally
+         *
+         *  @param code  Specificies vertical, horizontal, or both.
+         */
+        void flip(int code);
+
+        /**
+         *  Rotates the image following the angle provided as parameter.
+         *
+         *  @param angle  Specificies the angle of rotation
+         *  @param keep_resize  Specifies if the image will be resized after
+         *                      the rotation, or size will be kept.
+         */
+        void rotate(float angle, bool keep_size);
+
+        /**
          *  Checks to see if the Image has a depth associated with it.
          *    Currently returns false, as we do not support depth camera
          *    input yet.

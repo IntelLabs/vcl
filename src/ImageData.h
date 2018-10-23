@@ -48,7 +48,8 @@ namespace VCL {
     /*  *********************** */
     /*        OPERATION         */
     /*  *********************** */
-        enum OperationType { READ, WRITE, RESIZE, CROP, THRESHOLD };
+        enum OperationType { READ, WRITE, RESIZE, CROP, THRESHOLD,
+                             FLIP, ROTATE };
 
         /**
          *  Provides a way to keep track of what operations should
@@ -265,6 +266,74 @@ namespace VCL {
             OperationType get_type() { return THRESHOLD; };
         };
 
+    /*  *********************** */
+    /*    FLIP OPERATION   */
+    /*  *********************** */
+        /**  Extends Operation, performs a flip operation that
+         */
+        class Flip : public Operation {
+        private:
+            /** Minimum value pixels should be */
+            int _code;
+
+        public:
+            /**
+             *  Constructor, sets the flip code value.
+             *
+             *  @param code  Type of flipping operation
+             *  @param format  The current format of the image data
+             *  @see Image.h for more details on ImageFormat
+             */
+            Flip(const int code, ImageFormat format)
+                : Operation(format),
+                  _code(code)
+            {
+            };
+
+            /**
+             *  Performs the flip operation
+             *
+             *  @param img  A pointer to the current ImageData object
+             */
+            void operator()(ImageData *img);
+
+            OperationType get_type() { return FLIP; };
+        };
+
+    /*  *********************** */
+    /*    ROTATE OPERATION   */
+    /*  *********************** */
+        /**  Extends Operation, performs a flip operation that
+         */
+        class Rotate : public Operation {
+        private:
+            /** Minimum value pixels should be */
+            float _angle;
+            bool _keep_size;
+
+        public:
+            /**
+             *  Constructor, sets the flip code value.
+             *
+             *  @param format  The current format of the image data
+             *  @see Image.h for more details on ImageFormat
+             */
+            Rotate(const float angle, const bool keep_size, ImageFormat format)
+                : Operation(format),
+                  _angle(angle),
+                  _keep_size(keep_size)
+            {
+            };
+
+            /**
+             *  Performs the flip operation
+             *
+             *  @param img  A pointer to the current ImageData object
+             */
+            void operator()(ImageData *img);
+
+            OperationType get_type() { return ROTATE; };
+        };
 
     private:
     /*  *********************** */
@@ -559,6 +628,23 @@ namespace VCL {
          *  @param value  The threshold value
          */
         void threshold(int value);
+
+        /**
+         *  Stores a Flip Operation in the list of operations
+         *    to perform
+         *
+         *  @param code  The code of flip
+         */
+        void flip(int code);
+
+        /**
+         *  Rotates the image
+         *
+         *  @param angle  Angle of rotation
+         * @param keep_resize  Specifies if the image will be resized after
+         *                      the rotation, or size will be kept.
+         */
+        void rotate(float angle, bool keep_size);
 
         /**
          *  Deletes the ImageData as well as removes file from system if

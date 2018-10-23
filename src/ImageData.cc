@@ -176,6 +176,76 @@ void ImageData::Threshold::operator()(ImageData *img)
     }
 }
 
+    /*  *********************** */
+    /*    FLIP OPERATION        */
+    /*  *********************** */
+
+void ImageData::Flip::operator()(ImageData *img)
+{
+    if ( _format == VCL::TDB ) {
+        // Not implemented
+        throw VCLException(NotImplemented,
+                           "Operation not supported for this format");
+    }
+    else {
+        if ( !img->_cv_img.empty() ) {
+            cv::Mat dst = cv::Mat(img->_cv_img.rows, img->_cv_img.cols,
+                                       img->_cv_img.type());
+            cv::flip(img->_cv_img, dst, _code);
+            img->_cv_img = dst.clone();
+        }
+        else
+            throw VCLException(ObjectEmpty, "Image object is empty");
+    }
+}
+
+    /*  *********************** */
+    /*    ROTATE OPERATION      */
+    /*  *********************** */
+
+void ImageData::Rotate::operator()(ImageData *img)
+{
+    if ( _format == VCL::TDB ) {
+        // Not implemented
+        throw VCLException(NotImplemented,
+                           "Operation not supported for this format");
+    }
+    else {
+        if ( !img->_cv_img.empty() ) {
+
+            if (_keep_size) {
+                cv::Mat dst = cv::Mat(img->_cv_img.rows, img->_cv_img.cols,
+                                  img->_cv_img.type());
+
+                cv::Point2f im_c(img->_cv_img.cols/2., img->_cv_img.rows/2.);
+                cv::Mat r = cv::getRotationMatrix2D(im_c, _angle, 1.0);
+
+                cv::warpAffine(img->_cv_img, dst, r, img->_cv_img.size());
+                img->_cv_img = dst.clone();
+            }
+            else {
+
+                cv::Point2f im_c((img->_cv_img.cols-1)/2.0,
+                                 (img->_cv_img.rows-1)/2.0);
+                cv::Mat r = cv::getRotationMatrix2D(im_c, _angle, 1.0);
+                // Bbox rectangle
+                cv::Rect2f bbox = cv::RotatedRect(cv::Point2f(),
+                                                  img->_cv_img.size(),
+                                                  _angle)
+                                                  .boundingRect2f();
+                // Transformation Matrix
+                r.at<double>(0,2) += bbox.width/2.0  - img->_cv_img.cols/2.0;
+                r.at<double>(1,2) += bbox.height/2.0 - img->_cv_img.rows/2.0;
+
+                cv::Mat dst;
+                cv::warpAffine(img->_cv_img, dst, r, bbox.size());
+                img->_cv_img = dst.clone();
+            }
+        }
+        else
+            throw VCLException(ObjectEmpty, "Image object is empty");
+    }
+}
 
                     /*  *********************** */
                     /*         IMAGEDATA        */
@@ -610,11 +680,16 @@ void ImageData::set_minimum(int dimension)
 
 void ImageData::perform_operations()
 {
-    for (int x = 0; x < _operations.size(); ++x) {
-        std::shared_ptr<Operation> op = _operations[x];
-        if ( op == NULL )
-            throw VCLException(ObjectEmpty, "Nothing to be done");
-        (*op)(this);
+    try
+    {
+        for (int x = 0; x < _operations.size(); ++x) {
+            std::shared_ptr<Operation> op = _operations[x];
+            if ( op == NULL )
+                throw VCLException(ObjectEmpty, "Nothing to be done");
+            (*op)(this);
+        }
+    } catch( cv::Exception& e ) {
+        throw VCLException(OpenCVError, e.what());
     }
 
     _operations.clear();
@@ -654,6 +729,16 @@ void ImageData::crop(const Rectangle &rect)
 void ImageData::threshold(int value)
 {
     _operations.push_back(std::make_shared<Threshold> (value, _format));
+}
+
+void ImageData::flip(int type)
+{
+    _operations.push_back(std::make_shared<Flip> (type, _format));
+}
+
+void ImageData::rotate(float angle, bool keep_size)
+{
+    _operations.push_back(std::make_shared<Rotate> (angle, keep_size, _format));
 }
 
 void ImageData::delete_object()

@@ -43,6 +43,7 @@ namespace VCL {
 
       ObjectNotFound,
       OpenFailed,
+      NotImplemented,
 
       ObjectEmpty,
 
@@ -50,6 +51,8 @@ namespace VCL {
 
       TileDBNotFound,
       TileDBError,
+
+      OpenCVError,
 
     };
 
