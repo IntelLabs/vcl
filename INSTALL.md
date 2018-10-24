@@ -95,15 +95,19 @@ Download [Faiss 1.2.1](https://github.com/facebookresearch/faiss/archive/v1.2.1.
     cmake ..
     make -j
 
-    # You may need to change some flags in the CMakeFile depending on
-    # configurations on your system
+You may need to change some flags in the CMakeFile depending on
+configurations on your system.
 
-    # This library does not offer an install
-    # make sure you move .h files to /usr/lib/include/faiss or
-    # /usr/local/lib/include/faiss
-    # make sure you make the library (libfaiss.so) is available
-    # system-wide
-    # Or follow instructions [here](https://github.com/facebookresearch/faiss/blob/v1.2.1/INSTALL.md)
+Things that we have needed to change in CMakeLists.txt:
+* If your system doesn't have a GPU, make sure that BUILD_WITH_GPU is OFF
+* You may need to add -msse4 to set(CMAKE_CXX_FLAGS
+* Change the add_library call to be SHARED instead of STATIC
+
+This library does not offer an install. Make sure you move .h files
+to /usr/lib/include/faiss or /usr/local/lib/include/faiss,
+and make sure you make the library (libfaiss.so) is available system-wide
+Or follow instructions
+[here](https://github.com/facebookresearch/faiss/blob/v1.2.1/INSTALL.md)
 
 ## Compilation
     git clone https://github.com/IntelLabs/vcl # or download a release

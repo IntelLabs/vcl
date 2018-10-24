@@ -93,37 +93,37 @@ TEST(Descriptors_ReadFS, read_and_classify_10k)
 
     for (auto d : dimensions_list) {
 
-    float *xb = generate_desc_linear_increase(d, nb);
+        float *xb = generate_desc_linear_increase(d, nb);
 
-    for (auto eng : get_engines()) {
-        std::string index_filename = "dbs/read_and_classify_10k" +
-                                     std::to_string(d) + "_" +
-                                     std::to_string(eng);
-        int offset = 10;
+        for (auto eng : get_engines()) {
+            std::string index_filename = "dbs/read_and_classify_10k" +
+                                         std::to_string(d) + "_" +
+                                         std::to_string(eng);
+            int offset = 10;
 
-        {
-            VCL::DescriptorSet index(index_filename, unsigned(d), eng);
+            {
+                VCL::DescriptorSet index(index_filename, unsigned(d), eng);
 
-            std::vector<long> classes = classes_increasing_offset(nb, offset);
+                std::vector<long> classes = classes_increasing_offset(nb, offset);
 
-            index.add(xb, nb, classes);
-            index.store();
+                index.add(xb, nb, classes);
+                index.store();
+            }
+
+            VCL::DescriptorSet index_fs(index_filename);
+
+            std::vector<long> ret_ids = index_fs.classify(xb, 60);
+
+            int exp = 0;
+            int i = 0;
+            for (auto& id : ret_ids) {
+                // printf("%ld - %ld \n", id, exp);
+                EXPECT_EQ(id, exp);
+                if (++i % offset == 0 )
+                    ++exp;
+            }
         }
 
-        VCL::DescriptorSet index_fs(index_filename);
-
-        std::vector<long> ret_ids = index_fs.classify(xb, 60);
-
-        int exp = 0;
-        int i = 0;
-        for (auto& id : ret_ids) {
-            // printf("%ld - %ld \n", id, exp);
-            EXPECT_EQ(id, exp);
-            if (++i % offset == 0 )
-                ++exp;
-        }
-    }
-
-    delete [] xb;
+        delete [] xb;
     }
 }

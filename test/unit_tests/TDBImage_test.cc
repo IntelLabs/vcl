@@ -181,7 +181,6 @@ TEST_F(TDBImageTest, CopyConstructorNoData)
 
 TEST_F(TDBImageTest, CopyConstructorData)
 {
-
     VCL::TDBImage tdb("tdb/copy_construct.tdb");
 
     ASSERT_THROW(tdb.get_image_height(), VCL::Exception);
@@ -189,7 +188,6 @@ TEST_F(TDBImageTest, CopyConstructorData)
     ASSERT_THROW(tdb.get_image_channels(), VCL::Exception);
 
     EXPECT_EQ("tdb/copy_construct.tdb", tdb.get_object_id());
-
     tdb.write(cv_img_);
 
     VCL::TDBImage imgcopy(tdb);
@@ -197,14 +195,16 @@ TEST_F(TDBImageTest, CopyConstructorData)
     EXPECT_EQ(tdb.get_image_size(), imgcopy.get_image_size());
     ASSERT_TRUE(imgcopy.has_data());
 
-    long size = tdb.get_image_size();
-    unsigned char* buffer1 = new unsigned char[size];
-    unsigned char* buffer2 = new unsigned char[size];
+    long img_size = tdb.get_image_size();
+    unsigned char* buffer1 = new unsigned char[img_size];
+    unsigned char* buffer2 = new unsigned char[img_size];
 
-    tdb.get_buffer(buffer1, size);
-    imgcopy.get_buffer(buffer2, size);
+    tdb.get_buffer(buffer1, img_size);
+    imgcopy.get_buffer(buffer2, img_size);
 
-    compare_buffer_buffer(buffer1, buffer2, size);
+    compare_buffer_buffer(buffer1, buffer2, img_size);
+    compare_mat_buffer(cv_img_, buffer1);
+    compare_mat_buffer(cv_img_, buffer2);
 
     delete [] buffer2;
     delete [] buffer1;
@@ -217,6 +217,12 @@ TEST_F(TDBImageTest, CopyConstructor)
     EXPECT_EQ("tdb/copy_construct.tdb", tdb.get_object_id());
     ASSERT_FALSE(tdb.has_data());
 
+    long size = long(cv_img_.rows) * long(cv_img_.cols) * cv_img_.channels();
+    unsigned char* buf = new unsigned char[size];
+    tdb.get_buffer(buf, size);
+
+    compare_mat_buffer(cv_img_, buf);
+
     VCL::TDBImage imgcopy(tdb);
 
     EXPECT_EQ(tdb.get_image_size(), imgcopy.get_image_size());
@@ -227,10 +233,9 @@ TEST_F(TDBImageTest, CopyConstructor)
     ASSERT_FALSE(tdb.has_data());
 
     cv::Mat copy = imgcopy.get_cvmat();
-
     compare_mat_mat(copy, cv_img_);
 
-    imgcopy.write("tdb/copy_construct.tdb");
+    imgcopy.write("tdb/copied.tdb");
 }
 
 TEST_F(TDBImageTest, OperatorEqualsNoData)
@@ -452,9 +457,10 @@ TEST_F(TDBImageTest, DeleteImage)
 
 TEST_F(TDBImageTest, DeleteImageAfterRead)
 {
-    VCL::TDBImage tdb("tdb/copy_construct.tdb");
+    VCL::TDBImage tdb("tdb/copied.tdb");
 
     tdb.read();
+    ASSERT_TRUE(tdb.has_data());
     tdb.delete_image();
 
     ASSERT_FALSE(tdb.has_data());
