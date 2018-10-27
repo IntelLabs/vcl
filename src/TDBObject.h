@@ -80,7 +80,7 @@ namespace VCL {
         std::vector<const char*> _attributes;
 
         // Compression type
-        CompressionType _compressed;
+        ImageCompressionType _compressed;
         int _min_tile_dimension;
 
         // TileDB variables
@@ -197,9 +197,9 @@ namespace VCL {
          *    the TDBObject
          *
          *  @param comp  The compression type
-         *  @see Image.h for details on CompressionType
+         *  @see Image.h for details on ImageCompressionType
          */
-        void set_compression(CompressionType comp);
+        void set_compression(ImageCompressionType comp);
 
 
     /*  *********************** */
@@ -354,7 +354,7 @@ namespace VCL {
                         tiledb_array_schema_t* array_schema);
 
         /**
-         *  Converts the VCL CompressionType to TileDB compression
+         *  Converts the VCL ImageCompressionType to TileDB compression
          */
         tiledb_compressor_t convert_to_tiledb();
 

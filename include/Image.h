@@ -59,6 +59,9 @@ namespace VCL {
         // Pointer to an ImageData object
         ImageData *_image;
 
+
+
+
     public:
     /*  *********************** */
     /*        CONSTRUCTORS      */
@@ -140,7 +143,7 @@ namespace VCL {
          *
          *  @return The Format of the Image object
          */
-        Format get_image_format() const;
+        VCL::ImageFormat get_image_format() const;
 
         /**
          *  Gets the size of the image in pixels (height * width * channels)
@@ -192,8 +195,9 @@ namespace VCL {
          *  @return  A vector containing the encoded image
          *  @see OpenCV documentation for imencode for more details
          */
-        std::vector<unsigned char> get_encoded_image(Format format,
+        std::vector<unsigned char> get_encoded_image(VCL::ImageFormat format,
                 const std::vector<int>& params=std::vector<int>()) const;
+
 
 
     /*  *********************** */
@@ -209,7 +213,7 @@ namespace VCL {
          *    + unique id + format)
          */
         std::string create_unique(const std::string &path,
-                Format format);
+                VCL::ImageFormat format);
 
         /**
          *  Sets the type of compression to be used when compressing. Currently
@@ -217,7 +221,7 @@ namespace VCL {
          *
          *  @param comp  The compression type
          */
-        void set_compression(CompressionType comp);
+        void set_compression(ImageCompressionType comp);
 
         /**
          *  Sets the size of the image in pixels (width, height) using
@@ -251,7 +255,7 @@ namespace VCL {
          *    image metadata. Defaults to true (assuming no other metadata
          *    storage)
          */
-        void store(const std::string &image_id, Format image_format,
+        void store(const std::string &image_id, VCL::ImageFormat image_format,
             bool store_metadata=true);
 
         /**

@@ -42,7 +42,8 @@ namespace VCL {
     /**
      *  Determines what kind of compression to use
      */
-    enum class CompressionType : int { NOCOMPRESSION = 0,
+    enum  ImageCompressionType  {
+                   NOCOMPRESSION = 0,
                     GZIP = 1,
                     ZSTD = 2,
                     LZ4 = 3,
@@ -54,14 +55,23 @@ namespace VCL {
                     BZSTD = 9,
                     RLE = 10, };
 
-    enum class Format : int { NONE = 0,
+    enum  VideoCompressionType { NOCOMPRESSION_Video = 0,
+                   };
+    enum  class VideoFormat {
+                    NONE_VIDEO =0,
+                    MP4 = 1,
+                    AVI = 2,
+                    MPEG = 3,
+                    XVID = 4};
+
+    enum class ImageFormat{
+                    NONE_IMAGE = 0,
                     JPG = 1,
                     PNG = 2,
-                    TDB = 3,
-                    MP4 = 4,
-                    AVI = 5,
-                    MPEG = 6,
-                    XVID = 7, };
+                    TDB = 3
+                    };
+
+
 
 
     static const struct init_rand_t { init_rand_t() { srand(time(NULL)); } } init_rand;
@@ -81,7 +91,7 @@ namespace VCL {
      *  @return The string containing the full path to the object (path
      *    + unique id + format)
      */
-    std::string create_unique(const std::string &path, Format format);
+
 
     std::string remove_extention(std::string old_name);
 
@@ -91,7 +101,8 @@ namespace VCL {
      *  @param image_format The Format of the object
      *  @return The string containing the extension
      */
-    std::string format_to_string(Format format);
+
+
 
     /**
      *  Gets the extension of a filename

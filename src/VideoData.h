@@ -66,7 +66,7 @@ namespace VCL {
 
         protected:
             /** The format of the Video for this operation */
-            Format _format;
+            VCL::VideoFormat _format;
 
             /**
              *  Constructor, sets the format
@@ -74,7 +74,7 @@ namespace VCL {
              *  @param format  The format for the operation
              *  @see Video.h for more details on Format
              */
-            Operation(Format format)
+            Operation(VideoFormat format)
                 : _format(format)
             {
             };
@@ -113,7 +113,7 @@ namespace VCL {
              *  @param format  The format to read the Video from
              *  @see Video.h for more details on Format
              */
-            Read(const std::string& filename, Format format);
+            Read(const std::string& filename, VideoFormat format);
 
             /**
              *  Reads an Video from the file system (based on the format
@@ -139,9 +139,9 @@ namespace VCL {
             /** The full path of where to write the Video */
             std::string _fullpath;
             /** The format the Video used to be stored as */
-            Format _old_format;
+            VideoFormat _old_format;
             /** Whether to store the metadata */
-            bool _metadata;
+
             int _start;
             int _stop;
             int _step;
@@ -156,8 +156,8 @@ namespace VCL {
              *  @param old_format  The format the Video was stored in
              *  @see Video.h for more details on Format
              */
-            Write(const std::string& filename, Format format,
-                Format old_format, bool metadata);
+            Write(const std::string& filename, VideoFormat format,
+                VideoFormat old_format);
 
             /**
              *  Writes an Video to the file system (based on the format
@@ -192,7 +192,7 @@ namespace VCL {
              *  @param format  The current format of the Video data
              *  @see Video.h for more details on Format and Rectangle
              */
-            Resize(const Rectangle &rect, Format format)
+            Resize(const Rectangle &rect, VideoFormat format)
                 : Operation(format),
                   _rect(rect)
 
@@ -229,7 +229,7 @@ namespace VCL {
              *  @param format  The current format of the Video data
              *  @see Video.h for more details on Format and Rectangle
              */
-            Interval(const int start , const int stop, int step, Format format)
+            Interval(const int start , const int stop, int step, VideoFormat format)
                 : Operation(format),
                   _start(start),
                   _stop(stop),
@@ -268,9 +268,9 @@ namespace VCL {
              *  @param rect  Contains dimensions and coordinates of
              *    desired area
              *  @param format  The current format of the Video data
-             *  @see Video.h for more details on Format and Rectangle
+             *  @see Video.h for more details on VideoFormat and Rectangle
              */
-            Crop(const Rectangle &rect, Format format )
+            Crop(const Rectangle &rect, VideoFormat format )
                 : Operation(format),
                   _rect(rect)
 
@@ -308,9 +308,9 @@ namespace VCL {
              *
              *  @param value  Minimum value pixels should be
              *  @param format  The current format of the Video data
-             *  @see Video.h for more details on Format
+             *  @see Video.h for more details on VideoFormat
              */
-            Threshold(const int value, Format format)
+            Threshold(const int value, VideoFormat format)
                 : Operation(format),
                   _threshold(value)
 
@@ -334,57 +334,47 @@ namespace VCL {
     /*  *********************** */
         // Video height and width
 
-    std::string _file_name;
-    std::string _path;
+
+    VideoData* _video;
+
+    std::string _video_id;
+
+    cv::VideoCapture _cv_video;
+
+    cv::VideoCapture _inputVideo;
+
+    cv::VideoWriter _outputVideo;
+
+
+    std::string _temporary_path;
+    std::string _temporary_video;
+    bool _temp_exist = false;
+
+
+    int  _frame_count;
+    float _fps;
+    unsigned char* _encoded_video;
+    long _encoded_size;
     std::string _video_unit;
+    uint _length;
 
-
-    //Vidoe Hieght, width, length
-
-    uint _length,  _height, _width;
-    int _start_frame = 0;
-    int _end_frame = INT_MAX;
-    int _step = 1;
     int _scale_num = 8 ;
     const float scale_stride = sqrt(3) ;
 
     uint _frame_width;
     uint _frame_height;
-
-    float _fps;
-
+    int _start_frame = 0;
+    int _end_frame = INT_MAX;
+    int _step = 1;
     cv::Size _size;
     int _video_time ;
 
-
-
-    // Maintains order of operations requested
-    std::vector<std::shared_ptr<Operation>> _operations;
-
-    // Video format and compression type
-    Format _format;
-    CompressionType _compress;
+    VCL::VideoFormat _format;
+    VideoCompressionType _compress;
     int _cv_type;
 
+    std::vector<std::shared_ptr<Operation>> _operations;
 
-    // Full path to Video
-    std::string _video_id;
-
-    cv::VideoCapture _inputVideo;
-    cv::VideoWriter _outputVideo;
-
-    std::string _temporary_path;
-    std::string _temporary_video;
-    bool _temp_exist = false;
-    int  _frame_count;
-
-    // std::ifstream* _infile = nullptr;// (video_id,std::ifstream::binary);
-    // std::ofstream* _outfile = nullptr; // (video_id,std::ofstream::binary);
-
-     unsigned char* _encoded_video;
-     long _encoded_size;
-
-        // std::vector<Image> _frames;
 
 
     public:
@@ -428,7 +418,7 @@ namespace VCL {
         VideoData(const VideoData &video);
 
          // creates a video from an encoded buffer
-        VideoData(void*  buffer, long size, const std::string &path = "db/videos");
+        VideoData(void*  buffer, long size);
 
         /**
          *  Sets an VideoData object equal to another VideoData object
@@ -449,9 +439,13 @@ namespace VCL {
          *  @return The string containing the full path to the VideoData object
          */
         std::string get_video_id() const;
+        cv::VideoCapture get_cv_video() const;
+
         long get_frame_count(void) const;
 
           int default_ending = get_frame_count();
+
+          cv::VideoWriter get_output_video(void);
 
         /**
          *  Gets the format of the VideoData object
@@ -459,7 +453,7 @@ namespace VCL {
          *  @return The Format of the VideoData object
          *  @see Video.h for more details on Format
          */
-        Format get_video_format() const;
+        VCL::VideoFormat get_video_format() const;
 
         /**
          *  Gets the OpenCV type of the Video
@@ -516,12 +510,12 @@ namespace VCL {
         /**
          *  Gets encoded Video data in a buffer
          *
-         *  @param format  The Format the Video should be encoded as
+         *  @param format  The VCL::VideoFormat the Video should be encoded as
          *  @param buffer  The buffer the encoded Video will be stored in
          *  @param params  Optional parameters
          *  @see OpenCV documentation for imencode for more details
          */
-        char*  get_encoded(VCL::Format format,
+        char*  get_encoded(VCL::VideoFormat format,
                                      const std::vector<int>& params=std::vector<int>());
 
         long get_size_encoded();
@@ -535,12 +529,14 @@ namespace VCL {
          *
          *  @param path  A string with the path to where the Video should be
          *                  stored
-         *  @param format The Format the Video should be stored as
+         *  @param format The VCL::VideoFormat the Video should be stored as
          *  @return The string containing the full path to the Video (path
          *    + unique id + format)
          */
-        void create_unique(const std::string &path,
-                Format format);
+        std::string create_unique(const std::string &path,
+                VCL::VideoFormat format);
+
+         std::string format_to_string(VCL::VideoFormat format);
 
         std::string remove_extention(const std::string path);
 
@@ -556,8 +552,8 @@ namespace VCL {
          *  Sets the format of the VideoData object
          *
          *  @param extension  A string containing the file system
-         *    extension corresponding to the desired Format
-         *  @see Video.h for more details on Format
+         *    extension corresponding to the desired VCL::VideoFormat
+         *  @see Video.h for more details on VCL::VideoFormat
          */
         void set_format_from_extension(const std::string &extension);
 
@@ -578,9 +574,9 @@ namespace VCL {
          *    the TDBVideo
          *
          *  @param comp  The compression type
-         *  @see Video.h for details on CompressionType
+         *  @see Video.h for details on VideoCompressionType
          */
-         void set_compression(CompressionType comp) ;
+         void set_compression(VideoCompressionType comp) ;
 
 
         /**
@@ -606,9 +602,7 @@ namespace VCL {
          *
          *  @param buffer  The buffer containing the encoded pixel data
          */
-        void set_data_from_encoded(const std::vector<unsigned char> &buffer);
 
-        void set_minimum(int dimension);
 
     /*  *********************** */
     /*   VideoDATA INTERACTION  */
@@ -633,12 +627,12 @@ namespace VCL {
          *
          *  @param Video_id  The full path to where the Video should
          *    be written
-         *  @param Video_format  The Format to write the Video in
+         *  @param Video_format  The VCL::VideoFormat to write the Video in
          *  @param store_metadata  A flag to indicate whether to store the
          *    metadata in TileDB or not. Defaults to true
-         *  @see Video.h for more details on Format
+         *  @see Video.h for more details on VCL::VideoFormat
          */
-        void write(const std::string &video_id,  Format video_format,  bool store_metadata=true);
+        void write(const std::string &video_id,  VCL::VideoFormat video_format);
 
         // void remove(const std::string &Video_id);
 
@@ -691,13 +685,7 @@ namespace VCL {
          */
         void copy_cv(const cv::VideoCapture &cv_video);
 
-        /**
-         *  Copies the VideoData OpenCV Mat into a buffer
-         *
-         *  @param buffer  The buffer that will contain the Video
-         *    data
-         */
-        template <class T> void copy_to_buffer(T* buffer);
+
 
     /*  *********************** */
     /*      UTIL FUNCTIONS      */
@@ -705,14 +693,14 @@ namespace VCL {
 
         /**
          *  Creates full path to Video with appropriate extension based
-         *    on the Format
+         *    on the VCL::VideoFormat
          *
          *  @param filename The path to the Video object
-         *  @param format  The Format of the Video object
+         *  @param format  The VCL::VideoFormat of the Video object
          *  @return Full path to the object including extension
          */
         std::string create_fullpath(const std::string &filename,
-            Format format);
+            VCL::VideoFormat format);
     };
 
 }

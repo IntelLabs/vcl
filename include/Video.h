@@ -58,7 +58,6 @@ namespace VCL {
 
 
 
-
     public:
     /*  *********************** */
     /*        CONSTRUCTORS      */
@@ -74,11 +73,12 @@ namespace VCL {
 
         Video(const cv::VideoCapture video);
 
-        Video(void* buffer, int size, const std::string &path = "tests/db/tmp"); // creates a video from an encoded buffer
+        Video(void* buffer, int size); // creates a video from an encoded buffer
 
-         Video ( const Video &video);
+        Video ( const Video &video);
 
         void operator=(const Video &video);
+        //== operator t NULL in C++
 
 
 
@@ -92,30 +92,18 @@ namespace VCL {
 
         cv::Size get_dimensions() const; //instead of get dimension
 
-        Format get_video_format() const;
+        VideoFormat get_video_format() const;
 
-        int get_video_type() const;
+        int get_video_type() const;  // remove this
 
-
-        int get_raw_dat_size() const;
-
-        void get_raw_data(void* buffer, long buffer_size) const;
-
-        char* get_encoded_video(VCL::Format format,
+        char* get_encoded_video(VideoFormat format,
                 const std::vector<int>& params=std::vector<int>()) const;
 
         long get_encoded_size();
 
         std::string create_unique(const std::string &path,
-                Format format);
-        /**
-         *  Sets the size of the image in pixels (width, height) using
-         *    an OpenCV Size object
-         *
-         *  @param dims  The dimensions of the image in OpenCV Size format
-         *  @see OpenCV documentation on Size for more details
-         */
-        void set_dimensions(cv::Size dims);
+                VideoFormat format);
+           std::string format_to_string(VideoFormat format);
 
         /**
          *  Sets the type of compression to be used when compressing. Currently
@@ -123,9 +111,7 @@ namespace VCL {
          *
          *  @param comp  The compression type
          */
-        void set_compression(CompressionType comp);
-
-
+        void set_compression(VideoCompressionType comp);
         /**
          *  Sets the OpenCV type of the image
          *
@@ -144,19 +130,16 @@ namespace VCL {
          *    the given format
          *
          *  @param image_id  Full path to where the image should be written
-         *  @param image_format  Format in which to write the image
+         *  @param image_format  VideoFormat in which to write the image
          *  @param store_metadata  Flag to indicate whether to store the
          *    image metadata. Defaults to true (assuming no other metadata
          *    storage)
          */
-        void store(const std::string &video_id, Format video_format,
-            bool store_metadata=true);
-
+        void store(const std::string &video_id, VideoFormat video_format);
         /**
-         *  Deletes the Video
+         *  Deletes the Video file
          */
         void delete_video();
-
         /**
          *  Resizes the Video to the given size. This operation is not
          *    performed until the data is needed (ie, store is called or

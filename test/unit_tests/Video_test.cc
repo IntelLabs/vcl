@@ -88,7 +88,7 @@ TEST_F(VideoTest, BlobConstructor)
     // std::string json_query = std::string(inBuf);
     ifile.close();
 
-    VCL::Video video_data(inBuf, fsize, "temp/"); //
+    VCL::Video video_data(inBuf, fsize); //
     std::cout<< " The Video Size is " << fsize <<"\t"<< sizeof(inBuf)<<std::endl;
     delete[] inBuf;
 

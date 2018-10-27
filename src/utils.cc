@@ -85,54 +85,7 @@ namespace VCL {
         }
     }
 
-    std::string create_unique(const std::string &path, Format format)
-    {
-        std::string unique_id;
-        std::string name;
 
-        std::string extension = format_to_string(format);
-
-        const char& last = path.back();
-
-        do {
-            uint64_t id = get_uint64();
-            std::stringstream ss;
-            ss << std::hex << id;
-            unique_id = ss.str();
-            if (last != '/')
-                name = path + "/" + unique_id + "." + extension;
-            else
-                name = path + unique_id + "." + extension;
-        } while ( exists(name) );
-
-        return name;
-    }
-
-    std::string format_to_string(Format format)
-    {
-        switch( format )
-        {
-            case VCL::Format::NONE:
-                return "";
-            case VCL::Format::JPG:
-                return "jpg";
-            case VCL::Format::PNG:
-                return "png";
-            case VCL::Format::TDB:
-                return "tdb";
-            case VCL::Format::MP4:
-                return "mp4";
-            case VCL::Format::AVI:
-                return "avi";
-            case VCL::Format::MPEG:
-                return "mpeg";
-            case VCL::Format::XVID:
-                return "xvid";
-            default:
-                throw VCLException(UnsupportedFormat, (int)format + " is not a \
-                    valid format");
-        }
-    }
 
     std::string get_extension(const std::string &object_id)
     {

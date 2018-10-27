@@ -59,7 +59,7 @@ TDBObject::TDBObject() :
     _num_attributes = 1;
     const char* attr = "value";
     _attributes.push_back(attr);
-    _compressed = CompressionType::LZ4;
+    _compressed = ImageCompressionType::LZ4;
     _min_tile_dimension = 4;
 }
 
@@ -81,7 +81,7 @@ TDBObject::TDBObject(const std::string &object_id) :
     _num_attributes = 1;
     const char* attr = "value";
     _attributes.push_back(attr);
-    _compressed = CompressionType::LZ4;
+    _compressed = ImageCompressionType::LZ4;
     _min_tile_dimension = 4;
 }
 
@@ -224,7 +224,7 @@ void TDBObject::set_attributes(const std::vector<std::string> &attributes)
     }
 }
 
-void TDBObject::set_compression(CompressionType comp)
+void TDBObject::set_compression(ImageCompressionType comp)
 {
     _compressed = comp;
 }
