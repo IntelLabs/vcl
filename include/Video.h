@@ -52,6 +52,16 @@ namespace VCL {
 
     class Video {
 
+    public:
+    enum  CompressionType { NOCOMPRESSION_Video = 0,
+                   };
+    enum  class Format {
+                    NONE_VIDEO =0,
+                    MP4 = 1,
+                    AVI = 2,
+                    MPEG = 3,
+                    XVID = 4};
+
     private:
 
     VideoData *_video; // Pointer to a VideoData object
@@ -92,18 +102,18 @@ namespace VCL {
 
         cv::Size get_dimensions() const; //instead of get dimension
 
-        VideoFormat get_video_format() const;
+        Video::Format get_video_format() const;
 
         int get_video_type() const;  // remove this
 
-        char* get_encoded_video(VideoFormat format,
+        char* get_encoded_video(Video::Format format,
                 const std::vector<int>& params=std::vector<int>()) const;
 
         long get_encoded_size();
 
         std::string create_unique(const std::string &path,
-                VideoFormat format);
-           std::string format_to_string(VideoFormat format);
+                Video::Format format);
+           std::string format_to_string(Video::Format format);
 
         /**
          *  Sets the type of compression to be used when compressing. Currently
@@ -111,7 +121,7 @@ namespace VCL {
          *
          *  @param comp  The compression type
          */
-        void set_compression(VideoCompressionType comp);
+        void set_compression(Video::CompressionType comp);
         /**
          *  Sets the OpenCV type of the image
          *
@@ -130,12 +140,12 @@ namespace VCL {
          *    the given format
          *
          *  @param image_id  Full path to where the image should be written
-         *  @param image_format  VideoFormat in which to write the image
+         *  @param image_format  Video::Format in which to write the image
          *  @param store_metadata  Flag to indicate whether to store the
          *    image metadata. Defaults to true (assuming no other metadata
          *    storage)
          */
-        void store(const std::string &video_id, VideoFormat video_format);
+        void store(const std::string &video_id, Video::Format video_format);
         /**
          *  Deletes the Video file
          */

@@ -192,7 +192,7 @@ TEST_F(VideoDataTest, Interval)
     std::cout<< " Interval Operation" << std::endl;
     VCL::VideoData video_data(_video); //
     video_data.interval("frames",10, 200, 5);
-    video_data.write(_video , VCL::VideoFormat::XVID);
+    video_data.write(_video , VCL::Video::Format::XVID);
     video_data.perform_operations();
     long input_frame_count = video_data.get_output_video().get(CV_CAP_PROP_FRAME_COUNT);
     long test_frame_count;
@@ -253,7 +253,7 @@ TEST_F(VideoDataTest, Write)
     std::cout<< " Write Operation" << std::endl;
     VCL::VideoData video_data(_video); //
     video_data.interval("frames", 10, 200, 5);
-    video_data.write(_video, VCL::VideoFormat::XVID);
+    video_data.write(_video, VCL::Video::Format::XVID);
     video_data.perform_operations();
     }
     catch(VCL::Exception &e) {
@@ -302,10 +302,10 @@ TEST_F(VideoDataTest, CreateUnique)
     try
      {
         VCL::VideoData video_data(_inputVideo); //
-        video_data.create_unique("temp/", VCL::VideoFormat::MP4);
+        video_data.create_unique("temp/", VCL::Video::Format::MP4);
         std::cout<<video_data.get_video_id() <<std::endl;
         video_data.interval("frames",10, 200, 5);
-        video_data.write(video_data.get_video_id(), VCL::VideoFormat::MP4);
+        video_data.write(video_data.get_video_id(), VCL::Video::Format::MP4);
         video_data.perform_operations();
     }
 catch(VCL::Exception &e) {

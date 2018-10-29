@@ -24,20 +24,20 @@ Video::Video(const cv::VideoCapture video)
   _video = new VideoData(video);
 }
 
-void Video::store(const std::string &video_id, VCL::VideoFormat video_format)
+void Video::store(const std::string &video_id, VCL::Video::Format video_format)
 {
   _video->write(video_id, video_format);
   _video->perform_operations();
 }
 
 std::string Video::create_unique(const std::string &path,
-               VCL::VideoFormat format)
+               VCL::Video::Format format)
 {
   _video->create_unique(path, format);
   return _video->get_video_id();
 }
 
-char* Video::get_encoded_video(VCL::VideoFormat format,
+char* Video::get_encoded_video(VCL::Video::Format format,
                 const std::vector<int>& params) const
 {
   return _video->get_encoded(format, params);
@@ -87,7 +87,7 @@ void Video::delete_video()
 {
     delete _video;//delete video files
 }
-VCL::VideoFormat Video::get_video_format() const
+VCL::Video::Format Video::get_video_format() const
 {
     return _video->get_video_format();
 }

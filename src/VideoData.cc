@@ -14,7 +14,7 @@ using namespace std;
 
 using namespace VCL;
 
-VideoData::Read::Read(const std::string& filename, VCL::VideoFormat format)
+VideoData::Read::Read(const std::string& filename, VCL::Video::Format format)
     : Operation(format),
       _fullpath(filename)
 {
@@ -34,8 +34,8 @@ void VideoData::Read::operator()(VideoData *video)
     /*  *********************** */
     /*       WRITE OPERATION    */
     /*  *********************** */
-VideoData::Write::Write(const std::string& filename, VCL::VideoFormat format,
-    VCL::VideoFormat old_format)
+VideoData::Write::Write(const std::string& filename, VCL::Video::Format format,
+    VCL::Video::Format old_format)
     : Operation(format),
       _old_format(old_format),
       _fullpath(filename)
@@ -81,10 +81,8 @@ void VideoData::Resize::operator()(VideoData *video)
     _stop = video->_end_frame;
     _step = video->_step;
 
-    video->create_unique(video->_temporary_path, VCL::VideoFormat::AVI);
-    std::string cropped_vid = video->remove_extention(video->_video_id) + "resized.avi" ;
-    std::cout << cropped_vid << std::endl;
-    video->_outputVideo = cv::VideoWriter(cropped_vid,
+
+    video->_outputVideo = cv::VideoWriter(video->_temporary_path,
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     video->_fps,
                     cv::Size(_rect.width, _rect.height));
@@ -124,11 +122,7 @@ void VideoData::Crop::operator()(VideoData *video)
     _stop = video->_end_frame;
     _step = video->_step;
 
-   std::cout<<video->_temporary_path<<std::endl;
-    video->create_unique(video->_temporary_path, VCL::VideoFormat::AVI);
-
-    std::string cropped_vid = video->remove_extention(video->_video_id) + "_cropped.avi" ;
-    video->_outputVideo = cv::VideoWriter(cropped_vid,
+    video->_outputVideo = cv::VideoWriter(video->_temporary_path,
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     video->_fps,
                     cv::Size(_rect.width, _rect.height));
@@ -166,17 +160,14 @@ void VideoData::Threshold::operator()(VideoData *video)
     _stop = video->_end_frame;
     _step = video->_step;
 
-    video->create_unique(video->_temporary_path, VCL::VideoFormat::AVI);
-    std::string threshold_vid = video->remove_extention(video->_video_id) + "_threshold.avi" ;
-    std::cout << threshold_vid << std::endl;
-    video->_outputVideo = cv::VideoWriter(threshold_vid,
+
+    video->_outputVideo = cv::VideoWriter(video->_temporary_path,
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     video->_fps,
                     cv::Size(video->_frame_width, video->_frame_height));
 
     video->_inputVideo.set(CV_CAP_PROP_POS_FRAMES, _start - 1);
     int count = _start;
-
     while ( count < _stop ) {
         cv::Mat frame;
         if ( video->_inputVideo.read(frame) ) {
@@ -200,7 +191,6 @@ void VideoData::Threshold::operator()(VideoData *video)
                     /*  *********************** */
                     /*      Interval Operation  */
                     /*  *********************** */
-
 void VideoData::Interval::operator()(VideoData *video)
 {
 
@@ -220,9 +210,8 @@ VideoData::VideoData()
     _frame_width=0;
     _frame_height=0;
     _video_id ="";
-    _format = VCL::VideoFormat::NONE_VIDEO;
+    _format = VCL::Video::Format::NONE_VIDEO;
     _temporary_path ="/home/ragaad/vdms-video/tests/db/videos";
-;
 }
 
 
@@ -231,10 +220,8 @@ VideoData::VideoData(const VideoData &video)
      copy_cv(_inputVideo); // TODO
 
      _format = video._format;
-    _compress = VCL::VideoCompressionType::NOCOMPRESSION_Video ;
+    _compress = VCL::Video::CompressionType::NOCOMPRESSION_Video ;
      _video_id = "";
-
-
 }
 
 VideoData::VideoData( const std::string &video_id )
@@ -270,7 +257,7 @@ VideoData::VideoData(void* buffer, long size)
     std::fstream outfile;
     _temporary_path = "/home/ragaad/vdms-video/tests/db/videos";
      //ccreate a unique name of the buffer data
-    _temporary_video = create_unique(_temporary_path, VCL::VideoFormat::AVI);
+    _temporary_video = create_unique(_temporary_path, VCL::Video::Format::AVI);
 
     //open the outfile inorder to store the buffer data
     outfile.open(_temporary_video, std::ios::out);
@@ -340,7 +327,7 @@ void VideoData::read(const std::string &video_id){
     _operations.push_back(std::make_shared<Read> (_video_id, _format));
 }
 
-void VideoData::write( const std::string &video_id, VCL::VideoFormat video_format
+void VideoData::write( const std::string &video_id, VCL::Video::Format video_format
            )
 {
     _operations.push_back(std::make_shared<Write> (create_fullpath(video_id, video_format),
@@ -359,7 +346,6 @@ VideoData::~VideoData()
 {
     _inputVideo.release();
     _outputVideo.release();
-
 }
 
 
@@ -376,7 +362,7 @@ cv::VideoCapture VideoData::get_cv_video() const
     return _inputVideo;
 }
 
-VCL::VideoFormat VideoData::get_video_format() const
+VCL::Video::Format VideoData::get_video_format() const
 {
     return _format;
 }
@@ -428,7 +414,7 @@ VideoData VideoData::get_area(const Rectangle &roi)
      return area;
 }
 
-char* VideoData::get_encoded(VCL::VideoFormat format,
+char* VideoData::get_encoded(VCL::Video::Format format,
     const std::vector<int>& params)
 {
     perform_operations();
@@ -470,7 +456,7 @@ std::string VideoData::remove_extention(const std::string old_name)
     _video_id = VCL::remove_extention(old_name);
     return _video_id;
 }
-std::string VideoData::create_unique(const std::string &path, VCL::VideoFormat format)
+std::string VideoData::create_unique(const std::string &path, VCL::Video::Format format)
     {
         std::string unique_id;
         std::string name;
@@ -490,17 +476,17 @@ std::string VideoData::create_unique(const std::string &path, VCL::VideoFormat f
         return name;
     }
 
-std::string VideoData::format_to_string(VCL::VideoFormat format)
+std::string VideoData::format_to_string(VCL::Video::Format format)
     {
         switch( format )
         {
-            case VCL::VideoFormat::MP4:
+            case VCL::Video::Format::MP4:
                 return "mp4";
-            case VCL::VideoFormat::AVI:
+            case VCL::Video::Format::AVI:
                 return "avi";
-            case VCL::VideoFormat::MPEG:
+            case VCL::Video::Format::MPEG:
                 return "mpeg";
-            case VCL::VideoFormat::XVID:
+            case VCL::Video::Format::XVID:
                 return "xvid";
             default:
                 throw VCLException(UnsupportedFormat, (int)format + " is not a \
@@ -523,13 +509,13 @@ void VideoData::set_format_from_extension(const std::string &extension)
     }
 
     if ( extent == "avi" )
-        _format = VCL::VideoFormat::AVI;
+        _format = VCL::Video::Format::AVI;
     else if ( extent == "mp4" || extent == "fmp4" )
-        _format = VCL::VideoFormat::MP4;
+        _format = VCL::Video::Format::MP4;
     else if ( extent == "mpeg" )
-        _format = VCL::VideoFormat::MPEG;
+        _format = VCL::Video::Format::MPEG;
     else if ( extent == "xvid" )
-        _format = VCL::VideoFormat::XVID;
+        _format = VCL::Video::Format::XVID;
     else
         throw VCLException(UnsupportedFormat, extension + " is not a " +
             "supported format");
@@ -539,13 +525,13 @@ void VideoData::set_format(int form)
 {
     switch (form) {
         case 4:
-            _format = VCL::VideoFormat::MP4;
+            _format = VCL::Video::Format::MP4;
             break;
         case 5:
-            _format = VCL::VideoFormat::AVI;
+            _format = VCL::Video::Format::AVI;
             break;
         case 6:
-            _format = VCL::VideoFormat::MPEG;
+            _format = VCL::Video::Format::MPEG;
             break;
         default:
             throw VCLException(UnsupportedFormat, form + " is not a supported video format");
@@ -572,7 +558,7 @@ void VideoData::set_dimensions(cv::Size dimensions)
 }
 
 
-void VideoData::set_compression(VideoCompressionType comp)
+void VideoData::set_compression(Video::CompressionType comp)
 {
     _compress = comp;
 }
@@ -642,7 +628,7 @@ void VideoData::copy_cv(const cv::VideoCapture &video_id)
     /*  *********************** */
 
 std::string VideoData::create_fullpath(const std::string &filename,
-    VCL::VideoFormat format)
+    VCL::Video::Format format)
 {
     if ( filename == "" )
         throw VCLException(ObjectNotFound, "Location to write object is undefined");

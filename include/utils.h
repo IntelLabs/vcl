@@ -42,37 +42,6 @@ namespace VCL {
     /**
      *  Determines what kind of compression to use
      */
-    enum  ImageCompressionType  {
-                   NOCOMPRESSION = 0,
-                    GZIP = 1,
-                    ZSTD = 2,
-                    LZ4 = 3,
-                    BLOSC = 4,
-                    BLZ4 = 5,
-                    BLZ4HC =  6,
-                    BSNAPPY = 7,
-                    BZLIB = 8,
-                    BZSTD = 9,
-                    RLE = 10, };
-
-    enum  VideoCompressionType { NOCOMPRESSION_Video = 0,
-                   };
-    enum  class VideoFormat {
-                    NONE_VIDEO =0,
-                    MP4 = 1,
-                    AVI = 2,
-                    MPEG = 3,
-                    XVID = 4};
-
-    enum class ImageFormat{
-                    NONE_IMAGE = 0,
-                    JPG = 1,
-                    PNG = 2,
-                    TDB = 3
-                    };
-
-
-
 
     static const struct init_rand_t { init_rand_t() { srand(time(NULL)); } } init_rand;
 

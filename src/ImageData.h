@@ -62,7 +62,7 @@ namespace VCL {
         class Operation {
         protected:
             /** The format of the image for this operation */
-            VCL::ImageFormat _format;
+            VCL::Image::Format _format;
 
             /**
              *  Constructor, sets the format
@@ -70,7 +70,7 @@ namespace VCL {
              *  @param format  The format for the operation
              *  @see Image.h for more details on Format
              */
-            Operation(ImageFormat format)
+            Operation(Image::Format format)
                 : _format(format)
             {
             };
@@ -104,9 +104,9 @@ namespace VCL {
              *
              *  @param filename  The full path to read from
              *  @param format  The format to read the image from
-             *  @see Image.h for more details on ImageFormat
+             *  @see Image.h for more details on Image::Format
              */
-            Read(const std::string& filename, VCL::ImageFormat format);
+            Read(const std::string& filename, VCL::Image::Format format);
 
             /**
              *  Reads an image from the file system (based on the format
@@ -132,7 +132,7 @@ namespace VCL {
             /** The full path of where to write the image */
             std::string _fullpath;
             /** The format the image used to be stored as */
-            ImageFormat _old_format;
+            Image::Format _old_format;
             /** Whether to store the metadata */
             bool _metadata;
 
@@ -143,10 +143,10 @@ namespace VCL {
              *  @param filename  The full path to write to
              *  @param format  The format to store the image in
              *  @param old_format  The format the image was stored in
-             *  @see Image.h for more details on ImageFormat
+             *  @see Image.h for more details on Image::Format
              */
-            Write(const std::string& filename, ImageFormat format,
-                ImageFormat old_format, bool metadata);
+            Write(const std::string& filename, Image::Format format,
+                Image::Format old_format, bool metadata);
             /**
              *  Writes an image to the file system (based on the format
              *    and file path indicated)
@@ -175,9 +175,9 @@ namespace VCL {
              *
              *  @param rect  Contains height and width to resize to
              *  @param format  The current format of the image data
-             *  @see Image.h for more details on ImageFormat and Rectangle
+             *  @see Image.h for more details on Image::Format and Rectangle
              */
-            Resize(const Rectangle &rect, ImageFormat format)
+            Resize(const Rectangle &rect, Image::Format format)
                 : Operation(format),
                   _rect(rect)
             {
@@ -211,9 +211,9 @@ namespace VCL {
              *  @param rect  Contains dimensions and coordinates of
              *    desired area
              *  @param format  The current format of the image data
-             *  @see Image.h for more details on ImageFormat and Rectangle
+             *  @see Image.h for more details on Image::Format and Rectangle
              */
-            Crop(const Rectangle &rect, ImageFormat format)
+            Crop(const Rectangle &rect, Image::Format format)
                 : Operation(format),
                   _rect(rect)
             {
@@ -247,9 +247,9 @@ namespace VCL {
              *
              *  @param value  Minimum value pixels should be
              *  @param format  The current format of the image data
-             *  @see Image.h for more details on ImageFormat
+             *  @see Image.h for more details on Image::Format
              */
-            Threshold(const int value, ImageFormat format)
+            Threshold(const int value, Image::Format format)
                 : Operation(format),
                   _threshold(value)
             {
@@ -280,8 +280,8 @@ namespace VCL {
         std::vector<std::shared_ptr<Operation>> _operations;
 
         // Image format and compression type
-        ImageFormat _format;
-       ImageCompressionType _compress;
+        Image::Format _format;
+       Image::CompressionType _compress;
 
         // Full path to image
         std::string _image_id;
@@ -356,10 +356,10 @@ namespace VCL {
         /**
          *  Gets the format of the ImageData object
          *
-         *  @return The ImageFormat of the ImageData object
-         *  @see Image.h for more details on ImageFormat
+         *  @return The Image::Format of the ImageData object
+         *  @see Image.h for more details on Image::Format
          */
-        ImageFormat get_image_format() const;
+        Image::Format get_image_format() const;
 
         /**
          *  Gets the OpenCV type of the image
@@ -414,12 +414,12 @@ namespace VCL {
         /**
          *  Gets encoded image data in a buffer
          *
-         *  @param format  The ImageFormat the image should be encoded as
+         *  @param format  The Image::Format the image should be encoded as
          *  @param buffer  The buffer the encoded image will be stored in
          *  @param params  Optional parameters
          *  @see OpenCV documentation for imencode for more details
          */
-        std::vector<unsigned char> get_encoded(ImageFormat format,
+        std::vector<unsigned char> get_encoded(Image::Format format,
             const std::vector<int>& params=std::vector<int>());
 
 
@@ -431,13 +431,13 @@ namespace VCL {
          *
          *  @param path  A string with the path to where the Image should be
          *                  stored
-         *  @param format The ImageFormat the Image should be stored as
+         *  @param format The Image::Format the Image should be stored as
          *  @return The string containing the full path to the Image (path
          *    + unique id + format)
          */
-       std::string create_unique(const std::string &path, VCL::ImageFormat format);
+       std::string create_unique(const std::string &path, VCL::Image::Format format);
 
-        std::string format_to_string(ImageFormat format);
+        std::string format_to_string(Image::Format format);
 
         /**
          *  Sets the file system location of where the image
@@ -451,8 +451,8 @@ namespace VCL {
          *  Sets the format of the ImageData object
          *
          *  @param extension  A string containing the file system
-         *    extension corresponding to the desired ImageFormat
-         *  @see Image.h for more details on ImageFormat
+         *    extension corresponding to the desired Image::Format
+         *  @see Image.h for more details on Image::Format
          */
         void set_format(const std::string &extension);
 
@@ -471,7 +471,7 @@ namespace VCL {
          *  @param comp  The compression type
          *  @see Image.h for details on CompressionType
          */
-        void set_compression(ImageCompressionType comp);
+        void set_compression(Image::CompressionType comp);
 
         /**
          *  Sets the height and width of the image
@@ -523,12 +523,12 @@ namespace VCL {
          *
          *  @param image_id  The full path to where the image should
          *    be written
-         *  @param image_format  The ImageFormat to write the image in
+         *  @param image_format  The Image::Format to write the image in
          *  @param store_metadata  A flag to indicate whether to store the
          *    metadata in TileDB or not. Defaults to true
-         *  @see Image.h for more details on ImageFormat
+         *  @see Image.h for more details on Image::Format
          */
-        void write(const std::string &image_id, ImageFormat image_format,
+        void write(const std::string &image_id, Image::Format image_format,
             bool store_metadata=true);
 
         // void remove(const std::string &image_id);
@@ -595,14 +595,14 @@ namespace VCL {
 
         /**
          *  Creates full path to Image with appropriate extension based
-         *    on the ImageFormat
+         *    on the Image::Format
          *
          *  @param filename The path to the Image object
-         *  @param format  The ImageFormat of the Image object
+         *  @param format  The Image::Format of the Image object
          *  @return Full path to the object including extension
          */
         std::string create_fullpath(const std::string &filename,
-            ImageFormat format);
+            Image::Format format);
 
 
     };
