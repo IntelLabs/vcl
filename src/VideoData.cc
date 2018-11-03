@@ -52,18 +52,12 @@ void VideoData::Write::operator()(VideoData *video)
                     video->_fps,
                     cv::Size(video->_frame_width, video->_frame_height));
     int count=_start;
-
     while (count <=_stop)
     {
         cv::Mat frame;
-
-
         video->_inputVideo >> frame;
-
-
         if (frame.empty())
-           break; // probably want to throw if the frame is empty
-
+          break; // probably want to throw if the frame is empty
          _outputVideo.write(frame);
 
         count+=_step;
@@ -108,9 +102,6 @@ void VideoData::Resize::operator()(VideoData *video)
 
     video->_temp_exist = true;
 }
-
-
-
 
     /*  *********************** */
     /*       CROP OPERATION     */
@@ -211,7 +202,8 @@ VideoData::VideoData()
     _frame_height=0;
     _video_id ="";
     _format = VCL::Video::Format::NONE_VIDEO;
-    _temporary_path ="/home/ragaad/vdms-video/tests/db/videos";
+    _temporary_path ="tests/videos/";
+     _temporary_video = create_unique(_temporary_path, VCL::Video::Format::AVI);
 }
 
 
@@ -221,6 +213,8 @@ VideoData::VideoData(const VideoData &video)
 
      _format = video._format;
     _compress = VCL::Video::CompressionType::NOCOMPRESSION_Video ;
+     _temporary_path ="tests/videos/";
+     _temporary_video = create_unique(_temporary_path, VCL::Video::Format::AVI);
      _video_id = "";
 }
 
@@ -228,6 +222,7 @@ VideoData::VideoData( const std::string &video_id )
 {
      _video_id = video_id;
     _inputVideo =  cv::VideoCapture(video_id);
+
 
     _start_frame =0;
     _fps = static_cast<float>(_inputVideo.get(CV_CAP_PROP_FPS));
@@ -248,14 +243,15 @@ VideoData::VideoData( const std::string &video_id )
     char EXT[] = {(char)(ex & 0XFF) , (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
     set_format_from_extension(EXT);
 
-    _temporary_path = "/home/ragaad/vdms-video/tests/db/videos";
+    _temporary_path = "tests/videos/";
+     _temporary_video = create_unique(_temporary_path, VCL::Video::Format::AVI);
 }
 
 VideoData::VideoData(void* buffer, long size)
 {
 
     std::fstream outfile;
-    _temporary_path = "/home/ragaad/vdms-video/tests/db/videos";
+    _temporary_path = "test/videos/";
      //ccreate a unique name of the buffer data
     _temporary_video = create_unique(_temporary_path, VCL::Video::Format::AVI);
 
@@ -293,7 +289,6 @@ VideoData::VideoData(void* buffer, long size)
     set_format_from_extension(EXT); // to get the current extention of the video file
 }
 
-
 VideoData::VideoData(const cv::VideoCapture &cv_video )
 {
     _inputVideo = cv_video;
@@ -312,13 +307,18 @@ VideoData::VideoData(const cv::VideoCapture &cv_video )
         _start_frame =0;
 
         }
-
-    _temporary_path ="/home/ragaad/vdms-video/tests/db/videos";
+    _temporary_path ="tests/videos/";
+    _temporary_video = create_unique(_temporary_path, VCL::Video::Format::AVI);
     }
 
 cv::VideoWriter VideoData::get_output_video(){
 
     return _outputVideo;
+}
+
+std::string VideoData::get_temporary_video(void){
+    return _temporary_video;
+
 }
 void VideoData::read(const std::string &video_id){
 

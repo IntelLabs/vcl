@@ -336,30 +336,21 @@ namespace VCL {
 
 
     VideoData* _video;
-
     std::string _video_id;
-
     cv::VideoCapture _cv_video;
-
     cv::VideoCapture _inputVideo;
-
     cv::VideoWriter _outputVideo;
-
     std::string _temporary_path;
     std::string _temporary_video;
     bool _temp_exist = false;
-
-
     int  _frame_count;
     float _fps;
     unsigned char* _encoded_video;
     long _encoded_size;
     std::string _video_unit;
     uint _length;
-
     int _scale_num = 8 ;
     const float scale_stride = sqrt(3) ;
-
     uint _frame_width;
     uint _frame_height;
     int _start_frame = 0;
@@ -367,7 +358,6 @@ namespace VCL {
     int _step = 1;
     cv::Size _size;
     int _video_time ;
-
     VCL::Video::Format _format;
     Video::CompressionType _compress;
     int _cv_type;
@@ -475,6 +465,8 @@ namespace VCL {
          *  @return The size of the Video in pixels
          */
         cv::Size get_size();
+
+        std::string get_temporary_video(void);
 
 
 
