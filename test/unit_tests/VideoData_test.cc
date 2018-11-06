@@ -165,6 +165,7 @@ TEST_F(VideoDataTest, BlobConstructor)
     inBuf = new char[fsize];
     ifile.read(inBuf, fsize);
     ifile.close();
+
     VCL::VideoData video_data(inBuf, fsize); //
     delete[] inBuf;
     long input_frame_count = video_data.get_frame_count();
