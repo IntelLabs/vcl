@@ -64,7 +64,6 @@ class VideoDataTest : public ::testing::Test {
         int rows = img.rows;
         int columns = img.cols;
         int channels = img.channels();
-
         if ( img.isContinuous() ) {
             columns *= rows;
             rows = 1;
@@ -107,17 +106,13 @@ class VideoDataTest : public ::testing::Test {
 
     }
 
-
     VCL::Rectangle rect_;
     VCL::Rectangle bad_rect_;
     std::string img_;
     std::string tdb_img_;
-
     cv::Mat cv_img_;
-
     int dimension_;
     int size_;
-
     std::string _video ;
     cv::VideoCapture _inputVideo;
     cv::VideoCapture testVideo;
@@ -154,7 +149,6 @@ TEST_F(VideoDataTest, ObjectConstructor)
     VCL::VideoData video_data(_inputVideo); //
     long input_frame_count = video_data.get_frame_count();
     long test_frame_count;
-
     testVideo = cv::VideoCapture("videos/Megamind.avi");
     test_frame_count= testVideo.get(CV_CAP_PROP_FRAME_COUNT);
     std::cout<< input_frame_count <<"=="<< test_frame_count <<std::endl;
@@ -254,14 +248,12 @@ TEST_F(VideoDataTest, Write)
     }
 
 }
-
-
 TEST_F(VideoDataTest, Interval)
 {
     try {
     std::cout<< " Interval Operation" << std::endl;
     VCL::VideoData video_data(_video); //
-    video_data.interval("frames",10, 200, 5);
+    video_data.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
     video_data.write(_video, VCL::Video::Format::XVID);
 
     video_data.perform_operations();
@@ -314,7 +306,7 @@ TEST_F(VideoDataTest, Resize)
     try {
     std::cout<< " Resize Operation" << std::endl;
     VCL::VideoData video_data(_video); //
-    video_data.interval("frames",10, 200, 5);
+    video_data.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
     video_data.resize( 10,10);
     video_data.write(_video, VCL::Video::Format::XVID);
 
@@ -367,7 +359,7 @@ TEST_F(VideoDataTest, Threshold)
    try {
     std::cout<< " Threshold Operation" << std::endl;
     VCL::VideoData video_data(_video); //
-    video_data.interval("frames",10, 200, 5);
+    video_data.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
     video_data.threshold( 150);
     video_data.write(_video, VCL::Video::Format::XVID);
     video_data.perform_operations();
@@ -423,7 +415,7 @@ TEST_F(VideoDataTest, CreateUnique)
         VCL::VideoData video_data(_inputVideo); //
         video_data.create_unique("videos_tests/", VCL::Video::Format::MP4);
         std::cout<<video_data.get_video_id() <<std::endl;
-        video_data.interval("frames",10, 200, 5);
+        video_data.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
         video_data.write(video_data.get_video_id(), VCL::Video::Format::MP4);
         video_data.perform_operations();
     }
@@ -438,7 +430,7 @@ TEST_F(VideoDataTest, Crop)
    try {
     std::cout<< " Crop Operation" << std::endl;
     VCL::VideoData video_data(_video); //
-    video_data.interval("frames",10, 200, 5);
+    video_data.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
     video_data.crop(VCL::Rectangle(0, 0, 50, 50));
     video_data.write(_video, VCL::Video::Format::XVID);
     video_data.perform_operations();

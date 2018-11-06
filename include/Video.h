@@ -32,25 +32,21 @@
 #pragma once
 
 #include <string>
-
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/videoio.hpp>
-
-
 #include "Exception.h"
 #include "utils.h"
-
-//#include "VideoUtils.h"
-
 
 namespace VCL {
     class VideoData; // To hide the Video implementation details
 
-
     typedef cv::Rect Rectangle; // spcifiy an ROI inside a video
 
     class Video {
+
+    private:
+    VideoData *_video; // Pointer to a VideoData object
 
     public:
     enum  CompressionType { NOCOMPRESSION_Video = 0,
@@ -61,15 +57,14 @@ namespace VCL {
                     AVI = 2,
                     MPEG = 3,
                     XVID = 4};
+   struct Video_Size {
+                    uint width;
+                    uint height;
+                    uint frame_number; };
+    enum class UNIT {FRAMES =0,
+                   SECONDS=1};
 
-    private:
-
-    VideoData *_video; // Pointer to a VideoData object
-
-
-
-    public:
-    /*  *********************** */
+   /*  *********************** */
     /*        CONSTRUCTORS      */
     /*  *********************** */
         /**
@@ -78,119 +73,94 @@ namespace VCL {
          *
          *  @param video_id  The full path to the video
          */
-        Video();
-        Video(const std::string &fileName); // fileName is the full path to the video
-
-        Video(const cv::VideoCapture video);
-
-        Video(void* buffer, int size); // creates a video from an encoded buffer
-
-        Video ( const Video &video);
-
-        void operator=(const Video &video);
-        //== operator t NULL in C++
-
-
-
-        ~Video();
+    Video();
+    Video(const std::string &fileName); // fileName is the full path to the video
+    Video(const cv::VideoCapture video);
+    Video(void* buffer, int size); // creates a video from an encoded buffer
+    Video ( const Video &video);
+    void operator=(const Video &video);
+    ~Video();
 
     /*  *********************** */
     /*        GET FUNCTIONS     */
-    /*  *********************** */
+    /* *********************** */
+    std::string get_video_id() const;
+    cv::Size get_dimensions() const; //instead of get dimension
+    Video::Video_Size get_size() const;
+    Video::Format get_video_format() const;
+    char* get_encoded_video(Video::Format format,
+           const std::vector<int>& params=std::vector<int>()) const;
+    long get_encoded_size();
+    std::string create_unique(const std::string &path,
+                             Video::Format format);
+    std::string format_to_string(Video::Format format);
+    /**
+     *  Sets the type of compression to be used when compressing. Currently
+     *    applicable only to TileDB
+     *
+     *  @param comp  The compression type
+     */
+    void set_compression(Video::CompressionType comp);
+    /**
+     *  Sets the OpenCV type of the video
+     *
+     *  @param The OpenCV type (CV_8UC3, etc)
+     *  @see OpenCV documentation on types for more details
+     */
 
-        std::string get_video_id() const;
+/*  *********************** */
+/*    IMAGE INTERACTIONS    */
+/*  *********************** */
+    /**
+     *  Writes the Image to the system at the given location and in
+     *    the given format
+     *
+     *  @param video_id  Full path to where the video should be written
+     *  @param video_format  Video::Format in which to write the video
+     *  @param store_metadata  Flag to indicate whether to store the
+     *    video metadata. Defaults to true (assuming no other metadata
+     *    storage)
+     */
+    void store(const std::string &video_id, Video::Format video_format);
+    /**
+     *  Deletes the Video file
+     */
+    void delete_video();
+    /**
+     *  Resizes the Video to the given size. This operation is not
+     *    performed until the data is needed (ie, store is called or
+     *    one of the get_ functions such as get_cvmat)
+     *
+     *  @param new_height  Number of rows
+     *  @param new_width  Number of columns
+      * start is the starting time
+      * stop is the stopping time
+      * step is the step length
+     */
+    void resize(int new_height, int new_width);
+    /**
+     *  Crops the Video to the area specified. This operation is not
+     *    performed until the data is needed (ie, store is called or
+     *    one of the get_ functions such as get_cvmat)
+     *
+     *  @param rect  The region of interest (starting x coordinate,
+     *    starting y coordinate, height, width) the video should be
+     *    cropped to
+     */
+    void crop(const Rectangle &rect);
 
-        cv::Size get_dimensions() const; //instead of get dimension
-
-        Video::Format get_video_format() const;
-
-        int get_video_type() const;  // remove this
-
-        char* get_encoded_video(Video::Format format,
-                const std::vector<int>& params=std::vector<int>()) const;
-
-        long get_encoded_size();
-
-        std::string create_unique(const std::string &path,
-                Video::Format format);
-           std::string format_to_string(Video::Format format);
-
-        /**
-         *  Sets the type of compression to be used when compressing. Currently
-         *    applicable only to TileDB
-         *
-         *  @param comp  The compression type
-         */
-        void set_compression(Video::CompressionType comp);
-        /**
-         *  Sets the OpenCV type of the image
-         *
-         *  @param The OpenCV type (CV_8UC3, etc)
-         *  @see OpenCV documentation on types for more details
-         */
-        void set_video_type(int cv_type);
-
-        void set_minimum_dimension(int dimension);
-
-    /*  *********************** */
-    /*    IMAGE INTERACTIONS    */
-    /*  *********************** */
-        /**
-         *  Writes the Image to the system at the given location and in
-         *    the given format
-         *
-         *  @param image_id  Full path to where the image should be written
-         *  @param image_format  Video::Format in which to write the image
-         *  @param store_metadata  Flag to indicate whether to store the
-         *    image metadata. Defaults to true (assuming no other metadata
-         *    storage)
-         */
-        void store(const std::string &video_id, Video::Format video_format);
-        /**
-         *  Deletes the Video file
-         */
-        void delete_video();
-        /**
-         *  Resizes the Video to the given size. This operation is not
-         *    performed until the data is needed (ie, store is called or
-         *    one of the get_ functions such as get_cvmat)
-         *
-         *  @param new_height  Number of rows
-         *  @param new_width  Number of columns
-          * start is the starting time
-          * stop is the stopping time
-          * step is the step length
-         */
-        void resize(int new_height, int new_width);
-
-        /**
-         *  Crops the Video to the area specified. This operation is not
-         *    performed until the data is needed (ie, store is called or
-         *    one of the get_ functions such as get_cvmat)
-         *
-         *  @param rect  The region of interest (starting x coordinate,
-         *    starting y coordinate, height, width) the image should be
-         *    cropped to
-         */
-        void crop(const Rectangle &rect);
-
-        /**
-         *  Performs a thresholding operation on the Video. Discards the pixel
-         *    value if it is less than or equal to the threshold and sets that
-         *    pixel to zero. This operation is not performed until the data
-         *    is needed (ie, store is called or one of the get_ functions
-         *    such as get_cvmat)
-         *
-         *  @param value  The threshold value
-         */
-        void threshold(int value);
-
-        void interval (std::string unit, int start, int stop, int step=1);
-        long get_frame_count(void) const;
-
-
-
-
-    };
+    /**
+     *  Performs a thresholding operation on the Video. Discards the pixel
+     *    value if it is less than or equal to the threshold and sets that
+     *    pixel to zero. This operation is not performed until the data
+     *    is needed (ie, store is called or one of the get_ functions
+     *    such as get_cvmat)
+     *
+     *  @param value  The threshold value
+     */
+    void threshold(int value);
+    void interval(Video::UNIT u, int start, int stop, int step=1);
+    long get_frame_count(void) const;
+};
 
 };

@@ -6,43 +6,36 @@
 #include "VideoData.h"
 
 using namespace VCL;
-
 using namespace cv; // OpenCV namespace
 
 Video::Video()
 {
   _video = new VideoData();
 }
-
 Video::Video(const std::string &fileName)
 {
   _video = new VideoData(fileName);
 }
-
 Video::Video(const cv::VideoCapture video)
 {
   _video = new VideoData(video);
 }
-
 void Video::store(const std::string &video_id, VCL::Video::Format video_format)
 {
   _video->write(video_id, video_format);
   _video->perform_operations();
 }
-
 std::string Video::create_unique(const std::string &path,
                VCL::Video::Format format)
 {
   _video->create_unique(path, format);
   return _video->get_video_id();
 }
-
 char* Video::get_encoded_video(VCL::Video::Format format,
                 const std::vector<int>& params) const
 {
   return _video->get_encoded(format, params);
 }
-
 long Video::get_encoded_size()
 {
   return _video->get_size_encoded();
@@ -63,10 +56,9 @@ void Video::operator=(const Video &vid)
      delete _video;
     _video = new VideoData(*vid._video);
 }
-
 Video::~Video()
 {
-delete _video;
+    delete _video;
 }
  /***********Getter Functions ****************/
 std::string Video::get_video_id() const
@@ -82,6 +74,10 @@ cv::Size Video::get_dimensions() const
 {
     return _video->get_dimensions();
 }
+VCL::Video::Video_Size Video::get_size() const
+{
+ return _video->get_size();
+}
 
 void Video::delete_video()
 {
@@ -92,27 +88,15 @@ VCL::Video::Format Video::get_video_format() const
     return _video->get_video_format();
 }
 
-int Video::get_video_type() const
-{
-    return _video->get_type();
-}
-
-/**********************************/
-
-void Video::set_video_type(int cv_type)
-{
-    _video->set_type(cv_type);
-}
-
 /********************OPERATIONS ***********************/
 void Video::resize(int new_height, int new_width)
 {
     _video->resize(new_height, new_width);
 }
 
-void Video::interval(std::string unit, int start, int stop, int step)
+void Video::interval(Video::UNIT u, int start, int stop, int step)
 {
-    _video->interval(unit, start, stop, step);
+    _video->interval(u, start, stop, step);
 }
 void Video::crop(const Rectangle &rect)
 {
