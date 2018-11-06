@@ -126,7 +126,6 @@ TEST_F(VideoDataTest, DefaultConstructor)
     long test_frame_count;
     cv::VideoCapture testVideo = cv::VideoCapture();
     test_frame_count= testVideo.get(CV_CAP_PROP_FRAME_COUNT);
-    std::cout<< input_frame_count <<"=="<< test_frame_count <<std::endl;
     ASSERT_EQ(input_frame_count, test_frame_count);
 }
 
@@ -136,10 +135,8 @@ TEST_F(VideoDataTest, StringConstructor)
     VCL::VideoData video_data(_video);
     long input_frame_count = video_data.get_frame_count();
     long test_frame_count;
-
     testVideo = cv::VideoCapture("videos/Megamind.avi");
     test_frame_count= testVideo.get(CV_CAP_PROP_FRAME_COUNT);
-    std::cout<< input_frame_count <<"=="<< test_frame_count <<std::endl;
     ASSERT_EQ(input_frame_count, test_frame_count);
 }
 
@@ -174,7 +171,6 @@ TEST_F(VideoDataTest, BlobConstructor)
     long test_frame_count;
     testVideo = cv::VideoCapture("videos/Megamind.avi");
     test_frame_count = testVideo.get(CV_CAP_PROP_FRAME_COUNT);
-    std::cout<< input_frame_count <<"=="<< test_frame_count <<std::endl;
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(video_data.get_cv_video(), testVideo, 1, test_frame_count);
 }
@@ -192,7 +188,6 @@ TEST_F(VideoDataTest, Read)
     long test_frame_count;
     long input_frame_count;
     test_frame_count= testVideo.get(CV_CAP_PROP_FRAME_COUNT);
-    std::cout<< input_frame_count <<"=="<< test_frame_count <<std::endl;
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(video_data.get_cv_video(), testVideo, 1, test_frame_count);
    }
@@ -234,12 +229,10 @@ TEST_F(VideoDataTest, Write)
     }
     cv::VideoCapture test_written_video("videos_tests/test_write_write.avi");
     std::string cv_name ;
-   // std::cout<< _video.get_temporary_video() <<std:endl;
     cv_name = video_data.get_temporary_video();
     cv::VideoCapture vcl_written_video(cv_name);
     input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
     test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-    std::cout<< input_frame_count <<"=="<< test_frame_count <<std::endl;
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
   }
@@ -255,7 +248,6 @@ TEST_F(VideoDataTest, Interval)
     VCL::VideoData video_data(_video); //
     video_data.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
     video_data.write(_video, VCL::Video::Format::XVID);
-
     video_data.perform_operations();
     testVideo = cv::VideoCapture("videos/Megamind.avi");
     long test_frame_count;
@@ -283,12 +275,10 @@ TEST_F(VideoDataTest, Interval)
     }
     cv::VideoCapture test_written_video("videos_tests/test_write_interval.avi");
     std::string cv_name ;
-   // std::cout<< _video.get_temporary_video() <<std:endl;
     cv_name = video_data.get_temporary_video();
     cv::VideoCapture vcl_written_video(cv_name);
     input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
     test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-    std::cout<< input_frame_count <<"=="<< test_frame_count <<std::endl;
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
   }
@@ -344,7 +334,6 @@ TEST_F(VideoDataTest, Resize)
     cv::VideoCapture vcl_written_video(cv_name);
     input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
     test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-    std::cout<< input_frame_count <<"=="<< test_frame_count <<std::endl;
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
   }
@@ -397,7 +386,6 @@ TEST_F(VideoDataTest, Threshold)
     cv::VideoCapture vcl_written_video(cv_name);
     input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
     test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-    std::cout<< input_frame_count <<"=="<< test_frame_count <<std::endl;
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
   }
@@ -467,7 +455,6 @@ TEST_F(VideoDataTest, Crop)
     cv::VideoCapture vcl_written_video(cv_name);
     input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
     test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-    std::cout<< input_frame_count <<"=="<< test_frame_count <<std::endl;
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
   }

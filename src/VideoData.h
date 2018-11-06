@@ -418,8 +418,7 @@ namespace VCL {
          *
          *  @return An OpenCV Mat
          */
-        cv::VideoCapture get_cv_video_capture();
-      /**
+         /**
          *  Gets a specific area of the Video, indicated by the Rectangle
          *    parameters
          *

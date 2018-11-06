@@ -32,6 +32,7 @@ VideoData::Write::Write(const std::string& filename, VCL::Video::Format format,
       _old_format(old_format),
       _fullpath(filename)
 {
+
 }
 
 void VideoData::Write::operator()(VideoData *video)

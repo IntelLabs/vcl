@@ -25,6 +25,11 @@ void Video::store(const std::string &video_id, VCL::Video::Format video_format)
   _video->write(video_id, video_format);
   _video->perform_operations();
 }
+void Video::read (std::string video_id) const {
+   _video->read(video_id);
+   _video->perform_operations();
+
+}
 std::string Video::create_unique(const std::string &path,
                VCL::Video::Format format)
 {
@@ -69,6 +74,12 @@ long Video::get_frame_count() const
 {
   return _video->get_frame_count();
 }
+cv::VideoCapture Video::get_cv_video(void) const
+{
+return _video->get_cv_video();
+
+}
+
 
 cv::Size Video::get_dimensions() const
 {

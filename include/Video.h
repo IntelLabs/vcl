@@ -122,6 +122,9 @@ namespace VCL {
      *    storage)
      */
     void store(const std::string &video_id, Video::Format video_format);
+    void read (std::string ) const;
+
+    cv::VideoCapture get_cv_video(void) const;
     /**
      *  Deletes the Video file
      */
