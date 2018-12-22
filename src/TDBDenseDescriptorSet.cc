@@ -50,7 +50,8 @@ TDBDenseDescriptorSet::TDBDenseDescriptorSet(const std::string &filename):
     TDBDescriptorSet(filename),
     _flag_buffer_updated(false)
 {
-    read_metadata();
+    TDBObject descriptorSetObject(_set_path);
+    read_descriptor_metadata();
 }
 
 TDBDenseDescriptorSet::TDBDenseDescriptorSet(const std::string &filename,
@@ -59,98 +60,37 @@ TDBDenseDescriptorSet::TDBDenseDescriptorSet(const std::string &filename,
     TDBDescriptorSet(filename, dim),
     _flag_buffer_updated(true)
 {
-    auto d = tiledb::Dimension::create<uint64_t>(
-                            _tiledb_ctx, "d", {{0, MAX_DESC-1}}, 10);
+    TDBObject descriptorSetObject;
 
-    tiledb::Domain domain(_tiledb_ctx);
-    domain.add_dimension(d);
+    descriptorSetObject.set_full_dimensions(
+                                        std::vector<std::string>{"d"},
+                                        std::vector<uint64_t>{(MAX_DESC-1)},
+                                        std::vector<uint64_t>{0},
+                                        10);
+    std::string desc  = ATTRIBUTE_DESC;
+    std::string label = ATTRIBUTE_LABEL;
+    descriptorSetObject.set_single_attribute(desc, VCL::CompressionType::LZ4,
+                                             (float)_dimensions);
+    descriptorSetObject.set_single_attribute(label, VCL::CompressionType::LZ4,
+                                             (long)1);
 
-    tiledb::Attribute a_desc = tiledb::Attribute::create<float>(
-                                _tiledb_ctx, ATTRIBUTE_DESC);
-    a_desc.set_compressor({TILEDB_BLOSC_LZ, -1});
-    a_desc.set_cell_val_num(_dimensions);
-
-    tiledb::Attribute a_label = tiledb::Attribute::create<long>(
-                _tiledb_ctx, ATTRIBUTE_LABEL);
-    a_label.set_compressor({TILEDB_BLOSC_LZ, -1});
-
-    tiledb::ArraySchema schema(_tiledb_ctx, TILEDB_DENSE);
-    schema.set_tile_order(TILEDB_ROW_MAJOR).set_cell_order(TILEDB_ROW_MAJOR);
-    schema.set_domain(domain);
-    schema.add_attribute(a_desc);
-    schema.add_attribute(a_label);
-
-    try {
-        schema.check();
-    } catch (tiledb::TileDBError &e) {
-        throw VCLException(TileDBError, "Error creating TDB schema");
-    }
-
-    // Create array
-    tiledb::Array::create(_set_path, schema);
-
-    write_metadata();
-}
-
-void TDBDenseDescriptorSet::read_metadata()
-{
-    std::vector<long> metadata(2);
-
-    tiledb::Array array(_tiledb_ctx, _set_path, TILEDB_READ);
-    tiledb::Query query(_tiledb_ctx, array);
-    query.set_layout(TILEDB_ROW_MAJOR);
-    query.set_subarray<uint64_t>( {METADATA_OFFSET, METADATA_OFFSET+1} );
-    query.set_buffer(ATTRIBUTE_LABEL, metadata);
-    query.submit();
-
-    _dimensions = (unsigned)metadata[0];
-    _n_total    = (uint64_t)metadata[1];
-
-}
-
-void TDBDenseDescriptorSet::write_metadata()
-{
-    // Writing metadata using KV store in TileDB
-    // (thru the write_metadata(3) in TDBObject)
-    // is an overkill.
-    // We simply need to store 3-64bits values as
-    // metadata, which can be inserted in the
-    // 2-D array that we are already using.
-    // The following code does that, and the corresponding
-    // read_metadata() knows how to read these values back.
-
-    std::vector<long> metadata;
-    metadata.push_back(_dimensions);
-    metadata.push_back(_n_total);
-
-    // This is only here because tiledb requires all the
-    // attributes when writing.
-    std::vector<float> aux_dims(_dimensions * 2, .0f);
-
-    // Write metadata
-    tiledb::Array array(_tiledb_ctx, _set_path, TILEDB_WRITE);
-    tiledb::Query query(_tiledb_ctx, array);
-    query.set_layout(TILEDB_ROW_MAJOR);
-    query.set_subarray<uint64_t>({METADATA_OFFSET, METADATA_OFFSET+1});
-    query.set_buffer(ATTRIBUTE_LABEL, metadata);
-    query.set_buffer(ATTRIBUTE_DESC, aux_dims);
-    query.submit();
-    query.finalize();
-
+    std::vector<long> num_values{_dimensions, 1};
+    descriptorSetObject.set_schema_dense(_set_path, num_values);
+    write_descriptor_metadata();
 }
 
 void TDBDenseDescriptorSet::load_buffer()
 {
     try {
 
-        read_metadata();
+        read_descriptor_metadata();
 
-        tiledb::Array array(_tiledb_ctx, _set_path, TILEDB_READ);
+        tiledb::Array array(_ctx, _set_path, TILEDB_READ);
         {
             _buffer.resize(_dimensions * _n_total);
             _label_ids.resize(_n_total);
 
-            tiledb::Query query(_tiledb_ctx, array);
+            tiledb::Query query(_ctx, array);
             query.set_layout(TILEDB_ROW_MAJOR);
             query.set_subarray<uint64_t>({0, _n_total - 1});
             query.set_buffer(ATTRIBUTE_DESC, _buffer);
@@ -163,6 +103,47 @@ void TDBDenseDescriptorSet::load_buffer()
     }
 
     _flag_buffer_updated = true;
+}
+
+void TDBDenseDescriptorSet::read_descriptor_metadata()
+{
+    std::vector<uint64_t> subarray = { METADATA_OFFSET,
+                                      (METADATA_OFFSET + 1)};
+    std::vector<long> values(2);
+
+    tiledb::Array array(_ctx, _set_path, TILEDB_READ);
+    tiledb::Query md_read(_ctx, array, TILEDB_READ);
+
+    md_read.set_subarray(subarray);
+    md_read.set_layout(TILEDB_ROW_MAJOR);
+
+    md_read.set_buffer(ATTRIBUTE_LABEL, values);
+    md_read.submit();
+    array.close();
+
+    _dimensions = values[0];
+    _n_total = values[1];
+}
+
+void TDBDenseDescriptorSet::write_descriptor_metadata()
+{
+    std::vector<long> metadata;
+    metadata.push_back(_dimensions);
+    metadata.push_back(_n_total);
+
+    // This is only here because tiledb requires all the
+    // attributes when writing.
+    std::vector<float> aux_dims(_dimensions * 2, .0f);
+
+    // Write metadata
+    tiledb::Array array(_ctx, _set_path, TILEDB_WRITE);
+    tiledb::Query query(_ctx, array);
+    query.set_layout(TILEDB_ROW_MAJOR);
+    query.set_subarray<uint64_t>({METADATA_OFFSET, METADATA_OFFSET+1});
+    query.set_buffer(ATTRIBUTE_LABEL, metadata);
+    query.set_buffer(ATTRIBUTE_DESC, aux_dims);
+    query.submit();
+    query.finalize();
 }
 
 long TDBDenseDescriptorSet::add(float* descriptors, unsigned n, long* labels)
@@ -178,8 +159,8 @@ long TDBDenseDescriptorSet::add(float* descriptors, unsigned n, long* labels)
         }
 
         {
-            tiledb::Array array(_tiledb_ctx, _set_path, TILEDB_WRITE);
-            tiledb::Query query(_tiledb_ctx, array);
+            tiledb::Array array(_ctx, _set_path, TILEDB_WRITE);
+            tiledb::Query query(_ctx, array);
             query.set_layout(TILEDB_ROW_MAJOR);
             query.set_subarray<uint64_t>({_n_total, _n_total + n-1});
             query.set_buffer(ATTRIBUTE_DESC, descriptors, n * _dimensions);
@@ -196,7 +177,7 @@ long TDBDenseDescriptorSet::add(float* descriptors, unsigned n, long* labels)
     // This is good because we only write metadata
     // (_n_total) after the other two writes succedded.
     _n_total += n;
-    write_metadata();
+    write_descriptor_metadata();
 
     // - n becase we already increase _n_total for writing metadata on tdb
     long old_n_total = _n_total - n;

@@ -56,16 +56,15 @@ namespace VCL {
 
     protected:
         const unsigned long MAX_DESC = 100000;
-
-        tiledb::Context _tiledb_ctx;
+        const unsigned long METADATA_OFFSET = MAX_DESC - 2;
 
         // this is caching data
         std::vector<long> _label_ids; // we need to move this
 
         void compute_distances(float* q, DistanceData& d, DescBuffer& data);
 
-        virtual void read_metadata();
-        virtual void write_metadata();
+        virtual void read_descriptor_metadata()  = 0;
+        virtual void write_descriptor_metadata() = 0;
 
     public:
 
@@ -108,15 +107,13 @@ namespace VCL {
 
     private:
 
-        const unsigned long METADATA_OFFSET = MAX_DESC - 2;
-
         // This is for caching, accelerates searches fairly well.
         bool _flag_buffer_updated;
         std::vector<float> _buffer;
 
-        void read_metadata();
-        void write_metadata();
         void load_buffer();
+        void read_descriptor_metadata();
+        void write_descriptor_metadata();
 
     public:
         TDBDenseDescriptorSet(const std::string &collection_path);
@@ -138,8 +135,8 @@ namespace VCL {
 
     private:
 
-        void read_metadata();
-        void write_metadata();
+        void read_descriptor_metadata();
+        void write_descriptor_metadata();
 
         void load_neighbors(float* query, unsigned k,
                             std::vector<float>& descriptors,

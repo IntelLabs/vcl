@@ -171,32 +171,3 @@ void TDBDescriptorSet::store(std::string filename)
     // which is basically make a copy of the TileDB folder.
     throw VCLException(UnsupportedOperation, "Unsupported operation");
 }
-
-void TDBDescriptorSet::read_metadata()
-{
-    std::string md_name = _set_path + METADATA_PATH;
-
-    std::vector<std::string> keys;
-    keys.push_back("dimensions");
-    keys.push_back("n_total");
-
-    std::vector<uint64_t*> values;
-    values.push_back((uint64_t*)&_dimensions);
-    values.push_back((uint64_t*)&_n_total);
-
-    TDBObject::read_metadata(md_name, keys, values);
-}
-
-void TDBDescriptorSet::write_metadata()
-{
-    std::vector<std::string> keys;
-    std::vector<uint64_t> values;
-
-    keys.push_back("dimensions");
-    keys.push_back("n_total");
-
-    values.push_back(_dimensions);
-    values.push_back(_n_total);
-
-    TDBObject::write_metadata(_set_path + METADATA_PATH, keys, values);
-}

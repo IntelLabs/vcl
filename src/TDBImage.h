@@ -59,10 +59,9 @@ namespace VCL {
         // threshold value
         int _threshold;
 
-        bool _tile_order;
-
         // raw data of the image
         unsigned char* _raw_data;
+        std::vector<unsigned char> _full_array;
 
     public:
     /*  *********************** */
@@ -340,23 +339,22 @@ namespace VCL {
          */
         std::string namespace_setup(const std::string &image_id);
 
-        /**
-         *  Sets the schema and writes the metadata of the TDBImage
-         *
-         *  @param  metadata  A flag indicating whether the metadata
-         *    should be stored in TileDB or not
-         *  @return  The number of values per cell in the array
-         */
-        void array_setup(bool metadata);
-
 
     /*  *********************** */
     /*   METADATA INTERACTION   */
     /*  *********************** */
+
+        /**
+         *  Writes the metadata of the TDBImage
+         *
+         *  @param  array  The tiledb::Array to which data is being written
+         */
+        void write_image_metadata(tiledb::Array &array);
+
         /**
          *  Reads the metadata at the existing TDBImage path variables
          */
-        void read_metadata();
+        void read_image_metadata();
 
 
     /*  *********************** */
@@ -370,28 +368,8 @@ namespace VCL {
          *  @param  subarray  An array of the coordinates of the subarray
          *    to read
          */
-        void read_from_tdb(int64_t* subarray);
+        void read_from_tdb(std::vector<uint64_t> subarray);
 
-        /**
-         *  Reorders the raw data buffer into image order and
-         *    casts as the specified type
-         *
-         *  @param  buffer  The buffer to store the image order data in
-         */
-        template <class T> void reorder_buffer(T* buffer);
-
-        /**
-         *  Reorders a tile into image order and casts as the
-         *    specified type
-         *
-         *  @param  buffer  The buffer to store the image order data in
-         *  @param  subarray  The coordinates of the current tile
-         *  @param  buffer_index  The current index into the image order buffer
-         *  @param  start_index  The current index into the raw data buffer
-         *  @return  The current index into the image order buffer
-         */
-        template <class T> long reorder_tile(T* buffer, int64_t* subarray,
-            long buffer_index, long start_index);
 
     /*  *********************** */
     /*      MATH FUNCTIONS      */

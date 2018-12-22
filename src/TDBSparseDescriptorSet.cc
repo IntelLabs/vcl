@@ -51,7 +51,8 @@ TDBSparseDescriptorSet::TDBSparseDescriptorSet(const std::string &filename):
     TDBDescriptorSet(filename)
 {
     _name = "unnecessary_name";
-    read_metadata();
+    TDBObject descriptorSetObject(_set_path);
+    read_descriptor_metadata();
 }
 
 TDBSparseDescriptorSet::TDBSparseDescriptorSet(
@@ -61,51 +62,62 @@ TDBSparseDescriptorSet::TDBSparseDescriptorSet(
     TDBDescriptorSet(filename, dim)
 {
     _name = "unnecessary_name";
-    tiledb::Domain domain(_tiledb_ctx);
+
+    std::vector<std::string> names;
+    std::vector<float> uppers;
+    std::vector<float> lowers;
+    TDBObject descriptorSetObject;
 
     for (int i = 0; i < _dimensions; ++i) {
-        std::string dim_name = "dim_" + std::to_string(i);
-
-        float lower_limit = DIMENSION_LOWER_LIMIT;
-        float upper_limit = DIMENSION_UPPER_LIMIT;
+        names.push_back("dim_" + std::to_string(i));
+        lowers.push_back(DIMENSION_LOWER_LIMIT);
 
         if (i == 0) {
             // First dimension is incresed to store metadata,
             // as descriptors will always have at least 1 dim.
-            upper_limit = upper_limit + DIMENSION_TILE_SIZE;
+            uppers.push_back(DIMENSION_UPPER_LIMIT + DIMENSION_TILE_SIZE);
         }
-
-        auto d = tiledb::Dimension::create<float>(
-                        _tiledb_ctx, dim_name.c_str(), {
-                        {lower_limit, upper_limit}}, DIMENSION_TILE_SIZE);
-        // TODO: The domains can be set based on the distribution
-        // of the data, which can be moved to trai() fuction in the future.
-        domain.add_dimension(d);
+        else
+            uppers.push_back(DIMENSION_UPPER_LIMIT);
     }
 
-    tiledb::Attribute att_id = tiledb::Attribute::create<long>(_tiledb_ctx, ATTRIBUTE_SPARSE_ID);
-    att_id.set_compressor({TILEDB_BLOSC_LZ, -1});
+    descriptorSetObject.set_full_dimensions(names, uppers, lowers, DIMENSION_TILE_SIZE);
+    descriptorSetObject.set_capacity(100);
+    descriptorSetObject.set_compression(VCL::CompressionType::LZ4);
+    descriptorSetObject.set_attributes(std::vector<std::string>{ATTRIBUTE_SPARSE_ID, ATTRIBUTE_SPARSE_LABEL});
 
-    tiledb::Attribute att_label = tiledb::Attribute::create<long>(_tiledb_ctx, ATTRIBUTE_SPARSE_LABEL);
-    att_label.set_compressor({TILEDB_BLOSC_LZ, -1});
+    std::vector<long> num_values{1, 1};
+    descriptorSetObject.set_schema_sparse(_set_path, num_values);
 
-    tiledb::ArraySchema schema(_tiledb_ctx, TILEDB_SPARSE);
-    schema.set_tile_order(TILEDB_ROW_MAJOR).set_cell_order(TILEDB_ROW_MAJOR);
-    schema.set_capacity(100);
-    schema.set_domain(domain);
-    schema.add_attribute(att_id);
-    schema.add_attribute(att_label);
-
-    try {
-        schema.check();
-    } catch (tiledb::TileDBError &e) {
-        throw VCLException(TileDBError, "Error setting TileDB Schema");
-    }
-
-    tiledb::Array::create(_set_path, schema);
+    write_descriptor_metadata();
 }
 
-void TDBSparseDescriptorSet::write_metadata()
+void TDBSparseDescriptorSet::read_descriptor_metadata()
+{
+    tiledb::Array array(_ctx, _set_path, TILEDB_READ);
+    _dimensions = array.schema().domain().ndim();
+    std::vector<float> coords(_dimensions * 2, DIMENSION_UPPER_LIMIT);
+    coords[0] += 1.0f;
+    coords[1] += 1.0f;
+
+    auto max_elements = array.max_buffer_elements(coords);
+    std::vector<long> id_val(max_elements[ATTRIBUTE_SPARSE_ID].second);
+    std::vector<long> label_val(max_elements[ATTRIBUTE_SPARSE_LABEL].second);
+
+    tiledb::Query md_read(_ctx, array, TILEDB_READ);
+
+    md_read.set_subarray(coords);
+    md_read.set_layout(TILEDB_ROW_MAJOR);
+    md_read.set_buffer(ATTRIBUTE_SPARSE_ID, id_val);
+    md_read.set_buffer(ATTRIBUTE_SPARSE_LABEL, label_val);
+    md_read.submit();
+    array.close();
+
+    _dimensions = id_val[0];
+    _n_total = label_val[0];
+}
+
+void TDBSparseDescriptorSet::write_descriptor_metadata()
 {
     std::vector<float> coords(_dimensions, DIMENSION_UPPER_LIMIT);
     coords[0] += 1.0f;
@@ -114,45 +126,14 @@ void TDBSparseDescriptorSet::write_metadata()
     long n_total = _n_total;
     // We use the ID attribute to store _dimension
     // and the LABEL attibute to store _n_total;
-    tiledb::Array array(_tiledb_ctx, _set_path, TILEDB_WRITE);
-    tiledb::Query query(_tiledb_ctx, array);
+    tiledb::Array array(_ctx, _set_path, TILEDB_WRITE);
+    tiledb::Query query(_ctx, array);
     query.set_layout(TILEDB_GLOBAL_ORDER);
     query.set_buffer(ATTRIBUTE_SPARSE_ID, &dims, 1);
     query.set_buffer(ATTRIBUTE_SPARSE_LABEL, &n_total, 1);
     query.set_buffer(TILEDB_COORDS, coords);
     query.submit();
     query.finalize();
-    array.close();
-}
-
-void TDBSparseDescriptorSet::read_metadata()
-{
-    tiledb::Array array(_tiledb_ctx, _set_path, TILEDB_READ);
-
-    std::vector<float> coords(_dimensions * 2, DIMENSION_UPPER_LIMIT);
-    coords[0] += 1.0f;
-    coords[1] += 1.0f;
-
-    auto max_sizes = array.max_buffer_elements(coords);
-
-    // Prepare cell buffers
-    std::vector<long> desc_ids(max_sizes[ATTRIBUTE_SPARSE_ID].second);
-    std::vector<long> desc_labels(max_sizes[ATTRIBUTE_SPARSE_LABEL].second);
-
-    tiledb::Query query(_tiledb_ctx, array);
-    query.set_layout(TILEDB_ROW_MAJOR).set_subarray(coords);
-    query.set_buffer(ATTRIBUTE_SPARSE_ID, desc_ids);
-    query.set_buffer(ATTRIBUTE_SPARSE_LABEL, desc_labels);
-    query.submit();
-
-    auto result_el = query.result_buffer_elements();
-    long found = result_el[ATTRIBUTE_SPARSE_ID].second;
-
-    assert(found == 1);
-
-    _dimensions = desc_ids[0];
-    _n_total = desc_labels[0];
-
     array.close();
 }
 
@@ -173,8 +154,8 @@ long TDBSparseDescriptorSet::add(float* descriptors, unsigned n, long* labels)
         }
 
         {
-            tiledb::Array array(_tiledb_ctx, _set_path, TILEDB_WRITE);
-            tiledb::Query query(_tiledb_ctx, array);
+            tiledb::Array array(_ctx, _set_path, TILEDB_WRITE);
+            tiledb::Query query(_ctx, array);
             query.set_layout(TILEDB_GLOBAL_ORDER);
             query.set_buffer(ATTRIBUTE_SPARSE_ID, att_id);
             query.set_buffer(ATTRIBUTE_SPARSE_LABEL, labels_for_query, n);
@@ -187,7 +168,7 @@ long TDBSparseDescriptorSet::add(float* descriptors, unsigned n, long* labels)
         throw VCLException(UnsupportedOperation, "TileDBError, check logs");
     }
 
-    write_metadata();
+    write_descriptor_metadata();
     _n_total += n;
     return _n_total - n;
 }
@@ -201,10 +182,9 @@ void TDBSparseDescriptorSet::load_neighbors(float* q, unsigned k,
     long found = 0;
     int attempt = 0;
 
-    tiledb::Array array(_tiledb_ctx, _set_path, TILEDB_READ);
+    tiledb::Array array(_ctx, _set_path, TILEDB_READ);
 
     while (found < k) {
-
         // Calculate maximum buffer elements for the
         // query results per attribute
 
@@ -233,7 +213,7 @@ void TDBSparseDescriptorSet::load_neighbors(float* q, unsigned k,
         desc_labels.resize(max_sizes[ATTRIBUTE_SPARSE_LABEL].second);
 
         // Create query
-        tiledb::Query query(_tiledb_ctx, array);
+        tiledb::Query query(_ctx, array);
         query.set_layout(TILEDB_ROW_MAJOR).set_subarray(subarray);
         query.set_buffer(ATTRIBUTE_SPARSE_LABEL, desc_labels);
         query.set_buffer(ATTRIBUTE_SPARSE_ID, desc_ids);
@@ -357,7 +337,7 @@ void TDBSparseDescriptorSet::get_descriptors(long* ids, unsigned n,
         subarray[2*i+1] = DIMENSION_UPPER_LIMIT;
     }
 
-    tiledb::Array array(_tiledb_ctx, _set_path, TILEDB_READ);
+    tiledb::Array array(_ctx, _set_path, TILEDB_READ);
     auto max_sizes = array.max_buffer_elements(subarray);
 
     // Prepare cell buffers
@@ -367,7 +347,7 @@ void TDBSparseDescriptorSet::get_descriptors(long* ids, unsigned n,
     desc_ids.resize(max_sizes[ATTRIBUTE_SPARSE_ID].second);
 
     // Create query
-    tiledb::Query query(_tiledb_ctx, array);
+    tiledb::Query query(_ctx, array);
     query.set_layout(TILEDB_ROW_MAJOR);
     query.set_subarray(subarray);
     query.set_buffer(ATTRIBUTE_SPARSE_ID, desc_ids);
@@ -422,7 +402,7 @@ void TDBSparseDescriptorSet::get_labels(long* ids, unsigned n, long* labels)
         subarray[2*i+1] = DIMENSION_UPPER_LIMIT;
     }
 
-    tiledb::Array array(_tiledb_ctx, _set_path, TILEDB_READ);
+    tiledb::Array array(_ctx, _set_path, TILEDB_READ);
     auto max_sizes = array.max_buffer_elements(subarray);
 
     // Prepare cell buffers
@@ -432,7 +412,7 @@ void TDBSparseDescriptorSet::get_labels(long* ids, unsigned n, long* labels)
     desc_labels.resize(max_sizes[ATTRIBUTE_SPARSE_LABEL].second);
 
     // Create query
-    tiledb::Query query(_tiledb_ctx, array);
+    tiledb::Query query(_ctx, array);
     query.set_layout(TILEDB_ROW_MAJOR).set_subarray(subarray);
     query.set_buffer(ATTRIBUTE_SPARSE_LABEL, desc_labels);
     query.set_buffer(ATTRIBUTE_SPARSE_ID, desc_ids);
