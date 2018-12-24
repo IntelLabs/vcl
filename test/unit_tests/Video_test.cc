@@ -36,12 +36,14 @@ class VideoTest : public ::testing::Test {
                     unsigned char pixel = img.at<unsigned char>(i, j);
                     unsigned char test_pixel = cv_img.at<unsigned char>(i, j);
                     ASSERT_EQ(pixel, test_pixel);
+                   
                 }
                 else {
                     cv::Vec3b colors = img.at<cv::Vec3b>(i, j);
                     cv::Vec3b test_colors = cv_img.at<cv::Vec3b>(i, j);
                     for ( int x = 0; x < channels; ++x ) {
                         ASSERT_EQ(colors.val[x], test_colors.val[x]);
+
                     }
                 }
             }
@@ -148,6 +150,7 @@ TEST_F(VideoTest, Read)
     long test_frame_count;
     long input_frame_count;
     test_frame_count= testVideo.get(CV_CAP_PROP_FRAME_COUNT);
+     input_frame_count = video.get_frame_count();
      ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(video.get_cv_video(), testVideo, 1, test_frame_count);
    }
@@ -165,13 +168,13 @@ TEST_F(VideoTest, Store)
     testVideo = cv::VideoCapture("videos/Megamind.avi");
     long test_frame_count;
     long input_frame_count;
-     cv::VideoWriter testResultVideo = cv::VideoWriter("videos_tests/test_store.avi",
+     cv::VideoWriter testResultVideo = cv::VideoWriter("videos_test/test_store_write1.avi",
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     testVideo.get(CV_CAP_PROP_FPS),
                     cv::Size(testVideo.get(CV_CAP_PROP_FRAME_WIDTH),testVideo.get(CV_CAP_PROP_FRAME_HEIGHT)));
     int count= 0;
     int _stop = video.get_frame_count();
-    int _step = 5;
+    int _step = 1;
     while ( count < _stop ) {
         cv::Mat frame;
         if ( testVideo.read(frame) ) {
@@ -186,12 +189,15 @@ TEST_F(VideoTest, Store)
             throw VCLException(ObjectEmpty, "Frame not retrieved");
         count+=_step;
     }
-    cv::VideoCapture test_written_video("videos_tests/test_store_store.avi");
+    cv::VideoCapture test_written_video("videos_test/test_store_write1.avi");
     std::string cv_name ;
-    cv_name = "cv_written_video";
+   
     cv::VideoCapture vcl_written_video(video.get_cv_video());
-    input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
+    input_frame_count = video.get_frame_count();
     test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
+    input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
+
+    std::cout<<test_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
   }
@@ -211,7 +217,7 @@ TEST_F(VideoTest, Interval)
     testVideo = cv::VideoCapture("videos/Megamind.avi");
     long test_frame_count;
     long input_frame_count;
-     cv::VideoWriter testResultVideo = cv::VideoWriter("videos_tests/test_interval.avi",
+     cv::VideoWriter testResultVideo = cv::VideoWriter("videos_test/test_Video_interval.avi",
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     testVideo.get(CV_CAP_PROP_FPS),
                     cv::Size(testVideo.get(CV_CAP_PROP_FRAME_WIDTH),testVideo.get(CV_CAP_PROP_FRAME_HEIGHT)));
@@ -232,11 +238,11 @@ TEST_F(VideoTest, Interval)
             throw VCLException(ObjectEmpty, "Frame not retrieved");
         count+=_step;
     }
-    cv::VideoCapture test_written_video("videos_tests/test_store_interval.avi");
+    cv::VideoCapture test_written_video("videos_test/test_Video_interval.avi");
     std::string cv_name ;
     cv_name = video.get_video_id();
     cv::VideoCapture vcl_written_video(video.get_cv_video());
-    input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
+     input_frame_count = video.get_frame_count();
     test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
@@ -259,7 +265,7 @@ TEST_F(VideoTest, Resize)
     testVideo = cv::VideoCapture("videos/Megamind.avi");
     long test_frame_count;
     long input_frame_count;
-     cv::VideoWriter testResultVideo = cv::VideoWriter("videos_tests/test_resize.avi",
+     cv::VideoWriter testResultVideo = cv::VideoWriter("videos_test/test_Video_resize.avi",
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     testVideo.get(CV_CAP_PROP_FPS),
                     cv::Size(testVideo.get(CV_CAP_PROP_FRAME_WIDTH),testVideo.get(CV_CAP_PROP_FRAME_HEIGHT)));
@@ -281,12 +287,14 @@ TEST_F(VideoTest, Resize)
             throw VCLException(ObjectEmpty, "Frame not retrieved");
         count+=_step;
     }
-    cv::VideoCapture test_written_video("videos_tests/test_store_resize.avi");
+    cv::VideoCapture test_written_video("videos_test/test_Video_resize.avi");
     std::string cv_name ;
    // std::cout<< _video.get_temporary_video() <<std:endl;
      cv_name = video.get_video_id();
+    input_frame_count = video.get_frame_count();
      cv::VideoCapture vcl_written_video(video.get_cv_video());
-    input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
+    input_frame_count = video.get_frame_count();
+     input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
     test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
@@ -309,7 +317,7 @@ TEST_F(VideoTest, Threshold)
     testVideo = cv::VideoCapture("videos/Megamind.avi");
     long test_frame_count;
     long input_frame_count;
-     cv::VideoWriter testResultVideo = cv::VideoWriter("videos_tests/test_threshold.avi",
+     cv::VideoWriter testResultVideo = cv::VideoWriter("videos_test/test_Video_threshold.avi",
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     testVideo.get(CV_CAP_PROP_FPS),
                     cv::Size(testVideo.get(CV_CAP_PROP_FRAME_WIDTH),testVideo.get(CV_CAP_PROP_FRAME_HEIGHT)));
@@ -333,12 +341,13 @@ TEST_F(VideoTest, Threshold)
             throw VCLException(ObjectEmpty, "Frame not retrieved");
         count+=_step;
     }
-    cv::VideoCapture test_written_video("videos_tests/test_store_threshold.avi");
+    cv::VideoCapture test_written_video("videos_test/test_Video_threshold.avi");
     std::string cv_name ;
    // std::cout<< _video.get_temporary_video() <<std:endl;
-     cv_name = video.get_video_id();
+    cv_name = video.get_video_id();
+    input_frame_count = video.get_frame_count();
     cv::VideoCapture vcl_written_video(video.get_cv_video());
-    input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
+    //input_frame_count = vcl_written_video.get_frame_count();
     test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
@@ -355,7 +364,7 @@ TEST_F(VideoTest, CreateUnique)
     try
      {
         VCL::Video video(_inputVideo); //
-        video.create_unique("videos_tests/", VCL::Video::Format::MP4);
+        video.create_unique("videos_test/", VCL::Video::Format::MP4);
         std::cout<<video.get_video_id() <<std::endl;
         video.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
         video.store(video.get_video_id(), VCL::Video::Format::MP4);
@@ -370,7 +379,7 @@ TEST_F(VideoTest, Crop)
 {
 
    try {
-    std::cout<< " Crop Operation" << std::endl;
+    std::cout<< "Crop Operation" << std::endl;
     VCL::Video video(_video); //
     video.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
     video.crop(VCL::Rectangle(0, 0, 50, 50));
@@ -378,7 +387,7 @@ TEST_F(VideoTest, Crop)
     testVideo = cv::VideoCapture("videos/Megamind.avi");
     long test_frame_count;
     long input_frame_count;
-     cv::VideoWriter testResultVideo = cv::VideoWriter("videos_tests/test_crop.avi",
+     cv::VideoWriter testResultVideo = cv::VideoWriter("videos_test/test_video_crop.avi",
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     testVideo.get(CV_CAP_PROP_FPS),
                     cv::Size(testVideo.get(CV_CAP_PROP_FRAME_WIDTH),testVideo.get(CV_CAP_PROP_FRAME_HEIGHT)));
@@ -401,11 +410,11 @@ TEST_F(VideoTest, Crop)
             throw VCLException(ObjectEmpty, "Frame not retrieved");
         count+=_step;
     }
-    cv::VideoCapture test_written_video("videos_tests/test_store_crop.avi");
-    // std::string cv_name ;
-    // cv_name = video.get_video_id();
+    cv::VideoCapture test_written_video("videos_test/test_video_crop.avi");
+    std::string cv_name ;
+    cv_name = video.get_video_id();
     cv::VideoCapture vcl_written_video(video.get_cv_video());
-    input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
+    input_frame_count = video.get_frame_count();
     test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);

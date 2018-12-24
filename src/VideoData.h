@@ -311,7 +311,7 @@ namespace VCL {
     cv::VideoCapture _inputVideo;
     cv::VideoWriter _outputVideo;
     std::string _temporary_path;
-    std::string _temporary_video;
+    std::string _fullpath;
     bool _temp_exist = false;
     int  _frame_count;
     float _fps;
@@ -403,7 +403,7 @@ namespace VCL {
          */
         VCL::Video::Video_Size get_size();
 
-        std::string get_temporary_video(void);
+        std::string get_fullpath(void);
          /**
          *  Gets the Video data in a buffer
          *
