@@ -52,7 +52,9 @@ void VideoData::Write::operator()(VideoData *video)
 
         count+=video->_step;
   }
-
+ 
+   
+  video->_inputVideo = cv::VideoCapture(video->_fullpath);
 }
 
     /*  *********************** */
@@ -86,6 +88,7 @@ void VideoData::Resize::operator()(VideoData *video)
     }
 
     video->_temp_exist = true;
+    video->_inputVideo = cv::VideoCapture(video->_fullpath);
 }
 
     /*  *********************** */
@@ -117,6 +120,7 @@ void VideoData::Crop::operator()(VideoData *video)
         count+=video->_step;
     }
     video->_temp_exist = true;
+    video->_inputVideo = cv::VideoCapture(video->_fullpath);
 }
 
     /*  *********************** */
@@ -146,10 +150,11 @@ void VideoData::Threshold::operator()(VideoData *video)
         else
             throw VCLException(ObjectEmpty, "Frame not retrieved");
         count+=video->_step;
-       // video->_inputVideo=cv::VideoCapture(video->_outputVideo);
+     
     }
 
     video->_temp_exist = true;
+    video->_inputVideo = cv::VideoCapture(video->_fullpath);
 }
                     /*  *********************** */
                     /*      Interval Operation  */
@@ -162,6 +167,10 @@ void VideoData::Interval::operator()(VideoData *video)
     /*  *********************** */
     /*        CONSTRUCTORS      */
     /*  *********************** */
+void VideoData::set_cv_video(cv::VideoCapture& v){
+
+    _inputVideo=v;
+}
 
 VideoData::VideoData()
 {
@@ -308,7 +317,7 @@ VideoData::~VideoData()
 
 std::string VideoData::get_video_id() const
 {
-    return _video_id;
+    return _fullpath;
 }
 cv::VideoCapture VideoData::get_cv_video() const
 {

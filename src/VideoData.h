@@ -466,6 +466,7 @@ namespace VCL {
          *  @param Video_id  The full path to the Video location
          */
         void set_video_id(const std::string &Video_id);
+        void set_cv_video(cv::VideoCapture& );
 
         /**
          *  Sets the format of the VideoData object
