@@ -56,21 +56,13 @@ namespace VCL {
      *
      *  @param path  A string with the path to where the object should be
      *                  stored
-     *  @param format The Format the object should be stored as
+     *  @param extension The format the object should be stored as
      *  @return The string containing the full path to the object (path
-     *    + unique id + format)
+     *    + unique id + extension)
      */
-
+    std::string create_unique_path(const std::string &path, const std::string &extension);
 
     std::string remove_extention(std::string old_name);
-
-    /**
-     *  Converts Format to string
-     *
-     *  @param image_format The Format of the object
-     *  @return The string containing the extension
-     */
-
 
 
     /**
@@ -89,4 +81,6 @@ namespace VCL {
      *  @return True if the file does not exist, false if it does
      */
     bool exists(const std::string &name);
+
+
 };

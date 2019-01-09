@@ -30,12 +30,9 @@
 #include "VideoData.h"
 #include "gtest/gtest.h"
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/highgui/highgui.hpp>
+
+
+#include "helpers.h"
 
 #include <string>
 #include <iostream>
@@ -57,52 +54,6 @@ class VideoDataTest : public ::testing::Test {
     virtual void SetUp() {
         _video = "videos/Megamind.avi";
         _inputVideo = cv::VideoCapture("videos/Megamind.avi");
-
-    }
-    void compare_mat_mat(cv::Mat &cv_img, cv::Mat &img)
-    {
-        int rows = img.rows;
-        int columns = img.cols;
-        int channels = img.channels();
-        if ( img.isContinuous() ) {
-            columns *= rows;
-            rows = 1;
-        }
-
-        for ( int i = 0; i < rows; ++i ) {
-            for ( int j = 0; j < columns; ++j ) {
-                if (channels == 1) {
-                    unsigned char pixel = img.at<unsigned char>(i, j);
-                    unsigned char test_pixel = cv_img.at<unsigned char>(i, j);
-                    ASSERT_EQ(pixel, test_pixel);
-                }
-                else {
-                    cv::Vec3b colors = img.at<cv::Vec3b>(i, j);
-                    cv::Vec3b test_colors = cv_img.at<cv::Vec3b>(i, j);
-                    for ( int x = 0; x < channels; ++x ) {
-                        ASSERT_EQ(colors.val[x], test_colors.val[x]);
-                    }
-                }
-            }
-        }
-    }
-    void compare_cvcapture_cvcapture(cv::VideoCapture v1, cv::VideoCapture v2, int start, int end){
-        int count=start;
-        while ( count < end ) {
-        cv::Mat frame1;
-        cv::Mat frame2;
-        if ( v1.read(frame1) && v2.read(frame2)) {
-            if ( !frame1.empty() && !frame2.empty()) {
-
-                 compare_mat_mat(frame1,frame2);
-            }
-            else
-                throw VCLException(ObjectEmpty, "Frame is empty");
-        }
-        else
-            throw VCLException(ObjectEmpty, "Frame not retrieved");
-        count+=1;
-    }
 
     }
 

@@ -491,48 +491,31 @@ std::vector<unsigned char> ImageData::get_encoded(VCL::Image::Format format,
     /*        SET FUNCTIONS     */
     /*  *********************** */
 std::string ImageData::create_unique(const std::string &path, VCL::Image::Format format)
-    {
-        std::string unique_id;
-        std::string name;
+{
+    std::string extension = format_to_string(format);
+    std::string name = create_unique_path(path, extension);
+    _image_id = name;
 
-        std::string extension = format_to_string(format);
-
-        const char& last = path.back();
-
-        do {
-            uint64_t id = get_uint64();
-            std::stringstream ss;
-            ss << std::hex << id;
-            unique_id = ss.str();
-            if (last != '/')
-                name = path + "/" + unique_id + "." + extension;
-            else
-                name = path + unique_id + "." + extension;
-        } while ( exists(name) );
-
-        return name;
-    }
-
-
-
+    return name;
+}
 
 std::string ImageData::format_to_string(VCL::Image::Format format)
+{
+    switch( format )
     {
-        switch( format )
-        {
-            case VCL::Image::Format::NONE_IMAGE:
-                return "";
-            case VCL::Image::Format::JPG:
-                return "jpg";
-            case VCL::Image::Format::PNG:
-                return "png";
-            case VCL::Image::Format::TDB:
-                return "tdb";
-            default:
-                throw VCLException(UnsupportedFormat, (int)format + " is not a \
-                    valid format");
-        }
+        case VCL::Image::Format::NONE_IMAGE:
+            return "";
+        case VCL::Image::Format::JPG:
+            return "jpg";
+        case VCL::Image::Format::PNG:
+            return "png";
+        case VCL::Image::Format::TDB:
+            return "tdb";
+        default:
+            throw VCLException(UnsupportedFormat, (int)format + " is not a \
+                valid format");
     }
+}
 
 void ImageData::set_image_id(const std::string &image_id)
 {

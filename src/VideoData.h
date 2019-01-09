@@ -65,6 +65,7 @@ namespace VCL {
         protected:
             /** The format of the Video for this operation */
             VCL::Video::Format _format;
+            int _fourcc;
 
             /**
              *  Constructor, sets the format
@@ -87,6 +88,8 @@ namespace VCL {
             virtual void operator()(VideoData *video) = 0;
 
             virtual OperationType get_type() = 0;
+
+            void set_fourcc();
         };
 
     /*  *********************** */

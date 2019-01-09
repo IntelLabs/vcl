@@ -37,6 +37,21 @@
 
 #include "VCL.h"
 
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+
+void compare_mat_mat(cv::Mat &cv_img, cv::Mat &img);
+
+void compare_cvcapture_cvcapture(cv::VideoCapture v1, cv::VideoCapture v2,
+                                 int start, int end);
+ void compare_buffer_buffer(unsigned char* buffer1, unsigned char* buffer2, int length);
+ void compare_mat_buffer(cv::Mat &img, unsigned char* buffer);
+
 void generate_desc_linear_increase(int d, int nb, float* xb, float init = 0);
 
 float* generate_desc_linear_increase(int d, int nb, float init = 0);

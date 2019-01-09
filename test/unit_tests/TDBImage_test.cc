@@ -37,6 +37,7 @@
 #include <opencv2/imgproc.hpp>
 #include <string>
 
+#include "helpers.h"
 class TDBImageTest : public ::testing::Test {
 
 protected:
@@ -45,72 +46,6 @@ protected:
         tdb_test_ = "tdb/write_test.tdb";
         cv_img_ = cv::imread("images/large1.jpg", cv::IMREAD_ANYCOLOR);
         rect_ = VCL::Rectangle(100, 100, 100, 100);
-    }
-
-    void compare_mat_buffer(cv::Mat &img, unsigned char* buffer)
-    {
-        int index = 0;
-
-        int rows = img.rows;
-        int columns = img.cols;
-        int channels = img.channels();
-
-        if ( img.isContinuous() ) {
-            columns *= rows;
-            rows = 1;
-        }
-
-        for ( int i = 0; i < rows; ++i ) {
-            for ( int j = 0; j < columns; ++j ) {
-                if (channels == 1) {
-                    unsigned char pixel = img.at<unsigned char>(i, j);
-                    ASSERT_EQ(pixel, buffer[index]);
-                }
-                else {
-                    cv::Vec3b colors = img.at<cv::Vec3b>(i, j);
-                    for ( int x = 0; x < channels; ++x ) {
-                        ASSERT_EQ(colors.val[x], buffer[index + x]);
-                    }
-                }
-                index += channels;
-            }
-        }
-    }
-
-    void compare_mat_mat(cv::Mat &cv_img, cv::Mat &img)
-    {
-        int rows = img.rows;
-        int columns = img.cols;
-        int channels = img.channels();
-
-        if ( img.isContinuous() ) {
-            columns *= rows;
-            rows = 1;
-        }
-
-        for ( int i = 0; i < rows; ++i ) {
-            for ( int j = 0; j < columns; ++j ) {
-                if (channels == 1) {
-                    unsigned char pixel = img.at<unsigned char>(i, j);
-                    unsigned char test_pixel = cv_img.at<unsigned char>(i, j);
-                    ASSERT_EQ(pixel, test_pixel);
-                }
-                else {
-                    cv::Vec3b colors = img.at<cv::Vec3b>(i, j);
-                    cv::Vec3b test_colors = cv_img.at<cv::Vec3b>(i, j);
-                    for ( int x = 0; x < channels; ++x ) {
-                        ASSERT_EQ(colors.val[x], test_colors.val[x]);
-                    }
-                }
-            }
-        }
-    }
-
-    void compare_buffer_buffer(unsigned char* buffer1, unsigned char* buffer2, int length)
-    {
-        for ( int i = 0; i < length; ++i ) {
-            ASSERT_EQ(buffer1[i], buffer2[i]);
-        }
     }
 
     std::string tdb_img_;
@@ -181,7 +116,7 @@ TEST_F(TDBImageTest, CopyConstructorNoData)
 
 TEST_F(TDBImageTest, CopyConstructorData)
 {
-
+    try {
     VCL::TDBImage tdb("tdb/copy_construct.tdb");
 
     ASSERT_THROW(tdb.get_image_height(), VCL::Exception);
@@ -208,6 +143,10 @@ TEST_F(TDBImageTest, CopyConstructorData)
 
     delete [] buffer2;
     delete [] buffer1;
+    }
+    catch (VCL::Exception &e) {
+        print_exception(e);
+    }
 }
 
 TEST_F(TDBImageTest, CopyConstructor)

@@ -34,10 +34,10 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
-
-#include "VCL.h"
 #include "gtest/gtest.h"
 #include "helpers.h"
+#include "VCL.h"
+
 
 TEST(Descriptors_Train, train_flatl2_4d)
 {

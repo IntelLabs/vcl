@@ -33,8 +33,98 @@
 #include <fstream>
 #include <iostream>
 #include <cmath>
-
+#include "gtest/gtest.h"
 #include "helpers.h"
+
+// Image / Video Helpers
+
+void compare_mat_mat(cv::Mat &cv_img, cv::Mat &img)
+{
+    int rows = img.rows;
+    int columns = img.cols;
+    int channels = img.channels();
+    if ( img.isContinuous() ) {
+        columns *= rows;
+        rows = 1;
+    }
+
+    for ( int i = 0; i < rows; ++i ) {
+        for ( int j = 0; j < columns; ++j ) {
+            if (channels == 1) {
+                unsigned char pixel = img.at<unsigned char>(i, j);
+                unsigned char test_pixel = cv_img.at<unsigned char>(i, j);
+                ASSERT_EQ(pixel, test_pixel);
+
+            }
+            else {
+                cv::Vec3b colors = img.at<cv::Vec3b>(i, j);
+                cv::Vec3b test_colors = cv_img.at<cv::Vec3b>(i, j);
+                for ( int x = 0; x < channels; ++x ) {
+                    ASSERT_EQ(colors.val[x], test_colors.val[x]);
+
+                }
+            }
+        }
+    }
+}
+
+void compare_cvcapture_cvcapture(cv::VideoCapture v1, cv::VideoCapture v2, int start, int end)
+{
+    int count=start;
+    while ( count < end ) {
+        cv::Mat frame1;
+        cv::Mat frame2;
+        if ( v1.read(frame1) && v2.read(frame2)) {
+            if ( !frame1.empty() && !frame2.empty()) {
+
+                 compare_mat_mat(frame1,frame2);
+            }
+            else
+                throw VCLException(ObjectEmpty, "Frame is empty");
+        }
+        else
+            throw VCLException(ObjectEmpty, "Frame not retrieved");
+        count+=1;
+    }
+
+}
+
+
+void compare_mat_buffer(cv::Mat &img, unsigned char* buffer)
+    {
+        int index = 0;
+
+        int rows = img.rows;
+        int columns = img.cols;
+        int channels = img.channels();
+
+        if ( img.isContinuous() ) {
+            columns *= rows;
+            rows = 1;
+        }
+
+        for ( int i = 0; i < rows; ++i ) {
+            for ( int j = 0; j < columns; ++j ) {
+                if (channels == 1) {
+                    unsigned char pixel = img.at<unsigned char>(i, j);
+                    ASSERT_EQ(pixel, buffer[index]);
+                }
+                else {
+                    cv::Vec3b colors = img.at<cv::Vec3b>(i, j);
+                    for ( int x = 0; x < channels; ++x ) {
+                        ASSERT_EQ(colors.val[x], buffer[index + x]);
+                    }
+                }
+                index += channels;
+            }
+        }
+    }
+    void compare_buffer_buffer(unsigned char* buffer1, unsigned char* buffer2, int length)
+    {
+        for ( int i = 0; i < length; ++i ) {
+            ASSERT_EQ(buffer1[i], buffer2[i]);
+        }
+    }
 
 // This function return nb descriptors of dimension d as follows:
 // init       init      ...   init      (d times)

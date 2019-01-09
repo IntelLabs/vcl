@@ -14,6 +14,33 @@ using namespace std;
 
 using namespace VCL;
 
+void VideoData::Operation::set_fourcc()
+{
+    switch( _format )
+    {
+        case VCL::Video::Format::MP4:
+            _fourcc = CV_FOURCC('H', '2', '6', '+');
+            break;
+        case VCL::Video::Format::AVI:
+            _fourcc = CV_FOURCC('M', 'J', 'P', 'G');
+            break;
+        case VCL::Video::Format::MPEG:
+            _fourcc = CV_FOURCC('M', 'P', 'E', 'G');
+            // _fourcc[0] = 'M';
+            // _fourcc[1] = 'P';
+            // _fourcc[2] = 'E';
+            // _fourcc[3] = 'G';
+            // break;
+        case VCL::Video::Format::XVID:
+            _fourcc = CV_FOURCC('X', 'V', 'I', 'D');
+            break;
+        default:
+            throw VCLException(UnsupportedFormat, (int)_format + " is not a \
+                valid format");
+    }
+}
+
+
 VideoData::Read::Read(const std::string& filename, VCL::Video::Format format)
     : Operation(format),
       _fullpath(filename)
@@ -37,24 +64,25 @@ VideoData::Write::Write(const std::string& filename, VCL::Video::Format format,
 
 void VideoData::Write::operator()(VideoData *video)
 {
-    cv::VideoWriter _outputVideo(_fullpath,
-                    CV_FOURCC('X', 'V', 'I', 'D'),
+    set_fourcc();
+    cv::VideoWriter _outputVideo(video->_fullpath,
+                    _fourcc,
                     video->_fps,
                     cv::Size(video->_frame_width, video->_frame_height));
     int count=video->_start_frame;
     while (count <=video->_end_frame)
     {
         cv::Mat frame;
-        video->_inputVideo >> frame;
+        video->_cv_video >> frame;
         if (frame.empty())
           break; // probably want to throw if the frame is empty
          _outputVideo.write(frame);
 
         count+=video->_step;
   }
- 
-   
-  video->_inputVideo = cv::VideoCapture(video->_fullpath);
+
+
+  video->_cv_video = cv::VideoCapture(video->_fullpath);
 }
 
     /*  *********************** */
@@ -63,16 +91,17 @@ void VideoData::Write::operator()(VideoData *video)
 
 void VideoData::Resize::operator()(VideoData *video)
 {
-     video->_outputVideo = cv::VideoWriter(video->_fullpath,
-                    CV_FOURCC('X', 'V', 'I', 'D'),
+    set_fourcc();
+    video->_outputVideo = cv::VideoWriter(video->_fullpath,
+                    _fourcc,
                     video->_fps,
                     cv::Size(_rect.width, _rect.height));
 
-    video->_inputVideo.set(CV_CAP_PROP_POS_FRAMES, video->_start_frame - 1);
+    video->_cv_video.set(CV_CAP_PROP_POS_FRAMES, video->_start_frame - 1);
     int count = video->_start_frame;
       while ( count < video->_end_frame ) {
         cv::Mat frame;
-        if ( video->_inputVideo.read(frame) ) {
+        if ( video->_cv_video.read(frame) ) {
             if ( !frame.empty() ) {
                  cv::Mat cv_resized;
                  cv::resize(frame, cv_resized, cv::Size(_rect.width, _rect.height));
@@ -88,7 +117,7 @@ void VideoData::Resize::operator()(VideoData *video)
     }
 
     video->_temp_exist = true;
-    video->_inputVideo = cv::VideoCapture(video->_fullpath);
+    video->_cv_video = cv::VideoCapture(video->_fullpath);
 }
 
     /*  *********************** */
@@ -97,15 +126,16 @@ void VideoData::Resize::operator()(VideoData *video)
 
 void VideoData::Crop::operator()(VideoData *video)
 {
+    set_fourcc();
     video->_outputVideo = cv::VideoWriter(video->_fullpath,
-                    CV_FOURCC('X', 'V', 'I', 'D'),
+                    _fourcc,
                     video->_fps,
                     cv::Size(_rect.width, _rect.height));
-    video->_inputVideo.set(CV_CAP_PROP_POS_FRAMES, video->_start_frame - 1);
+    video->_cv_video.set(CV_CAP_PROP_POS_FRAMES, video->_start_frame - 1);
     int count = video->_start_frame;
     while ( count < video->_end_frame ) {
         cv::Mat frame;
-        if ( video->_inputVideo.read(frame) ) {
+        if ( video->_cv_video.read(frame) ) {
             if ( !frame.empty() ) {
                 if ( frame.rows < _rect.height + _rect.y || frame.cols < _rect.width + _rect.x )
                     throw VCLException(SizeMismatch, "Requested area is not within the Video");
@@ -120,7 +150,7 @@ void VideoData::Crop::operator()(VideoData *video)
         count+=video->_step;
     }
     video->_temp_exist = true;
-    video->_inputVideo = cv::VideoCapture(video->_fullpath);
+    video->_cv_video = cv::VideoCapture(video->_fullpath);
 }
 
     /*  *********************** */
@@ -129,16 +159,17 @@ void VideoData::Crop::operator()(VideoData *video)
 
 void VideoData::Threshold::operator()(VideoData *video)
 {
+    set_fourcc();
     video->_outputVideo = cv::VideoWriter(video->_fullpath,
-                    CV_FOURCC('X', 'V', 'I', 'D'),
+                    _fourcc,
                     video->_fps,
                     cv::Size(video->_frame_width, video->_frame_height));
 
-    video->_inputVideo.set(CV_CAP_PROP_POS_FRAMES, video->_start_frame - 1);
+    video->_cv_video.set(CV_CAP_PROP_POS_FRAMES, video->_start_frame - 1);
     int count = video->_start_frame;
     while ( count < video->_end_frame ) {
         cv::Mat frame;
-        if ( video->_inputVideo.read(frame) ) {
+        if ( video->_cv_video.read(frame) ) {
             if ( !frame.empty() ) {
                  cv::threshold(frame, frame, _threshold, _threshold,
                  cv::THRESH_TOZERO);
@@ -150,11 +181,11 @@ void VideoData::Threshold::operator()(VideoData *video)
         else
             throw VCLException(ObjectEmpty, "Frame not retrieved");
         count+=video->_step;
-     
+
     }
 
     video->_temp_exist = true;
-    video->_inputVideo = cv::VideoCapture(video->_fullpath);
+    video->_cv_video = cv::VideoCapture(video->_fullpath);
 }
                     /*  *********************** */
                     /*      Interval Operation  */
@@ -169,7 +200,7 @@ void VideoData::Interval::operator()(VideoData *video)
     /*  *********************** */
 void VideoData::set_cv_video(cv::VideoCapture& v){
 
-    _inputVideo=v;
+    _cv_video=v;
 }
 
 VideoData::VideoData()
@@ -182,56 +213,54 @@ VideoData::VideoData()
     _frame_width=0;
     _frame_height=0;
     _video_id ="";
-    _format = VCL::Video::Format::NONE_VIDEO;
+    _format = VCL::Video::Format::AVI;
     _temporary_path ="videos_test/";
-    _fullpath = create_unique(_temporary_path, VCL::Video::Format::AVI);
+    _fullpath = create_unique(_temporary_path, _format);
 }
 
 
 VideoData::VideoData(const VideoData &video)
 {
-     copy_cv(_inputVideo); // TODO
-     _format = video._format;
+    copy_cv(_cv_video); // TODO
+    _format = video._format;
     _compress = VCL::Video::CompressionType::NOCOMPRESSION_Video ;
-     _temporary_path ="videos_test/";
-    _fullpath = create_unique(_temporary_path, VCL::Video::Format::AVI);
-     _video_id = "";
+    _temporary_path ="videos_test/";
+    _fullpath = create_unique(_temporary_path, _format);
+    _video_id = "";
 }
 
 VideoData::VideoData( const std::string &video_id )
 {
-     _video_id = video_id;
-    _inputVideo =  cv::VideoCapture(video_id);
-     _temporary_path = "videos_test/";
-     _fullpath = create_unique(_temporary_path, VCL::Video::Format::AVI);
+    _video_id = video_id;
+    _cv_video =  cv::VideoCapture(video_id);
+    _temporary_path = "videos_test/";
+
     _start_frame =0;
-    _fps = static_cast<float>(_inputVideo.get(CV_CAP_PROP_FPS));
-    _frame_count = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FRAME_COUNT));
-    _frame_width = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FRAME_WIDTH));
-    _frame_height = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT));
+    _fps = static_cast<float>(_cv_video.get(CV_CAP_PROP_FPS));
+    _frame_count = static_cast<int>(_cv_video.get(CV_CAP_PROP_FRAME_COUNT));
+    _frame_width = static_cast<int>(_cv_video.get(CV_CAP_PROP_FRAME_WIDTH));
+    _frame_height = static_cast<int>(_cv_video.get(CV_CAP_PROP_FRAME_HEIGHT));
     _video_time = _frame_count/_fps;
     _length = _frame_count;
     _end_frame = _frame_count;
 
-    if(!_inputVideo.isOpened()) {  // check if we succeeded
+    if(!_cv_video.isOpened()) {  // check if we succeeded
       std::cout<<" Error in Opening the File " <<std::endl;
       throw VCLException(OpenFailed, "Could not open " + video_id);
     }
 
-    int ex = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FOURCC));     // Get Codec Type- Int form
+    int ex = static_cast<int>(_cv_video.get(CV_CAP_PROP_FOURCC));     // Get Codec Type- Int form
     char EXT[] = {(char)(ex & 0XFF) , (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
     set_format_from_extension(EXT);
-
-   
+    _fullpath = create_unique(_temporary_path, _format);
 }
 
 VideoData::VideoData(void* buffer, long size)
 {
-
     std::fstream outfile;
     _temporary_path = "videos_test/";
-   _fullpath = create_unique(_temporary_path, VCL::Video::Format::AVI);
-     outfile.open(_fullpath, std::ios::out);
+    _fullpath = create_unique(_temporary_path, VCL::Video::Format::AVI);
+    outfile.open(_fullpath, std::ios::out);
     if (outfile.is_open())
     {
         outfile.write(reinterpret_cast<char*>(buffer), size);
@@ -241,44 +270,45 @@ VideoData::VideoData(void* buffer, long size)
     else std::cout<< " The Video Blob was not opened!"<<std::endl;
 
  //after we recieved the video file, we create a VideoCapture out of it in-order toget the vide details.
-    _inputVideo =  cv::VideoCapture(_fullpath);
-    _fps         = static_cast<float>(_inputVideo.get(CV_CAP_PROP_FPS));
-    _frame_count = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FRAME_COUNT));
-    _frame_width = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FRAME_WIDTH));
-    _frame_height = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT));
+    _cv_video =  cv::VideoCapture(_fullpath);
+    _fps         = static_cast<float>(_cv_video.get(CV_CAP_PROP_FPS));
+    _frame_count = static_cast<int>(_cv_video.get(CV_CAP_PROP_FRAME_COUNT));
+    _frame_width = static_cast<int>(_cv_video.get(CV_CAP_PROP_FRAME_WIDTH));
+    _frame_height = static_cast<int>(_cv_video.get(CV_CAP_PROP_FRAME_HEIGHT));
     _video_time = _frame_count/_fps;
     _length = _frame_count;
     _end_frame = _frame_count;
-     _start_frame =0;
+    _start_frame =0;
 
-     if(!_inputVideo.isOpened()) {  // check if we succeeded
+    if(!_cv_video.isOpened()) {  // check if we succeeded
       std::cout<<" Error in Opening the Video File " <<std::endl;
       throw VCLException(OpenFailed, "Could not open " +_fullpath);
     }
-    int ex = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FOURCC));     // Get Codec Type- Int form
+    int ex = static_cast<int>(_cv_video.get(CV_CAP_PROP_FOURCC));     // Get Codec Type- Int form
     char EXT[] = {(char)(ex & 0XFF) , (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
     set_format_from_extension(EXT); // to get the current extention of the video file
 }
 
 VideoData::VideoData(const cv::VideoCapture &cv_video )
 {
-    _inputVideo = cv_video;
-    if(!_inputVideo.isOpened())  // check if we succeeded
+    _cv_video = cv_video;
+    if(!_cv_video.isOpened())  // check if we succeeded
         std::cout<<" Error in Opening the File " <<std::endl;
     else {
-        _frame_count = (int) _inputVideo.get(CV_CAP_PROP_FRAME_COUNT);
-        _fps = static_cast<float>(_inputVideo.get(CV_CAP_PROP_FPS));
-        int ex = static_cast<int>(_inputVideo.get(CV_CAP_PROP_FOURCC));
+        _frame_count = (int) _cv_video.get(CV_CAP_PROP_FRAME_COUNT);
+        _fps = static_cast<float>(_cv_video.get(CV_CAP_PROP_FPS));
+        int ex = static_cast<int>(_cv_video.get(CV_CAP_PROP_FOURCC));
         char EXT[] = {(char)(ex & 0XFF) , (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
         set_format_from_extension(EXT);
-        _frame_width = _inputVideo.get(CV_CAP_PROP_FRAME_WIDTH);
-        _frame_height = _inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT);
+        _frame_width = _cv_video.get(CV_CAP_PROP_FRAME_WIDTH);
+        _frame_height = _cv_video.get(CV_CAP_PROP_FRAME_HEIGHT);
         _end_frame = _frame_count;
         _start_frame =0;
-        }
-    _temporary_path ="videos_test/";
-   _fullpath = create_unique(_temporary_path, VCL::Video::Format::AVI);
     }
+
+    _temporary_path ="videos_test/";
+    _fullpath = create_unique(_temporary_path, _format);
+}
 
 cv::VideoWriter VideoData::get_output_video(){
     return _outputVideo;
@@ -307,7 +337,7 @@ void VideoData::operator=(const VideoData &video)
 
 VideoData::~VideoData()
 {
-    _inputVideo.release();
+    _cv_video.release();
     _outputVideo.release();
 }
 
@@ -321,7 +351,7 @@ std::string VideoData::get_video_id() const
 }
 cv::VideoCapture VideoData::get_cv_video() const
 {
-    return _inputVideo;
+    return _cv_video;
 }
 
 VCL::Video::Format VideoData::get_video_format() const
@@ -336,16 +366,16 @@ long VideoData::get_frame_count() const
 
 cv::Size VideoData::get_dimensions()
 {
-     _dim = cv::Size((int) _inputVideo.get(CV_CAP_PROP_FRAME_WIDTH),    // Acquire input size
-                 (int) _inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT));
+     _dim = cv::Size((int) _cv_video.get(CV_CAP_PROP_FRAME_WIDTH),    // Acquire input size
+                 (int) _cv_video.get(CV_CAP_PROP_FRAME_HEIGHT));
     return _dim;
 }
 
 VCL::Video::Video_Size VideoData::get_size()
 {
-    _size.width = (int) _inputVideo.get(CV_CAP_PROP_FRAME_WIDTH);    // Acquire input size
-    _size.height=  (int) _inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT);
-    _size.frame_number = (int) _inputVideo.get(CV_CAP_PROP_FRAME_COUNT);
+    _size.width = (int) _cv_video.get(CV_CAP_PROP_FRAME_WIDTH);    // Acquire input size
+    _size.height=  (int) _cv_video.get(CV_CAP_PROP_FRAME_HEIGHT);
+    _size.frame_number = (int) _cv_video.get(CV_CAP_PROP_FRAME_COUNT);
     return _size;
 }
 
@@ -391,43 +421,34 @@ std::string VideoData::remove_extention(const std::string old_name)
     _video_id = VCL::remove_extention(old_name);
     return _video_id;
 }
-std::string VideoData::create_unique(const std::string &path, VCL::Video::Format format)
-    {
-        std::string unique_id;
-        std::string name;
-        std::string extension = format_to_string(format);
-        const char& last = path.back();
-        do {
-            uint64_t id = get_uint64();
-            std::stringstream ss;
-            ss << std::hex << id;
-            unique_id = ss.str();
-            if (last != '/')
-                name = path + "/" + unique_id + "." + extension;
-            else
-                name = path + unique_id + "." + extension;
-        } while ( exists(name) );
 
-        return name;
-    }
+std::string VideoData::create_unique(const std::string &path, VCL::Video::Format format)
+{
+    std::string extension = format_to_string(format);
+    std::string name = create_unique_path(path, extension);
+    _fullpath = name;
+
+    return name;
+}
 
 std::string VideoData::format_to_string(VCL::Video::Format format)
+{
+    switch( format )
     {
-        switch( format )
-        {
-            case VCL::Video::Format::MP4:
-                return "mp4";
-            case VCL::Video::Format::AVI:
-                return "avi";
-            case VCL::Video::Format::MPEG:
-                return "mpeg";
-            case VCL::Video::Format::XVID:
-                return "xvid";
-            default:
-                throw VCLException(UnsupportedFormat, (int)format + " is not a \
-                    valid format");
-        }
+        case VCL::Video::Format::MP4:
+            return "mp4";
+        case VCL::Video::Format::AVI:
+            return "avi";
+        case VCL::Video::Format::MPEG:
+            return "mpeg";
+        case VCL::Video::Format::XVID:
+            return "xvid";
+        default:
+            throw VCLException(UnsupportedFormat, (int)format + " is not a \
+                valid format");
     }
+}
+
 void VideoData::set_video_id(const std::string &video_id)
 {
   _video_id = video_id;
@@ -537,11 +558,11 @@ void VideoData::delete_object()
 
 void VideoData::copy_cv(const cv::VideoCapture &video_id)
 {
-    _inputVideo =  cv::VideoCapture(video_id);
-    _fps = _inputVideo.get(CV_CAP_PROP_FPS);
-    _frame_count= _inputVideo.get(CV_CAP_PROP_FRAME_COUNT);
-    _frame_width = _inputVideo.get(CV_CAP_PROP_FRAME_WIDTH);
-    _frame_height = _inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT);
+    _cv_video =  cv::VideoCapture(video_id);
+    _fps = _cv_video.get(CV_CAP_PROP_FPS);
+    _frame_count= _cv_video.get(CV_CAP_PROP_FRAME_COUNT);
+    _frame_width = _cv_video.get(CV_CAP_PROP_FRAME_WIDTH);
+    _frame_height = _cv_video.get(CV_CAP_PROP_FRAME_HEIGHT);
 
 }
     /*  *********************** */

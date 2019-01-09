@@ -111,8 +111,27 @@ namespace VCL {
 
     std::string remove_extention(std::string old_name)
     {
+        return old_name.erase(old_name.find_last_of("."), std::string::npos);
+    }
 
-    return old_name.erase(old_name.find_last_of("."), std::string::npos);
-}
+    std::string create_unique_path(const std::string &path, const std::string &extension)
+    {
+        std::string unique_id;
+        std::string name;
+
+        const char& last = path.back();
+        do {
+            uint64_t id = get_uint64();
+            std::stringstream ss;
+            ss << std::hex << id;
+            unique_id = ss.str();
+            if (last != '/')
+                name = path + "/" + unique_id + "." + extension;
+            else
+                name = path + unique_id + "." + extension;
+        } while ( exists(name) );
+
+        return name;
+    }
 
 }
