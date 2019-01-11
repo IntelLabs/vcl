@@ -58,9 +58,17 @@ namespace VCL {
                     MPEG = 3,
                     XVID = 4};
    struct Video_Size {
-                    uint width;
-                    uint height;
-                    uint frame_number; };
+                    long width;
+                    long height;
+                    long frame_number;
+
+                    bool operator==(Video_Size s){
+
+                        return ((this->width ==s.width)
+                            && (this->height ==s.height)
+                            && (this->frame_number == s.frame_number));
+                    }
+                };
     enum class UNIT {FRAMES =0,
                    SECONDS=1};
 

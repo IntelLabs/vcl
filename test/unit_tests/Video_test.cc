@@ -11,7 +11,7 @@ class VideoTest : public ::testing::Test {
  protected:
     virtual void SetUp() {
         _video = "videos/Megamind.avi";
-        _inputVideo = cv::VideoCapture("videos/Megamind.avi");
+        _inputVideo = cv::VideoCapture(_video);
 
     }
 
@@ -25,6 +25,8 @@ class VideoTest : public ::testing::Test {
     std::string _video ;
     cv::VideoCapture _inputVideo;
     cv::VideoCapture testVideo;
+    VCL::Video::Video_Size vcl_size;
+    VCL::Video::Video_Size test_size;
    };
 
 
@@ -43,7 +45,7 @@ TEST_F(VideoTest, StringConstructor)
     VCL::Video video(_video);
     long input_frame_count = video.get_frame_count();
     long test_frame_count;
-    testVideo = cv::VideoCapture("videos/Megamind.avi");
+    testVideo = cv::VideoCapture(_video);
     test_frame_count= testVideo.get(CV_CAP_PROP_FRAME_COUNT);
     ASSERT_EQ(input_frame_count, test_frame_count);
 }
@@ -53,7 +55,7 @@ TEST_F(VideoTest, ObjectConstructor)
     VCL::Video video(_inputVideo); //
     long input_frame_count = video.get_frame_count();
     long test_frame_count;
-    testVideo = cv::VideoCapture("videos/Megamind.avi");
+    testVideo = cv::VideoCapture(_video);
     test_frame_count= testVideo.get(CV_CAP_PROP_FRAME_COUNT);
 
     // std::cout<<testVideo.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
@@ -81,7 +83,7 @@ TEST_F(VideoTest, BlobConstructor)
     delete[] inBuf;
     long input_frame_count = video.get_frame_count();
     long test_frame_count;
-    testVideo = cv::VideoCapture("videos/Megamind.avi");
+    testVideo = cv::VideoCapture(_video);
     test_frame_count = testVideo.get(CV_CAP_PROP_FRAME_COUNT);
     ASSERT_EQ(input_frame_count, test_frame_count);
     compare_cvcapture_cvcapture(video.get_cv_video(), testVideo, 1, test_frame_count);
@@ -133,7 +135,7 @@ TEST_F(VideoTest, OpenInternalVideo)
         //video.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
         video.store(video.get_video_id(), VCL::Video::Format::AVI);
 
-        testVideo = cv::VideoCapture("videos/Megamind.avi");
+        testVideo = cv::VideoCapture(_video);
         long test_frame_count = testVideo.get(CV_CAP_PROP_FRAME_COUNT);
         long input_frame_count = video.get_frame_count();
         ASSERT_EQ(input_frame_count, test_frame_count);
@@ -149,15 +151,25 @@ TEST_F(VideoTest, ReadStoredVideo)
     try {
     std::cout<< " Read Stored Video" << std::endl;
     VCL::Video video(_video); //
-    video.store(_video, VCL::Video::Format::AVI);
+    std::string name = video.create_unique("videos_test/", VCL::Video::Format::AVI);
+    video.store(name, VCL::Video::Format::AVI);
 
-    std::string  test_vi_id = video.get_video_id();
+    std::string test_vi_id = video.get_video_id();
+    std::cout<< test_vi_id <<"\t"<< name <<std::endl;
     cv::VideoCapture vcl_written_video(test_vi_id);
-
+    vcl_size = video.get_size();
+    test_size.width = vcl_written_video.get(CV_CAP_PROP_FRAME_WIDTH);
+    test_size.height = vcl_written_video.get(CV_CAP_PROP_FRAME_HEIGHT);
+    test_size.frame_number = static_cast<long> (vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT));
     long input_frame_count = video.get_frame_count();
-    long test_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
+
+    std::cout<< vcl_size.width << "\t"<<vcl_size.height << "\t"<< vcl_size.frame_number <<std::endl;
+    std::cout<< test_size.width << "\t"<<test_size.height << "\t"<< test_size.frame_number <<std::endl;
+    long test_frame_count = static_cast<long> (vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT));
     std::cout<< input_frame_count<<"\t"<<test_frame_count<<std::endl;
-    ASSERT_EQ(input_frame_count, test_frame_count);
+    if (vcl_size==test_size)
+        std::cout <<"PASSED\n";
+
 
     // cv::VideoWriter testResultVideo = cv::VideoWriter(test_vi_id,
     //                 CV_FOURCC('X', 'V', 'I', 'D'),
@@ -181,8 +193,9 @@ TEST_F(VideoTest, ReadStoredVideo)
             std::cout << "video not read\n";
         count+=_step;
     }
-    // testVideo = cv::VideoCapture(_video);
-    // compare_cvcapture_cvcapture(video.get_cv_video(), testVideo, 1, test_frame_count);
+//    compare_cvcapture_cvcapture(video.get_cv_video(), vcl_written_video, 1, count);
+    ASSERT_EQ(input_frame_count, count);
+
 
     }
     catch(VCL::Exception &e) {
@@ -195,8 +208,10 @@ TEST_F(VideoTest, Store)
     try {
     std::cout<< " Store Operation" << std::endl;
     VCL::Video video(_video); //
-    video.store(_video, VCL::Video::Format::AVI);
-    testVideo = cv::VideoCapture("videos/Megamind.avi");
+      std::string name = video.create_unique("videos_test/", VCL::Video::Format::AVI);
+    video.store(name, VCL::Video::Format::AVI);
+
+    testVideo = cv::VideoCapture(_video);
     long test_frame_count;
     long input_frame_count;
     std::string  test_vi_id ="videos_test/test_store_write1.avi";
@@ -211,7 +226,6 @@ TEST_F(VideoTest, Store)
         cv::Mat frame;
         if ( testVideo.read(frame) ) {
             if ( !frame.empty() ) {
-
                  testResultVideo.write(frame);
             }
             else
@@ -221,19 +235,15 @@ TEST_F(VideoTest, Store)
             throw VCLException(ObjectEmpty, "Frame not retrieved");
         count+=_step;
     }
+    testVideo.release();
+    testResultVideo.release();
     cv::VideoCapture test_written_video(test_vi_id);
     std::string cv_name ;
 
     cv::VideoCapture vcl_written_video(video.get_cv_video());
     input_frame_count = video.get_frame_count();
-    test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-    input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-     std::cout<< "video frame count\t"<<video.get_frame_count()<<"\t"<<vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"test_video\t"<<testVideo.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"test_written_vdeio\t"<<test_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"vcl_vedio\t"<<(video.get_cv_video()).get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    ASSERT_EQ(input_frame_count, test_frame_count);
-    compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
+    ASSERT_EQ(input_frame_count, count);
+    compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, count);
   }
     catch(VCL::Exception &e) {
         print_exception(e);
@@ -245,19 +255,22 @@ TEST_F(VideoTest, Interval)
     try {
     std::cout<< " Interval Operation" << std::endl;
     VCL::Video video(_video); //
-    video.interval(VCL::Video::UNIT::FRAMES,1, 200, 5);
-    video.store(_video, VCL::Video::Format::AVI);
-    testVideo = cv::VideoCapture("videos/Megamind.avi");
+    std::string name = video.create_unique("videos_test/", VCL::Video::Format::AVI);
+    video.interval(VCL::Video::UNIT::FRAMES, 1, 200, 5);
+    video.store(name, VCL::Video::Format::AVI);
     long test_frame_count;
     long input_frame_count;
-    std::string test_vi_id="videos_test/test_Video_interval.avi";
-     cv::VideoWriter testResultVideo = cv::VideoWriter(test_vi_id,
+
+    std::string test_vi_id = "videos_test/test_Video_interval.avi";
+    testVideo = cv::VideoCapture(_video);
+    cv::VideoWriter testResultVideo = cv::VideoWriter(test_vi_id,
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     testVideo.get(CV_CAP_PROP_FPS),
                     cv::Size(testVideo.get(CV_CAP_PROP_FRAME_WIDTH),testVideo.get(CV_CAP_PROP_FRAME_HEIGHT)));
     int count= 1;
     int _stop = 200;
     int _step = 5;
+    int total_frames = 0;
     while ( count < _stop ) {
         cv::Mat frame;
         if ( testVideo.read(frame) ) {
@@ -271,25 +284,34 @@ TEST_F(VideoTest, Interval)
         else
             throw VCLException(ObjectEmpty, "Frame not retrieved");
         count+=_step;
-
+        total_frames++;
     }
-    cv::VideoCapture test_written_video(test_vi_id);
-    std::string cv_name ;
-    cv_name = video.get_video_id();
-    cv::VideoCapture vcl_written_video(video.get_cv_video());
-     input_frame_count = video.get_frame_count();
-    test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-    std::cout<< video.get_frame_count()<<"\t"<<vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<testVideo.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<test_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<video.get_cv_video().get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<< "video frame count\t"<<video.get_frame_count()<<"\t"<<vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"test_video\t"<<testVideo.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"test_written_vdeio\t"<<test_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"vcl_vedio\t"<<(video.get_cv_video()).get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
+    testVideo.release();
+    testResultVideo.release();
 
-    ASSERT_EQ(input_frame_count, test_frame_count);
-    compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
+    std::string cv_name = video.get_video_id();
+    cv::VideoCapture test_written_video(cv_name);
+    cv::VideoCapture test_cv_video(test_vi_id);
+
+    count = 0;
+    _stop = video.get_frame_count();
+    _step = 1;
+    while ( count < _stop ) {
+        cv::Mat frame1;
+        cv::Mat frame2;
+        if ( test_written_video.read(frame1) && test_cv_video.read(frame2)) {
+            ASSERT_FALSE(frame1.empty());
+            ASSERT_FALSE(frame2.empty());
+            compare_mat_mat(frame1, frame2);
+        }
+        else {
+            std::cout << "Test failed at frame " << count << std::endl;
+            break;
+        }
+        count+=_step;
+    }
+    ASSERT_EQ(count, total_frames);
+
   }
     catch(VCL::Exception &e) {
         print_exception(e);
@@ -300,28 +322,33 @@ TEST_F(VideoTest, Resize)
 {
     try {
     std::cout<< " Resize Operation" << std::endl;
-    VCL::Video video(_video); //
-    video.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
-    video.resize( 10,10);
-    video.store(_video, VCL::Video::Format::AVI);
-    testVideo = cv::VideoCapture("videos/Megamind.avi");
+    VCL::Video video(_video);
+    std::string name = video.create_unique("videos_test/", VCL::Video::Format::AVI);
+    video.interval(VCL::Video::UNIT::FRAMES,1, 200, 5);
+    video.resize(10,10);
+    video.store(name, VCL::Video::Format::AVI);
+
+    testVideo = cv::VideoCapture(_video);
+
     long test_frame_count;
     long input_frame_count;
+
     std::string test_vi_id="videos_test/test_Video_resize.avi";
      cv::VideoWriter testResultVideo = cv::VideoWriter(test_vi_id,
                     CV_FOURCC('X', 'V', 'I', 'D'),
                     testVideo.get(CV_CAP_PROP_FPS),
                     cv::Size(testVideo.get(CV_CAP_PROP_FRAME_WIDTH),testVideo.get(CV_CAP_PROP_FRAME_HEIGHT)));
-    int count= 10;
+    int count= 1;
     int _stop = 200;
     int _step = 5;
+    int total_frames = 0;
     while ( count < _stop ) {
         cv::Mat frame;
         if ( testVideo.read(frame) ) {
             if ( !frame.empty() ) {
                 cv::Mat cv_resized;
                 cv::resize(frame, cv_resized, cv::Size(10, 10));
-                testResultVideo.write(frame);
+                testResultVideo.write(cv_resized);
             }
             else
                 throw VCLException(ObjectEmpty, "Frame is empty");
@@ -329,38 +356,34 @@ TEST_F(VideoTest, Resize)
         else
             throw VCLException(ObjectEmpty, "Frame not retrieved");
         count+=_step;
+        total_frames++;
     }
-    cv::VideoCapture test_written_video(test_vi_id);
+    testVideo.release();
+    testResultVideo.release();
 
-    count =10;
-    int i=0;
+    std::string cv_name = video.get_video_id();
+    std::cout << "vcl name is " << cv_name << ", cv name is " << test_vi_id << std::endl;
+    cv::VideoCapture test_written_video(cv_name);
+    cv::VideoCapture test_cv_video(test_vi_id);
 
-
-        while ( count < _stop ) {
-        cv::Mat frame;
-        if ( test_written_video.read(frame) ) {
-          std::cout<<count <<"\t"<<i<<std::endl;
-
+    count = 0;
+    _stop = video.get_frame_count();
+    _step = 1;
+    while ( count < _stop ) {
+        cv::Mat frame1;
+        cv::Mat frame2;
+        if ( test_written_video.read(frame1) && test_cv_video.read(frame2)) {
+            ASSERT_FALSE(frame1.empty());
+            ASSERT_FALSE(frame2.empty());
+            compare_mat_mat(frame1, frame2);
         }
-        else
-            throw VCLException(ObjectEmpty, "Frame not retrieved");
-        count+=_step; i++;
-
+        else {
+            std::cout << "Test failed at frame " << count << std::endl;
+            break;
+        }
+        count+=_step;
     }
-    std::string cv_name ;
-   // std::cout<< _video.get_temporary_video() <<std:endl;
-     cv_name = video.get_video_id();
-    input_frame_count = video.get_frame_count();
-     cv::VideoCapture vcl_written_video(video.get_cv_video());
-    input_frame_count = video.get_frame_count();
-     input_frame_count = vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-    test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-      std::cout<< "video frame count\t"<<video.get_frame_count()<<"\t"<<vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"test_video\t"<<testVideo.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"test_written_vdeio\t"<<test_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"vcl_vedio\t"<<(video.get_cv_video()).get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    ASSERT_EQ(input_frame_count, test_frame_count);
-    compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
+    ASSERT_EQ(count, total_frames);
   }
   catch(VCL::Exception &e)
   {
@@ -373,12 +396,12 @@ TEST_F(VideoTest, Threshold)
    try {
     std::cout<< " Threshold Operation" << std::endl;
     VCL::Video video(_video); //
+    std::string name = video.create_unique("videos_test/", VCL::Video::Format::AVI);
     video.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
     video.threshold( 150);
-    video.store(_video, VCL::Video::Format::AVI);
+    video.store(name, VCL::Video::Format::AVI);
 
-
-    testVideo = cv::VideoCapture("videos/Megamind.avi");
+    testVideo = cv::VideoCapture(_video);
     long test_frame_count;
     long input_frame_count;
     std::string test_vi_id="videos_test/test_Video_threshold.avi";
@@ -389,6 +412,7 @@ TEST_F(VideoTest, Threshold)
     int count= 10;
     int _stop = 200;
     int _step = 5;
+    int total_frames = 0;
     while ( count < _stop ) {
         cv::Mat frame;
         if ( testVideo.read(frame) ) {
@@ -405,22 +429,31 @@ TEST_F(VideoTest, Threshold)
         else
             throw VCLException(ObjectEmpty, "Frame not retrieved");
         count+=_step;
+        total_frames++;
     }
-    cv::VideoCapture test_written_video(test_vi_id);
-    std::string cv_name ;
-   // std::cout<< _video.get_temporary_video() <<std:endl;
-    cv_name = video.get_video_id();
-    input_frame_count = video.get_frame_count();
-    cv::VideoCapture vcl_written_video(cv_name);
 
-    //input_frame_count = vcl_written_video.get_frame_count();
-    test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-    std::cout<< "video frame count\t"<<video.get_frame_count()<<"\t"<<vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"test_video\t"<<testVideo.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"test_written_vdeio\t"<<test_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"vcl_vedio\t"<<(video.get_cv_video()).get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    ASSERT_EQ(input_frame_count, test_frame_count);
-    compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
+    std::string cv_name = video.get_video_id();
+    cv::VideoCapture test_written_video(cv_name);
+    cv::VideoCapture test_cv_video(test_vi_id);
+
+    count = 0;
+    _stop = video.get_frame_count();
+    _step = 1;
+    while ( count < _stop ) {
+        cv::Mat frame1;
+        cv::Mat frame2;
+        if ( test_written_video.read(frame1) && test_cv_video.read(frame2)) {
+            ASSERT_FALSE(frame1.empty());
+            ASSERT_FALSE(frame2.empty());
+            //compare_mat_mat(frame1, frame2);
+        }
+        else {
+            std::cout << "Test failed at frame " << count << std::endl;
+            break;
+        }
+        count+=_step;
+    }
+    ASSERT_EQ(count, total_frames);
   }
 
 catch(VCL::Exception &e) {
@@ -436,10 +469,11 @@ TEST_F(VideoTest, Crop)
    try {
     std::cout<< "Crop Operation" << std::endl;
     VCL::Video video(_video); //
+    std::string name = video.create_unique("videos_test/", VCL::Video::Format::AVI);
     video.interval(VCL::Video::UNIT::FRAMES,10, 200, 5);
     video.crop(VCL::Rectangle(0, 0, 50, 50));
-    video.store(_video, VCL::Video::Format::AVI);
-    testVideo = cv::VideoCapture("videos/Megamind.avi");
+     video.store(name, VCL::Video::Format::AVI);
+    testVideo = cv::VideoCapture(_video);
     long test_frame_count;
     long input_frame_count;
     std::string test_vi_id="videos_test/test_video_crop.avi";
@@ -487,13 +521,8 @@ TEST_F(VideoTest, Crop)
     std::cout<<cv_name<<std::endl;
     cv::VideoCapture vcl_written_video(video.get_cv_video());
     input_frame_count = video.get_frame_count();
-    test_frame_count = test_written_video.get(CV_CAP_PROP_FRAME_COUNT);
-     std::cout<< "video frame count\t"<<video.get_frame_count()<<"\t"<<vcl_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"test_video\t"<<testVideo.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"test_written_vdeio\t"<<test_written_video.get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    std::cout<<"vcl_vedio\t"<<(video.get_cv_video()).get(CV_CAP_PROP_FRAME_COUNT)<<std::endl;
-    ASSERT_EQ(input_frame_count, test_frame_count);
-    compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, test_frame_count);
+    ASSERT_EQ(input_frame_count, count);
+    compare_cvcapture_cvcapture(vcl_written_video, test_written_video, 1, count);
   }
 
 catch(VCL::Exception &e) {
