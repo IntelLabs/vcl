@@ -147,7 +147,7 @@ TEST_F(ImageDataTest, StringConstructorIMG)
     EXPECT_EQ(0, dims.height);
     EXPECT_EQ(0, dims.width);
 
-    EXPECT_EQ(img_data.get_image_format(), VCL::JPG);
+    EXPECT_EQ(img_data.get_image_format(), VCL::Image::Format::JPG);
 }
 
 TEST_F(ImageDataTest, StringConstructorTDB)
@@ -159,7 +159,7 @@ TEST_F(ImageDataTest, StringConstructorTDB)
     EXPECT_EQ(0, dims.height);
     EXPECT_EQ(0, dims.width);
 
-    EXPECT_EQ(img_data.get_image_format(), VCL::TDB);
+    EXPECT_EQ(img_data.get_image_format(), VCL::Image::Format::TDB);
 }
 
 TEST_F(ImageDataTest, BufferConstructor)
@@ -235,12 +235,12 @@ TEST_F(ImageDataTest, OperatorEqualsTDB)
     compare_mat_mat(cv_img, cv_copy);
 }
 
-TEST_F(ImageDataTest, GetImageIDandFormat)
+TEST_F(ImageDataTest, GetImageIDandImageFormat)
 {
     VCL::ImageData img_data(tdb_img_);
 
     EXPECT_EQ(img_data.get_image_id(), tdb_img_);
-    EXPECT_EQ(img_data.get_image_format(), VCL::TDB);
+    EXPECT_EQ(img_data.get_image_format(), VCL::Image::Format::TDB);
 }
 
 TEST_F(ImageDataTest, GetImageDimensions)
@@ -294,7 +294,7 @@ TEST_F(ImageDataTest, GetEncodedBuffer)
 {
     VCL::ImageData img_data(tdb_img_);
 
-    std::vector<unsigned char> encoded = img_data.get_encoded(VCL::PNG);
+    std::vector<unsigned char> encoded = img_data.get_encoded(VCL::Image::Format::PNG);
 
     cv::Mat mat = cv::imdecode(encoded, cv::IMREAD_ANYCOLOR);
     compare_mat_mat(cv_img_, mat);
@@ -304,9 +304,9 @@ TEST_F(ImageDataTest, CreateUnique)
 {
     VCL::ImageData img_data(cv_img_);
 
-    img_data.create_unique("image_results/", VCL::PNG);
+    auto unique_name = VCL::create_unique("image_results/", "png");
 
-    img_data.write(img_data.get_image_id(), VCL::PNG);
+    img_data.write(unique_name, VCL::Image::Format::PNG);
     img_data.perform_operations();
 }
 
@@ -354,7 +354,7 @@ TEST_F(ImageDataTest, Write)
 {
     VCL::ImageData img_data(cv_img_);
 
-    img_data.write("tdb/test_image", VCL::TDB);
+    img_data.write("tdb/test_image", VCL::Image::Format::TDB);
 }
 
 TEST_F(ImageDataTest, Resize)
@@ -417,10 +417,9 @@ TEST_F(ImageDataTest, DeleteIMG)
 {
     VCL::ImageData img_data(cv_img_);
 
-    img_data.create_unique("image_results/", VCL::PNG);
+    auto unique_name = VCL::create_unique("image_results/", "png");
 
-    test_img_ = img_data.get_image_id();
-    img_data.write(test_img_, VCL::PNG);
+    img_data.write(unique_name, VCL::Image::Format::PNG);
     img_data.perform_operations();
 
     img_data.delete_object();
