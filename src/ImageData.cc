@@ -400,7 +400,6 @@ ImageData::~ImageData()
     delete _tdb;
 }
 
-
     /*  *********************** */
     /*        GET FUNCTIONS     */
     /*  *********************** */

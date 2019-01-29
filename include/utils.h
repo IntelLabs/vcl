@@ -65,8 +65,6 @@ namespace VCL {
 
     uint64_t get_uint64();
 
-    std::string remove_extention(std::string &old_name);
-
     /**
      *  Gets the extension of a filename
      *

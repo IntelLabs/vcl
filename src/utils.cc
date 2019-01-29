@@ -107,11 +107,6 @@ namespace VCL {
         return (stat (name.c_str(), &filestatus) == 0);
     }
 
-    std::string remove_extention(std::string &old_name)
-    {
-        return old_name.erase(old_name.find_last_of("."), std::string::npos);
-    }
-
     std::string create_unique(const std::string &path,
                               const std::string &extension)
     {
