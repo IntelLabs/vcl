@@ -48,6 +48,7 @@ namespace VCL {
       ObjectEmpty,
 
       SizeMismatch,
+      OutOfBounds,
 
       TileDBNotFound,
       TileDBError,

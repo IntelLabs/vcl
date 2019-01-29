@@ -10,6 +10,7 @@ If your system does not have [scons](http://scons.org/) installed,
 run the following:
 
     sudo apt-get install scons
+    sudo apt-get install ffmpeg
 
 [Google Test](https://github.com/google/googletest) is used for the unit tests included in the test folder. To install:
 
@@ -38,6 +39,18 @@ Download [OpenCV 3.3.1](https://github.com/opencv/opencv/archive/3.3.1.zip)
     cd build/
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..
     make -jX   # substitute X for maximum number of CPUs (or leave it off to use all available)
+    sudo make install
+
+**Note**: When using videos, and getting the following error: "Unable to stop the stream: Inappropriate ioctl for device", you may need to include more flags when compiling OpenCV. Follow these instructions ([source](https://stackoverflow.com/questions/41200201/opencv-unable-to-stop-the-stream-inappropriate-ioctl-for-device)):
+
+    sudo apt-get install ffmpeg
+    sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev
+
+    // Rebuild OpenCV with the following commands:
+
+    cd build
+    cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local  -D WITH_FFMPEG=ON -D WITH_TBB=ON -D WITH_GTK=ON -D WITH_V4L=ON -D WITH_OPENGL=ON -D WITH_CUBLAS=ON -DWITH_QT=OFF -DCUDA_NVCC_FLAGS="-D_FORCE_INLINES" ..
+    make -j7
     sudo make install
 
 ## [TileDB](https://tiledb.io/)

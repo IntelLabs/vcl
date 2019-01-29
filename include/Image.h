@@ -45,14 +45,6 @@
 namespace VCL {
     class ImageData;
 
-    /*  *********************** */
-    /*        IMAGEFORMAT       */
-    /*  *********************** */
-    /**
-     *  Determines what kind of image it is
-     */
-    enum ImageFormat { NONE, JPG, PNG, TDB, };
-
     /**
      *  Uses the OpenCV Rect class to define an area in the image
      *    (starting x coordinate, starting y coordinate, height, width)
@@ -68,6 +60,14 @@ namespace VCL {
         ImageData *_image;
 
     public:
+
+        enum class Format{
+            NONE_IMAGE = 0,
+            JPG = 1,
+            PNG = 2,
+            TDB = 3
+            };
+
     /*  *********************** */
     /*        CONSTRUCTORS      */
     /*  *********************** */
@@ -146,9 +146,9 @@ namespace VCL {
         /**
          *  Gets the format of the Image object
          *
-         *  @return The ImageFormat of the Image object
+         *  @return The Format of the Image object
          */
-        ImageFormat get_image_format() const;
+        VCL::Image::Format get_image_format() const;
 
         /**
          *  Gets the size of the image in pixels (height * width * channels)
@@ -195,29 +195,17 @@ namespace VCL {
         /**
          *  Gets encoded image data in a buffer
          *
-         *  @param format  The ImageFormat the Image should be encoded as
+         *  @param format  The Format the Image should be encoded as
          *  @param params  Optional parameters
          *  @return  A vector containing the encoded image
          *  @see OpenCV documentation for imencode for more details
          */
-        std::vector<unsigned char> get_encoded_image(ImageFormat format,
+        std::vector<unsigned char> get_encoded_image(VCL::Image::Format format,
                 const std::vector<int>& params=std::vector<int>()) const;
-
 
     /*  *********************** */
     /*        SET FUNCTIONS     */
     /*  *********************** */
-        /**
-         *  Creates a unique ID in the path given with the given extension
-         *
-         *  @param path  A string with the path to where the Image should be
-         *                  stored
-         *  @param format The ImageFormat the Image should be stored as
-         *  @return The string containing the full path to the Image (path
-         *    + unique id + format)
-         */
-        std::string create_unique(const std::string &path,
-                ImageFormat format);
 
         /**
          *  Sets the type of compression to be used when compressing. Currently
@@ -259,7 +247,7 @@ namespace VCL {
          *    image metadata. Defaults to true (assuming no other metadata
          *    storage)
          */
-        void store(const std::string &image_id, ImageFormat image_format,
+        void store(const std::string &image_id, VCL::Image::Format image_format,
             bool store_metadata=true);
 
         /**

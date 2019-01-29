@@ -30,6 +30,7 @@
 #include <cpuid.h>
 #include <string>
 #include <sstream>
+#include <sys/stat.h>
 
 #include "utils.h"
 #include "Exception.h"
@@ -84,4 +85,44 @@ namespace VCL {
         }
     }
 
+    std::string get_extension(const std::string &object_id)
+    {
+        size_t file_ext = object_id.find_last_of(".");
+        size_t dir_ext = object_id.find_last_of("/");
+
+        if ( file_ext != std::string::npos ) {
+            if ( file_ext > dir_ext + 2 )
+                return object_id.substr(file_ext + 1);
+            else
+                throw VCLException(ObjectEmpty, object_id + " does not have a valid extension");
+        }
+        else
+            return "";
+    }
+
+    bool exists(const std::string &name)
+    {
+        struct stat filestatus;
+
+        return (stat (name.c_str(), &filestatus) == 0);
+    }
+
+    std::string create_unique(const std::string &path,
+                              const std::string &extension)
+    {
+        std::string unique_id;
+        std::string name;
+        const char& last = path.back();
+
+        do {
+            uint64_t id = get_uint64();
+            std::stringstream ss;
+            ss << std::hex << id;
+            unique_id = ss.str();
+            name = path + std::string((last != '/')? "/":"") +
+                   unique_id + "." + extension;
+        } while (exists(name));
+
+        return name;
+    }
 }
