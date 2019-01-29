@@ -34,7 +34,61 @@
 #include <iostream>
 #include <cmath>
 
+#include "gtest/gtest.h"
+
 #include "helpers.h"
+
+// Image / Video Helpers
+
+void compare_mat_mat(cv::Mat &cv_img, cv::Mat &img)
+{
+    int rows = img.rows;
+    int columns = img.cols;
+    int channels = img.channels();
+    if ( img.isContinuous() ) {
+        columns *= rows;
+        rows = 1;
+    }
+
+    for ( int i = 0; i < rows; ++i ) {
+        for ( int j = 0; j < columns; ++j ) {
+            if (channels == 1) {
+                unsigned char pixel = img.at<unsigned char>(i, j);
+                unsigned char test_pixel = cv_img.at<unsigned char>(i, j);
+                ASSERT_EQ(pixel, test_pixel);
+            }
+            else {
+                cv::Vec3b colors = img.at<cv::Vec3b>(i, j);
+                cv::Vec3b test_colors = cv_img.at<cv::Vec3b>(i, j);
+                for ( int x = 0; x < channels; ++x ) {
+                    ASSERT_EQ(colors.val[x], test_colors.val[x]);
+                }
+            }
+        }
+    }
+}
+
+void compare_cvcapture_cvcapture(cv::VideoCapture v1, cv::VideoCapture v2)
+{
+    while (true) {
+        cv::Mat frame1;
+        cv::Mat frame2;
+        if ( v1.read(frame1) && v2.read(frame2)) {
+            if ( !frame1.empty() && !frame2.empty()) {
+                 compare_mat_mat(frame1,frame2);
+            }
+            else if ( frame1.empty() && frame2.empty()) {
+                return;
+            }
+            else
+                throw VCLException(ObjectEmpty, "One video ended before");
+        }
+        else
+            throw VCLException(ObjectEmpty, "Error reading frames");
+    }
+}
+
+// Descriptors Helpers
 
 // This function return nb descriptors of dimension d as follows:
 // init       init      ...   init      (d times)

@@ -35,7 +35,21 @@
 #include <cstdlib>
 #include <list>
 
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 #include "VCL.h"
+
+// Image / Video Helpers
+
+void compare_mat_mat(cv::Mat& cv_img, cv::Mat& img);
+
+void compare_cvcapture_cvcapture(cv::VideoCapture v1, cv::VideoCapture v2);
+
+// Descriptors Helpers
 
 void generate_desc_linear_increase(int d, int nb, float* xb, float init = 0);
 
