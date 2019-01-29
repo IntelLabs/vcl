@@ -34,8 +34,7 @@
 #include <iostream>
 
 #include "ImageData.h"
-#include "TDBImage.h"
-#include "VCL.h"
+
 
 using namespace VCL;
 
@@ -46,7 +45,7 @@ using namespace VCL;
     /*  *********************** */
     /*       READ OPERATION     */
     /*  *********************** */
-ImageData::Read::Read(const std::string& filename, ImageFormat format)
+ImageData::Read::Read(const std::string& filename, Image::Format format)
     : Operation(format),
       _fullpath(filename)
 {
@@ -54,9 +53,9 @@ ImageData::Read::Read(const std::string& filename, ImageFormat format)
 
 void ImageData::Read::operator()(ImageData *img)
 {
-    if ( _format == VCL::TDB ) {
+    if ( _format == Image::Format::TDB ) {
         if ( img->_tdb == NULL )
-            throw VCLException(TileDBNotFound, "ImageFormat indicates image \
+            throw VCLException(TileDBNotFound, "Image::Format indicates image \
                 stored in TDB format, but no data was found");
 
         img->_tdb->read();
@@ -75,8 +74,8 @@ void ImageData::Read::operator()(ImageData *img)
     /*  *********************** */
     /*       WRITE OPERATION    */
     /*  *********************** */
-ImageData::Write::Write(const std::string& filename, ImageFormat format,
-    ImageFormat old_format, bool metadata)
+ImageData::Write::Write(const std::string& filename, Image::Format format,
+    Image::Format old_format, bool metadata)
     : Operation(format),
       _old_format(old_format),
       _metadata(metadata),
@@ -86,7 +85,7 @@ ImageData::Write::Write(const std::string& filename, ImageFormat format,
 
 void ImageData::Write::operator()(ImageData *img)
 {
-    if (_format == VCL::TDB) {
+    if (_format == Image::Format::TDB) {
         if ( img->_tdb == NULL ) {
             img->_tdb = new TDBImage(_fullpath);
             img->_tdb->set_compression(img->_compress);
@@ -99,13 +98,14 @@ void ImageData::Write::operator()(ImageData *img)
     }
     else {
         cv::Mat cv_img;
-        if (_old_format == VCL::TDB)
+        if (_old_format == Image::Format::TDB)
             cv_img = img->_tdb->get_cvmat();
         else
             cv_img = img->_cv_img;
 
         if ( !cv_img.empty() )
             cv::imwrite(_fullpath, cv_img);
+
         else
             throw VCLException(ObjectEmpty, _fullpath + " could not be written \
                 object is empty");
@@ -118,7 +118,7 @@ void ImageData::Write::operator()(ImageData *img)
 
 void ImageData::Resize::operator()(ImageData *img)
 {
-    if ( _format == VCL::TDB ) {
+    if ( _format == Image::Format::TDB ) {
         img->_tdb->resize(_rect);
         img->_height = img->_tdb->get_image_height();
         img->_width = img->_tdb->get_image_width();
@@ -141,7 +141,7 @@ void ImageData::Resize::operator()(ImageData *img)
 
 void ImageData::Crop::operator()(ImageData *img)
 {
-    if ( _format == VCL::TDB ) {
+    if ( _format == Image::Format::TDB ) {
         img->_tdb->read(_rect);
         img->_height = img->_tdb->get_image_height();
         img->_width = img->_tdb->get_image_width();
@@ -165,7 +165,7 @@ void ImageData::Crop::operator()(ImageData *img)
 
 void ImageData::Threshold::operator()(ImageData *img)
 {
-    if ( _format == VCL::TDB )
+    if ( _format == Image::Format::TDB )
         img->_tdb->threshold(_threshold);
     else {
         if ( !img->_cv_img.empty() )
@@ -176,6 +176,76 @@ void ImageData::Threshold::operator()(ImageData *img)
     }
 }
 
+    /*  *********************** */
+    /*    FLIP OPERATION        */
+    /*  *********************** */
+
+void ImageData::Flip::operator()(ImageData *img)
+{
+    if ( _format == Image::Format::TDB ) {
+        // Not implemented
+        throw VCLException(NotImplemented,
+                           "Operation not supported for this format");
+    }
+    else {
+        if ( !img->_cv_img.empty() ) {
+            cv::Mat dst = cv::Mat(img->_cv_img.rows, img->_cv_img.cols,
+                                       img->_cv_img.type());
+            cv::flip(img->_cv_img, dst, _code);
+            img->_cv_img = dst.clone();
+        }
+        else
+            throw VCLException(ObjectEmpty, "Image object is empty");
+    }
+}
+
+    /*  *********************** */
+    /*    ROTATE OPERATION      */
+    /*  *********************** */
+
+void ImageData::Rotate::operator()(ImageData *img)
+{
+    if ( _format == Image::Format::TDB ) {
+        // Not implemented
+        throw VCLException(NotImplemented,
+                           "Operation not supported for this format");
+    }
+    else {
+        if ( !img->_cv_img.empty() ) {
+
+            if (_keep_size) {
+                cv::Mat dst = cv::Mat(img->_cv_img.rows, img->_cv_img.cols,
+                                  img->_cv_img.type());
+
+                cv::Point2f im_c(img->_cv_img.cols/2., img->_cv_img.rows/2.);
+                cv::Mat r = cv::getRotationMatrix2D(im_c, _angle, 1.0);
+
+                cv::warpAffine(img->_cv_img, dst, r, img->_cv_img.size());
+                img->_cv_img = dst.clone();
+            }
+            else {
+
+                cv::Point2f im_c((img->_cv_img.cols-1)/2.0,
+                                 (img->_cv_img.rows-1)/2.0);
+                cv::Mat r = cv::getRotationMatrix2D(im_c, _angle, 1.0);
+                // Bbox rectangle
+                cv::Rect2f bbox = cv::RotatedRect(cv::Point2f(),
+                                                  img->_cv_img.size(),
+                                                  _angle)
+                                                  .boundingRect2f();
+                // Transformation Matrix
+                r.at<double>(0,2) += bbox.width/2.0  - img->_cv_img.cols/2.0;
+                r.at<double>(1,2) += bbox.height/2.0 - img->_cv_img.rows/2.0;
+
+                cv::Mat dst;
+                cv::warpAffine(img->_cv_img, dst, r, bbox.size());
+                img->_cv_img = dst.clone();
+            }
+        }
+        else
+            throw VCLException(ObjectEmpty, "Image object is empty");
+    }
+}
 
                     /*  *********************** */
                     /*         IMAGEDATA        */
@@ -192,8 +262,8 @@ ImageData::ImageData()
     _width = 0;
     _cv_type = CV_8UC3;
 
-    _format = VCL::NONE;
-    _compress = VCL::CompressionType::LZ4;
+    _format = Image::Format::NONE_IMAGE;
+    _compress = CompressionType::LZ4;
 
     _tdb = NULL;
     _image_id = "";
@@ -203,8 +273,8 @@ ImageData::ImageData(const cv::Mat &cv_img)
 {
     copy_cv(cv_img);
 
-    _format = VCL::NONE;
-    _compress = VCL::CompressionType::LZ4;
+    _format = Image::Format::NONE_IMAGE;
+    _compress = CompressionType::LZ4;
     _image_id = "";
 
     _tdb = NULL;
@@ -220,11 +290,11 @@ ImageData::ImageData(const std::string &image_id)
     std::string extension = get_extension(image_id);
     set_format(extension);
 
-    _compress = VCL::CompressionType::LZ4;
+    _compress = CompressionType::LZ4;
 
     _image_id = create_fullpath(image_id, _format);
 
-    if ( _format == VCL::TDB ) {
+    if ( _format == Image::Format::TDB ) {
         _tdb = new TDBImage(_image_id);
         _tdb->set_compression(_compress);
     }
@@ -240,8 +310,8 @@ ImageData::ImageData(void* buffer, cv::Size dimensions, int cv_type)
     _cv_type = cv_type;
     _channels = (cv_type / 8) + 1;
 
-    _format = VCL::TDB;
-    _compress = VCL::CompressionType::LZ4;
+    _format = Image::Format::TDB;
+    _compress = CompressionType::LZ4;
     _image_id = "";
 
     set_data_from_raw(buffer, _height*_width*_channels);
@@ -330,7 +400,6 @@ ImageData::~ImageData()
     delete _tdb;
 }
 
-
     /*  *********************** */
     /*        GET FUNCTIONS     */
     /*  *********************** */
@@ -340,7 +409,7 @@ std::string ImageData::get_image_id() const
     return _image_id;
 }
 
-ImageFormat ImageData::get_image_format() const
+Image::Format ImageData::get_image_format() const
 {
     return _format;
 }
@@ -359,12 +428,12 @@ cv::Size ImageData::get_dimensions()
     return cv::Size(_width, _height);
 }
 
-int ImageData::get_size()
+long ImageData::get_size()
 {
     if ( _height == 0 ) {
-        if ( _format == VCL::TDB ) {
+        if ( _format == Image::Format::TDB ) {
             if ( _tdb == NULL )
-                throw VCLException(TileDBNotFound, "ImageFormat indicates image \
+                throw VCLException(TileDBNotFound, "Image::Format indicates image \
                     stored in TDB format, but no data was found");
             return _tdb->get_image_size();
         }
@@ -375,52 +444,52 @@ int ImageData::get_size()
         }
     }
 
-    return int(_height) * int(_width) * _channels;
+    return long(_height) * long(_width) * _channels;
 }
 
-void ImageData::get_buffer(void* buffer, int buffer_size)
+void ImageData::get_buffer(void* buffer, long buffer_size)
 {
     perform_operations();
 
     switch ( _cv_type % 8 ) {
         case 0:
-            if ( _format != VCL::TDB )
+            if ( _format != Image::Format::TDB )
                 copy_to_buffer(static_cast<unsigned char*>(buffer));
             else
                 _tdb->get_buffer(static_cast<unsigned char*>(buffer), buffer_size);
             break;
         case 1:
-            if ( _format != VCL::TDB )
+            if ( _format != Image::Format::TDB )
                 copy_to_buffer(static_cast<char*>(buffer));
             else
                 _tdb->get_buffer(static_cast<char*>(buffer), buffer_size);
             break;
         case 2:
-            if ( _format != VCL::TDB )
+            if ( _format != Image::Format::TDB )
                 copy_to_buffer(static_cast<unsigned short*>(buffer));
             else
                 _tdb->get_buffer(static_cast<unsigned short*>(buffer), buffer_size);
             break;
         case 3:
-            if ( _format != VCL::TDB )
+            if ( _format != Image::Format::TDB )
                 copy_to_buffer(static_cast<short*>(buffer));
             else
                 _tdb->get_buffer(static_cast<short*>(buffer), buffer_size);
             break;
         case 4:
-            if ( _format != VCL::TDB )
+            if ( _format != Image::Format::TDB )
                 copy_to_buffer(static_cast<int*>(buffer));
             else
                 _tdb->get_buffer(static_cast<int*>(buffer), buffer_size);
             break;
         case 5:
-            if ( _format != VCL::TDB )
+            if ( _format != Image::Format::TDB )
                 copy_to_buffer(static_cast<float*>(buffer));
             else
                 _tdb->get_buffer(static_cast<float*>(buffer), buffer_size);
             break;
         case 6:
-            if ( _format != VCL::TDB )
+            if ( _format != Image::Format::TDB )
                 copy_to_buffer(static_cast<double*>(buffer));
             else
                 _tdb->get_buffer(static_cast<double*>(buffer), buffer_size);
@@ -437,7 +506,7 @@ cv::Mat ImageData::get_cvmat()
 {
     perform_operations();
 
-    if ( _format != VCL::TDB )
+    if ( _format != Image::Format::TDB )
         return _cv_img;
     else
         return _tdb->get_cvmat();
@@ -447,9 +516,9 @@ ImageData ImageData::get_area(const Rectangle &roi)
 {
     ImageData area = *this;
 
-    if ( area._format == VCL::TDB && area._operations.size() == 1 ) {
+    if ( area._format == Image::Format::TDB && area._operations.size() == 1 ) {
         if ( area._tdb == NULL )
-            throw VCLException(TileDBNotFound, "ImageFormat indicates image \
+            throw VCLException(TileDBNotFound, "Image::Format indicates image \
                 stored in TDB format, but no data was found");
         area._operations.pop_back();
     }
@@ -466,7 +535,7 @@ ImageData ImageData::get_area(const Rectangle &roi)
     return area;
 }
 
-std::vector<unsigned char> ImageData::get_encoded(ImageFormat format,
+std::vector<unsigned char> ImageData::get_encoded(Image::Format format,
     const std::vector<int>& params)
 {
     perform_operations();
@@ -486,32 +555,26 @@ std::vector<unsigned char> ImageData::get_encoded(ImageFormat format,
     return buffer;
 }
 
-
     /*  *********************** */
     /*        SET FUNCTIONS     */
     /*  *********************** */
-void ImageData::create_unique(const std::string &path,
-    ImageFormat format)
+
+std::string ImageData::format_to_string(Image::Format format)
 {
-    std::string unique_id;
-    std::string name;
-
-    std::string extension = format_to_string(format);
-
-    const char& last = path.back();
-
-    do {
-        uint64_t id = get_int64();
-        std::stringstream ss;
-        ss << std::hex << id;
-        unique_id = ss.str();
-        if (last != '/')
-            name = path + "/" + unique_id + "." + extension;
-        else
-            name = path + unique_id + "." + extension;
-    } while ( exists(name) );
-
-    _image_id = name;
+    switch( format )
+    {
+        case Image::Format::NONE_IMAGE:
+            return "";
+        case Image::Format::JPG:
+            return "jpg";
+        case Image::Format::PNG:
+            return "png";
+        case Image::Format::TDB:
+            return "tdb";
+        default:
+            throw VCLException(UnsupportedFormat, (int)format + " is not a \
+                valid format");
+    }
 }
 
 void ImageData::set_image_id(const std::string &image_id)
@@ -522,11 +585,11 @@ void ImageData::set_image_id(const std::string &image_id)
 void ImageData::set_format(const std::string &extension)
 {
     if ( extension == "jpg" )
-        _format = VCL::JPG;
+        _format = Image::Format::JPG;
     else if ( extension == "png" )
-        _format = VCL::PNG;
+        _format = Image::Format::PNG;
     else if ( extension == "tdb" )
-        _format = VCL::TDB;
+        _format = Image::Format::TDB;
     else
         throw VCLException(UnsupportedFormat, extension + " is not a \
             supported format");
@@ -549,15 +612,15 @@ void ImageData::set_dimensions(cv::Size dimensions)
     _height = dimensions.height;
     _width = dimensions.width;
 
-    if ( _format == VCL::TDB ) {
+    if ( _format == Image::Format::TDB ) {
         if ( _tdb == NULL )
-            throw VCLException(TileDBNotFound, "ImageFormat indicates image \
+            throw VCLException(TileDBNotFound, "Image::Format indicates image \
                 stored in TDB format, but no data was found");
         _tdb->set_image_properties(_height, _width, _channels);
     }
 }
 
-void ImageData::set_data_from_raw(void* buffer, int size)
+void ImageData::set_data_from_raw(void* buffer, long size)
 {
     switch ( _cv_type % 8 ) {
         case 0:
@@ -595,9 +658,9 @@ void ImageData::set_data_from_encoded(const std::vector<unsigned char> &buffer)
 
 void ImageData::set_minimum(int dimension)
 {
-    if ( _format == VCL::TDB ) {
+    if ( _format == Image::Format::TDB ) {
         if ( _tdb == NULL )
-            throw VCLException(TileDBNotFound, "ImageFormat indicates image \
+            throw VCLException(TileDBNotFound, "Image::Format indicates image \
                 stored in TDB format, but no data was found\n");
         _tdb->set_minimum(dimension);
     }
@@ -610,11 +673,16 @@ void ImageData::set_minimum(int dimension)
 
 void ImageData::perform_operations()
 {
-    for (int x = 0; x < _operations.size(); ++x) {
-        std::shared_ptr<Operation> op = _operations[x];
-        if ( op == NULL )
-            throw VCLException(ObjectEmpty, "Nothing to be done");
-        (*op)(this);
+    try
+    {
+        for (int x = 0; x < _operations.size(); ++x) {
+            std::shared_ptr<Operation> op = _operations[x];
+            if ( op == NULL )
+                throw VCLException(ObjectEmpty, "Nothing to be done");
+            (*op)(this);
+        }
+    } catch( cv::Exception& e ) {
+        throw VCLException(OpenCVError, e.what());
     }
 
     _operations.clear();
@@ -627,7 +695,7 @@ void ImageData::read(const std::string &image_id)
     _operations.push_back(std::make_shared<Read> (_image_id, _format));
 }
 
-void ImageData::write(const std::string &image_id, ImageFormat img_format,
+void ImageData::write(const std::string &image_id, Image::Format img_format,
     bool metadata)
 {
     _operations.push_back(std::make_shared<Write> (create_fullpath(image_id, img_format),
@@ -641,9 +709,9 @@ void ImageData::resize(int rows, int columns)
 
 void ImageData::crop(const Rectangle &rect)
 {
-    if ( _format == VCL::TDB && _operations.size() == 1 ) {
+    if ( _format == Image::Format::TDB && _operations.size() == 1 ) {
         if ( _tdb == NULL )
-            throw VCLException(TileDBNotFound, "ImageFormat indicates image \
+            throw VCLException(TileDBNotFound, "Image::Format indicates image \
                 stored in TDB format, but no data was found");
         _operations.pop_back();
     }
@@ -654,6 +722,16 @@ void ImageData::crop(const Rectangle &rect)
 void ImageData::threshold(int value)
 {
     _operations.push_back(std::make_shared<Threshold> (value, _format));
+}
+
+void ImageData::flip(int type)
+{
+    _operations.push_back(std::make_shared<Flip> (type, _format));
+}
+
+void ImageData::rotate(float angle, bool keep_size)
+{
+    _operations.push_back(std::make_shared<Rotate> (angle, keep_size, _format));
 }
 
 void ImageData::delete_object()
@@ -725,43 +803,10 @@ template void ImageData::copy_to_buffer(double* buffer);
     /*  *********************** */
     /*      UTIL FUNCTIONS      */
     /*  *********************** */
-std::string ImageData::get_extension(const std::string &image_id)
-{
-    size_t file_ext = image_id.find_last_of(".");
-    size_t dir_ext = image_id.find_last_of("/");
 
-    if ( file_ext != std::string::npos ) {
-        if ( file_ext > dir_ext + 2 )
-            return image_id.substr(file_ext + 1);
-        else
-            throw VCLException(ObjectEmpty, image_id + " does not have a valid extension");
-    }
-    else
-        return "";
-
-
-}
-
-std::string ImageData::format_to_string(ImageFormat image_format)
-{
-    switch( image_format )
-    {
-        case VCL::JPG:
-            return "jpg";
-        case VCL::PNG:
-            return "png";
-        case VCL::TDB:
-            return "tdb";
-        case VCL::NONE:
-            return "";
-        default:
-            throw VCLException(UnsupportedFormat, image_format + " is not a \
-                valid format");
-    }
-}
 
 std::string ImageData::create_fullpath(const std::string &filename,
-    ImageFormat format)
+    Image::Format format)
 {
     if ( filename == "" )
         throw VCLException(ObjectNotFound, "Location to write object is undefined");
@@ -775,9 +820,3 @@ std::string ImageData::create_fullpath(const std::string &filename,
         return filename + "." + ext;
 }
 
-bool ImageData::exists(const std::string &name)
-{
-    struct stat filestatus;
-
-    return (stat (name.c_str(), &filestatus) == 0);
-}

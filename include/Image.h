@@ -45,14 +45,6 @@
 namespace VCL {
     class ImageData;
 
-    /*  *********************** */
-    /*        IMAGEFORMAT       */
-    /*  *********************** */
-    /**
-     *  Determines what kind of image it is
-     */
-    enum ImageFormat { NONE, JPG, PNG, TDB, };
-
     /**
      *  Uses the OpenCV Rect class to define an area in the image
      *    (starting x coordinate, starting y coordinate, height, width)
@@ -68,6 +60,14 @@ namespace VCL {
         ImageData *_image;
 
     public:
+
+        enum class Format{
+            NONE_IMAGE = 0,
+            JPG = 1,
+            PNG = 2,
+            TDB = 3
+            };
+
     /*  *********************** */
     /*        CONSTRUCTORS      */
     /*  *********************** */
@@ -95,7 +95,7 @@ namespace VCL {
          *    defaults to IMREAD_COLOR
          *  @see OpenCV documentation on imdecode for more information on flags
          */
-        Image(void* buffer, int size, int flags=cv::IMREAD_ANYCOLOR);
+        Image(void* buffer, long size, int flags=cv::IMREAD_ANYCOLOR);
 
         /**
          *  Creates an Image object from a buffer of raw pixel data
@@ -146,16 +146,16 @@ namespace VCL {
         /**
          *  Gets the format of the Image object
          *
-         *  @return The ImageFormat of the Image object
+         *  @return The Format of the Image object
          */
-        ImageFormat get_image_format() const;
+        VCL::Image::Format get_image_format() const;
 
         /**
          *  Gets the size of the image in pixels (height * width * channels)
          *
          *  @return The size of the image in pixels
          */
-        int get_raw_data_size() const;
+        long get_raw_data_size() const;
 
         /**
          *  Gets the OpenCV type of the image
@@ -190,34 +190,22 @@ namespace VCL {
          *  @param  buffer_size  The pixel size of the image (length of
          *     the buffer, not bytes)
          */
-        void get_raw_data(void* buffer, int buffer_size) const;
+        void get_raw_data(void* buffer, long buffer_size) const;
 
         /**
          *  Gets encoded image data in a buffer
          *
-         *  @param format  The ImageFormat the Image should be encoded as
+         *  @param format  The Format the Image should be encoded as
          *  @param params  Optional parameters
          *  @return  A vector containing the encoded image
          *  @see OpenCV documentation for imencode for more details
          */
-        std::vector<unsigned char> get_encoded_image(ImageFormat format,
+        std::vector<unsigned char> get_encoded_image(VCL::Image::Format format,
                 const std::vector<int>& params=std::vector<int>()) const;
-
 
     /*  *********************** */
     /*        SET FUNCTIONS     */
     /*  *********************** */
-        /**
-         *  Creates a unique ID in the path given with the given extension
-         *
-         *  @param path  A string with the path to where the Image should be
-         *                  stored
-         *  @param format The ImageFormat the Image should be stored as
-         *  @return The string containing the full path to the Image (path
-         *    + unique id + format)
-         */
-        std::string create_unique(const std::string &path,
-                ImageFormat format);
 
         /**
          *  Sets the type of compression to be used when compressing. Currently
@@ -259,7 +247,7 @@ namespace VCL {
          *    image metadata. Defaults to true (assuming no other metadata
          *    storage)
          */
-        void store(const std::string &image_id, ImageFormat image_format,
+        void store(const std::string &image_id, VCL::Image::Format image_format,
             bool store_metadata=true);
 
         /**
@@ -298,6 +286,26 @@ namespace VCL {
          *  @param value  The threshold value
          */
         void threshold(int value);
+
+        /**
+         *  Flips the image either vertically, horizontally, or both, depending
+         *  on code, following OpenCV convention:
+         *  0 means flip vertically
+         *  positive value means flip horizontally
+         *  negative value means flip both vertically and horizontally
+         *
+         *  @param code  Specificies vertical, horizontal, or both.
+         */
+        void flip(int code);
+
+        /**
+         *  Rotates the image following the angle provided as parameter.
+         *
+         *  @param angle  Specificies the angle of rotation
+         *  @param keep_resize  Specifies if the image will be resized after
+         *                      the rotation, or size will be kept.
+         */
+        void rotate(float angle, bool keep_size);
 
         /**
          *  Checks to see if the Image has a depth associated with it.

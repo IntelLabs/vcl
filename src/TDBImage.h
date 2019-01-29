@@ -34,10 +34,9 @@
 
 #include <opencv2/core.hpp>
 
-#include <tiledb.h>
+#include <tiledb/tiledb.h>
 #include "Exception.h"
 #include "TDBObject.h"
-
 
 namespace VCL {
 
@@ -54,16 +53,15 @@ namespace VCL {
     /*  *********************** */
     private:
         // Image dimensions
-        int _img_height, _img_width, _img_channels;
-        int _img_size;
+        uint64_t _img_height, _img_width, _img_channels;
+        long _img_size;
 
         // threshold value
         int _threshold;
 
-        bool _tile_order;
-
         // raw data of the image
         unsigned char* _raw_data;
+        std::vector<unsigned char> _full_array;
 
     public:
     /*  *********************** */
@@ -87,7 +85,7 @@ namespace VCL {
          *  @param buffer  The raw pixel data
          *  @param size  The length of the buffer
          */
-        template <class T> TDBImage(T* buffer, int size);
+        template <class T> TDBImage(T* buffer, long size);
 
         /**
          *  Creates a TDBImage object from an existing TDBImage
@@ -114,7 +112,7 @@ namespace VCL {
          *
          *  @return The size of the image (height x width x channels)
          */
-        int get_image_size();
+        long get_image_size();
 
         /**
          *  Gets the height of the image (number of rows)
@@ -153,7 +151,7 @@ namespace VCL {
          *     data when the function ends
          *  @param  buffer_size  The length of buffer (not in bytes)
          */
-        template <class T> void get_buffer(T* buffer, int buffer_size);
+        template <class T> void get_buffer(T* buffer, long buffer_size);
 
     /*  *********************** */
     /*        SET FUNCTIONS     */
@@ -248,13 +246,6 @@ namespace VCL {
     /*  *********************** */
     /*        GET FUNCTIONS     */
     /*  *********************** */
-        /**
-         *  Gets the parent directory of a filename
-         *
-         *  @param  filename  The full path of a file
-         *  @return  The parent directory of the file
-         */
-        std::string get_parent_dir(const std::string &filename) const;
 
         /**
          *  Gets the coordinates in an array given the current tile
@@ -287,7 +278,7 @@ namespace VCL {
          *  @param  column  The column index
          *  @return  The index in the raw data where [row, column] is
          */
-        int get_index(int row, int column) const;
+        long get_index(int row, int column) const;
 
        /**
          *  Used for resizing, calculates the height of the current tile (used
@@ -339,33 +330,31 @@ namespace VCL {
     /*      TDBIMAGE SETUP      */
     /*  *********************** */
         /**
-         *  Determines the TileDB workspace, group, and array name
+         *  Determines the TileDB group and array name
          *    from the image id
          *
          *  @param  image_id  The full path of the image or the full path of
          *    where to store the image
          *  @return  The name of the TileDB array
          */
-        std::string workspace_setup(const std::string &image_id);
-
-        /**
-         *  Sets the schema and writes the metadata of the TDBImage
-         *
-         *  @param  image_id  The name of the TileDB array
-         *  @param  metadata  A flag indicating whether the metadata
-         *    should be stored in TileDB or not
-         *  @return  The number of values per cell in the array
-         */
-        int array_setup(const std::string &image_id, bool metadata);
+        std::string namespace_setup(const std::string &image_id);
 
 
     /*  *********************** */
     /*   METADATA INTERACTION   */
     /*  *********************** */
+
+        /**
+         *  Writes the metadata of the TDBImage
+         *
+         *  @param  array  The tiledb::Array to which data is being written
+         */
+        void write_image_metadata(tiledb::Array &array);
+
         /**
          *  Reads the metadata at the existing TDBImage path variables
          */
-        void read_metadata();
+        void read_image_metadata();
 
 
     /*  *********************** */
@@ -379,28 +368,8 @@ namespace VCL {
          *  @param  subarray  An array of the coordinates of the subarray
          *    to read
          */
-        void read_from_tdb(int64_t* subarray);
+        void read_from_tdb(std::vector<uint64_t> subarray);
 
-        /**
-         *  Reorders the raw data buffer into image order and
-         *    casts as the specified type
-         *
-         *  @param  buffer  The buffer to store the image order data in
-         */
-        template <class T> void reorder_buffer(T* buffer);
-
-        /**
-         *  Reorders a tile into image order and casts as the
-         *    specified type
-         *
-         *  @param  buffer  The buffer to store the image order data in
-         *  @param  subarray  The coordinates of the current tile
-         *  @param  tile  The current tile number (in row order)
-         *  @param  start_index  The current index into the raw data buffer
-         *  @return  The current index into the image order buffer
-         */
-        template <class T> int reorder_tile(T* buffer, int64_t* subarray,
-            int tile, int start_index);
 
     /*  *********************** */
     /*      MATH FUNCTIONS      */

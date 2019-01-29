@@ -39,16 +39,21 @@ namespace VCL {
 
       UnsupportedFormat,
       UnsupportedOperation,
+      UnsupportedIndex,
 
       ObjectNotFound,
       OpenFailed,
+      NotImplemented,
 
       ObjectEmpty,
 
       SizeMismatch,
+      OutOfBounds,
 
       TileDBNotFound,
       TileDBError,
+
+      OpenCVError,
 
     };
 

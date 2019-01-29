@@ -48,29 +48,30 @@ namespace VCL {
     /*  *********************** */
     /*        OPERATION         */
     /*  *********************** */
-        enum OperationType { READ, WRITE, RESIZE, CROP, THRESHOLD };
+        enum OperationType { READ, WRITE, RESIZE, CROP, THRESHOLD,
+                             FLIP, ROTATE };
 
         /**
          *  Provides a way to keep track of what operations should
          *   be performed on the data when it is needed
          *
          *  Operation is the base class, it keeps track of the format
-         *   of the image data, defines a way to convert ImageFormat to
+         *   of the image data, defines a way to convert Format to
          *   a string, and defines a virtual function that overloads the
          *   () operator
          */
         class Operation {
         protected:
             /** The format of the image for this operation */
-            ImageFormat _format;
+            Image::Format _format;
 
             /**
              *  Constructor, sets the format
              *
              *  @param format  The format for the operation
-             *  @see Image.h for more details on ImageFormat
+             *  @see Image.h for more details on Format
              */
-            Operation(ImageFormat format)
+            Operation(Image::Format format)
                 : _format(format)
             {
             };
@@ -104,9 +105,9 @@ namespace VCL {
              *
              *  @param filename  The full path to read from
              *  @param format  The format to read the image from
-             *  @see Image.h for more details on ImageFormat
+             *  @see Image.h for more details on Image::Format
              */
-            Read(const std::string& filename, ImageFormat format);
+            Read(const std::string& filename, Image::Format format);
 
             /**
              *  Reads an image from the file system (based on the format
@@ -132,7 +133,7 @@ namespace VCL {
             /** The full path of where to write the image */
             std::string _fullpath;
             /** The format the image used to be stored as */
-            ImageFormat _old_format;
+            Image::Format _old_format;
             /** Whether to store the metadata */
             bool _metadata;
 
@@ -143,10 +144,10 @@ namespace VCL {
              *  @param filename  The full path to write to
              *  @param format  The format to store the image in
              *  @param old_format  The format the image was stored in
-             *  @see Image.h for more details on ImageFormat
+             *  @see Image.h for more details on Image::Format
              */
-            Write(const std::string& filename, ImageFormat format,
-                ImageFormat old_format, bool metadata);
+            Write(const std::string& filename, Image::Format format,
+                Image::Format old_format, bool metadata);
             /**
              *  Writes an image to the file system (based on the format
              *    and file path indicated)
@@ -175,9 +176,9 @@ namespace VCL {
              *
              *  @param rect  Contains height and width to resize to
              *  @param format  The current format of the image data
-             *  @see Image.h for more details on ImageFormat and Rectangle
+             *  @see Image.h for more details on Image::Format and Rectangle
              */
-            Resize(const Rectangle &rect, ImageFormat format)
+            Resize(const Rectangle &rect, Image::Format format)
                 : Operation(format),
                   _rect(rect)
             {
@@ -211,9 +212,9 @@ namespace VCL {
              *  @param rect  Contains dimensions and coordinates of
              *    desired area
              *  @param format  The current format of the image data
-             *  @see Image.h for more details on ImageFormat and Rectangle
+             *  @see Image.h for more details on Image::Format and Rectangle
              */
-            Crop(const Rectangle &rect, ImageFormat format)
+            Crop(const Rectangle &rect, Image::Format format)
                 : Operation(format),
                   _rect(rect)
             {
@@ -247,9 +248,9 @@ namespace VCL {
              *
              *  @param value  Minimum value pixels should be
              *  @param format  The current format of the image data
-             *  @see Image.h for more details on ImageFormat
+             *  @see Image.h for more details on Image::Format
              */
-            Threshold(const int value, ImageFormat format)
+            Threshold(const int value, Image::Format format)
                 : Operation(format),
                   _threshold(value)
             {
@@ -265,6 +266,74 @@ namespace VCL {
             OperationType get_type() { return THRESHOLD; };
         };
 
+    /*  *********************** */
+    /*    FLIP OPERATION   */
+    /*  *********************** */
+        /**  Extends Operation, performs a flip operation that
+         */
+        class Flip : public Operation {
+        private:
+            /** Minimum value pixels should be */
+            int _code;
+
+        public:
+            /**
+             *  Constructor, sets the flip code value.
+             *
+             *  @param code  Type of flipping operation
+             *  @param format  The current format of the image data
+             *  @see Image.h for more details on Image::Format
+             */
+            Flip(const int code, Image::Format format)
+                : Operation(format),
+                  _code(code)
+            {
+            };
+
+            /**
+             *  Performs the flip operation
+             *
+             *  @param img  A pointer to the current ImageData object
+             */
+            void operator()(ImageData *img);
+
+            OperationType get_type() { return FLIP; };
+        };
+
+    /*  *********************** */
+    /*    ROTATE OPERATION   */
+    /*  *********************** */
+        /**  Extends Operation, performs a flip operation that
+         */
+        class Rotate : public Operation {
+        private:
+            /** Minimum value pixels should be */
+            float _angle;
+            bool _keep_size;
+
+        public:
+            /**
+             *  Constructor, sets the flip code value.
+             *
+             *  @param format  The current format of the image data
+             *  @see Image.h for more details on Image::Format
+             */
+            Rotate(const float angle, const bool keep_size, Image::Format format)
+                : Operation(format),
+                  _angle(angle),
+                  _keep_size(keep_size)
+            {
+            };
+
+            /**
+             *  Performs the flip operation
+             *
+             *  @param img  A pointer to the current ImageData object
+             */
+            void operator()(ImageData *img);
+
+            OperationType get_type() { return ROTATE; };
+        };
 
     private:
     /*  *********************** */
@@ -280,7 +349,7 @@ namespace VCL {
         std::vector<std::shared_ptr<Operation>> _operations;
 
         // Image format and compression type
-        ImageFormat _format;
+        Image::Format _format;
         CompressionType _compress;
 
         // Full path to image
@@ -356,10 +425,10 @@ namespace VCL {
         /**
          *  Gets the format of the ImageData object
          *
-         *  @return The ImageFormat of the ImageData object
-         *  @see Image.h for more details on ImageFormat
+         *  @return The Image::Format of the ImageData object
+         *  @see Image.h for more details on Image::Format
          */
-        ImageFormat get_image_format() const;
+        Image::Format get_image_format() const;
 
         /**
          *  Gets the OpenCV type of the image
@@ -381,7 +450,7 @@ namespace VCL {
          *
          *  @return The size of the image in pixels
          */
-        int get_size();
+        long get_size();
 
         /**
          *  Gets the image data in a buffer
@@ -391,7 +460,7 @@ namespace VCL {
          *  @param  buffer_size  The pixel size of the image (length of
          *     the buffer, not bytes)
          */
-        void get_buffer(void* buffer, int buffer_size);
+        void get_buffer(void* buffer, long buffer_size);
 
         /**
          *  Gets an OpenCV Mat that contains the image data
@@ -414,29 +483,20 @@ namespace VCL {
         /**
          *  Gets encoded image data in a buffer
          *
-         *  @param format  The ImageFormat the image should be encoded as
+         *  @param format  The Image::Format the image should be encoded as
          *  @param buffer  The buffer the encoded image will be stored in
          *  @param params  Optional parameters
          *  @see OpenCV documentation for imencode for more details
          */
-        std::vector<unsigned char> get_encoded(ImageFormat format,
+        std::vector<unsigned char> get_encoded(Image::Format format,
             const std::vector<int>& params=std::vector<int>());
 
 
     /*  *********************** */
     /*        SET FUNCTIONS     */
     /*  *********************** */
-        /**
-         *  Creates a unique ID in the path given with the given extension
-         *
-         *  @param path  A string with the path to where the Image should be
-         *                  stored
-         *  @param format The ImageFormat the Image should be stored as
-         *  @return The string containing the full path to the Image (path
-         *    + unique id + format)
-         */
-        void create_unique(const std::string &path,
-                ImageFormat format);
+
+        std::string format_to_string(Image::Format format);
 
         /**
          *  Sets the file system location of where the image
@@ -450,8 +510,8 @@ namespace VCL {
          *  Sets the format of the ImageData object
          *
          *  @param extension  A string containing the file system
-         *    extension corresponding to the desired ImageFormat
-         *  @see Image.h for more details on ImageFormat
+         *    extension corresponding to the desired Image::Format
+         *  @see Image.h for more details on Image::Format
          */
         void set_format(const std::string &extension);
 
@@ -487,7 +547,7 @@ namespace VCL {
          *  @param buffer  The buffer containing the raw pixel data
          *  @param size  The size of the buffer
          */
-        void set_data_from_raw(void* buffer, int size);
+        void set_data_from_raw(void* buffer, long size);
 
         /**
          *  Sets the Image object to contain raw pixel data
@@ -522,12 +582,12 @@ namespace VCL {
          *
          *  @param image_id  The full path to where the image should
          *    be written
-         *  @param image_format  The ImageFormat to write the image in
+         *  @param image_format  The Image::Format to write the image in
          *  @param store_metadata  A flag to indicate whether to store the
          *    metadata in TileDB or not. Defaults to true
-         *  @see Image.h for more details on ImageFormat
+         *  @see Image.h for more details on Image::Format
          */
-        void write(const std::string &image_id, ImageFormat image_format,
+        void write(const std::string &image_id, Image::Format image_format,
             bool store_metadata=true);
 
         // void remove(const std::string &image_id);
@@ -561,6 +621,23 @@ namespace VCL {
         void threshold(int value);
 
         /**
+         *  Stores a Flip Operation in the list of operations
+         *    to perform
+         *
+         *  @param code  The code of flip
+         */
+        void flip(int code);
+
+        /**
+         *  Rotates the image
+         *
+         *  @param angle  Angle of rotation
+         * @param keep_resize  Specifies if the image will be resized after
+         *                      the rotation, or size will be kept.
+         */
+        void rotate(float angle, bool keep_size);
+
+        /**
          *  Deletes the ImageData as well as removes file from system if
          *    it exists
          */
@@ -590,41 +667,19 @@ namespace VCL {
     /*  *********************** */
     /*      UTIL FUNCTIONS      */
     /*  *********************** */
-        /**
-         *  Gets the extension of a filename
-         *
-         *  @param filename  The path to the file
-         *  @return The string containing the extension
-         */
-        std::string get_extension(const std::string &filename);
-
-        /**
-         *  Converts ImageFormat to string
-         *
-         *  @param image_format The ImageFormat of the Image object
-         *  @return The string containing the extension
-         */
-        std::string format_to_string(ImageFormat image_format);
 
         /**
          *  Creates full path to Image with appropriate extension based
-         *    on the ImageFormat
+         *    on the Image::Format
          *
          *  @param filename The path to the Image object
-         *  @param format  The ImageFormat of the Image object
+         *  @param format  The Image::Format of the Image object
          *  @return Full path to the object including extension
          */
         std::string create_fullpath(const std::string &filename,
-            ImageFormat format);
+            Image::Format format);
 
-        /**
-         *  Checks to see if the file name is unique by attempting
-         *    to open the file
-         *
-         *  @param name  Full path to the theoretically unique ID
-         *  @return True if the file does not exist, false if it does
-         */
-        bool exists(const std::string &name);
+
     };
 
 }

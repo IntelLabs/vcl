@@ -35,7 +35,6 @@
 
 using namespace VCL;
 
-
     /*  *********************** */
     /*        CONSTRUCTORS      */
     /*  *********************** */
@@ -57,10 +56,13 @@ Image::Image(const cv::Mat &cv_img)
 
 }
 
-Image::Image(void* buffer, int size, int flags)
+Image::Image(void* buffer, long size, int flags)
 {
     cv::Mat raw_data(cv::Size(size, 1), CV_8UC1, buffer);
     cv::Mat img = cv::imdecode(raw_data, flags);
+    if ( img.empty() ) {
+        throw VCLException(ObjectEmpty, "Image object is empty");
+    }
 
     _image = new ImageData(img);
 }
@@ -104,12 +106,12 @@ cv::Size Image::get_dimensions() const
     return _image->get_dimensions();
 }
 
-ImageFormat Image::get_image_format() const
+Image::Format Image::get_image_format() const
 {
     return _image->get_image_format();
 }
 
-int Image::get_raw_data_size() const
+long Image::get_raw_data_size() const
 {
     return _image->get_size();
 }
@@ -135,29 +137,21 @@ cv::Mat Image::get_cvmat() const
     return mat.clone();
 }
 
-void Image::get_raw_data(void* buffer, int buffer_size ) const
+void Image::get_raw_data(void* buffer, long buffer_size ) const
 {
     _image->get_buffer(buffer, buffer_size);
 }
 
 
-std::vector<unsigned char> Image::get_encoded_image(ImageFormat format,
+std::vector<unsigned char> Image::get_encoded_image(Image::Format format,
                 const std::vector<int>& params) const
 {
     return _image->get_encoded(format, params);
 }
 
-
-
     /*  *********************** */
     /*        SET FUNCTIONS     */
     /*  *********************** */
-
-std::string Image::create_unique(const std::string &path, ImageFormat format)
-{
-    _image->create_unique(path, format);
-    return _image->get_image_id();
-}
 
 void Image::set_compression(CompressionType comp)
 {
@@ -183,7 +177,7 @@ void Image::set_minimum_dimension(int dimension)
     /*    IMAGE INTERACTIONS    */
     /*  *********************** */
 
-void Image::store(const std::string &filename, ImageFormat image_format,
+void Image::store(const std::string &filename, Image::Format image_format,
     bool store_metadata)
 {
     _image->write(filename, image_format, store_metadata);
@@ -212,4 +206,14 @@ void Image::crop(const Rectangle &rect)
 void Image::threshold(int value)
 {
     _image->threshold(value);
+}
+
+void Image::flip(int code)
+{
+    _image->flip(code);
+}
+
+void Image::rotate(float angle, bool keep_size)
+{
+    _image->rotate(angle, keep_size);
 }

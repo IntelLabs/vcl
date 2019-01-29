@@ -42,18 +42,20 @@ namespace VCL {
     /**
      *  Determines what kind of compression to use
      */
-    enum class CompressionType : int { NOCOMPRESSION = 0,
-                    GZIP = 1,
-                    ZSTD = 2,
-                    LZ4 = 3,
-                    BLOSC = 4,
-                    BLZ4 = 5,
-                    BLZ4HC =  6,
-                    BSNAPPY = 7,
-                    BZLIB = 8,
-                    BZSTD = 9,
-                    RLE = 10, };
 
+    enum class CompressionType {
+        NOCOMPRESSION = 0,
+        GZIP = 1,
+        ZSTD = 2,
+        LZ4 = 3,
+        BLOSC = 4,
+        BLZ4 = 5,
+        BLZ4HC =  6,
+        BSNAPPY = 7,
+        BZLIB = 8,
+        BZSTD = 9,
+        RLE = 10
+    };
 
     static const struct init_rand_t { init_rand_t() { srand(time(NULL)); } } init_rand;
 
@@ -61,6 +63,25 @@ namespace VCL {
 
     bool supports_rdrand();
 
-    uint64_t get_int64();
+    uint64_t get_uint64();
 
+    /**
+     *  Gets the extension of a filename
+     *
+     *  @param filename  The path to the file
+     *  @return The string containing the extension
+     */
+    std::string get_extension(const std::string &filename);
+
+    /**
+     *  Checks to see if the file name is unique by attempting
+     *    to open the file
+     *
+     *  @param name  Full path to the theoretically unique ID
+     *  @return True if the file does not exist, false if it does
+     */
+    bool exists(const std::string &name);
+
+    std::string create_unique(const std::string& path,
+                              const std::string& extension);
 };

@@ -36,12 +36,13 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <tiledb.h>
 #include "TDBImage.h"
 #include "TDBObject.h"
 #include "VCL.h"
 
 using namespace VCL;
+
+#define MAX_UCHAR 256
 
     /*  *********************** */
     /*        CONSTRUCTORS      */
@@ -56,12 +57,10 @@ TDBImage::TDBImage() : TDBObject()
     _threshold = 0;
 
     set_num_dimensions(2);
-
     set_default_attributes();
     set_default_dimensions();
 
     _raw_data = NULL;
-    _tile_order = false;
 }
 
 TDBImage::TDBImage(const std::string &image_id) : TDBObject(image_id)
@@ -78,11 +77,10 @@ TDBImage::TDBImage(const std::string &image_id) : TDBObject(image_id)
     set_default_dimensions();
 
     _raw_data = NULL;
-    _tile_order = false;
 }
 
 template <class T>
-TDBImage::TDBImage(T* buffer, int size) : TDBObject()
+TDBImage::TDBImage(T* buffer, long size) : TDBObject()
 {
     _img_height = 0;
     _img_width = 0;
@@ -97,23 +95,22 @@ TDBImage::TDBImage(T* buffer, int size) : TDBObject()
 
     _raw_data = new unsigned char[size];
     std::memcpy(_raw_data, buffer, _img_size);
-    _tile_order = false;
 }
 
 // OpenCV type CV_8UC1-4
-template TDBImage::TDBImage(unsigned char* buffer, int size);
+template TDBImage::TDBImage(unsigned char* buffer, long size);
 // OpenCV type CV_8SC1-4
-template TDBImage::TDBImage(char* buffer, int size);
+template TDBImage::TDBImage(char* buffer, long size);
 // OpenCV type CV_16UC1-4
-template TDBImage::TDBImage(unsigned short* buffer, int size);
+template TDBImage::TDBImage(unsigned short* buffer, long size);
 // OpenCV type CV_16SC1-4
-template TDBImage::TDBImage(short* buffer, int size);
+template TDBImage::TDBImage(short* buffer, long size);
 // OpenCV type CV_32SC1-4
-template TDBImage::TDBImage(int* buffer, int size);
+template TDBImage::TDBImage(int* buffer, long size);
 // OpenCV type CV_32FC1-4
-template TDBImage::TDBImage(float* buffer, int size);
+template TDBImage::TDBImage(float* buffer, long size);
 // OpenCV type CV_64FC1-4
-template TDBImage::TDBImage(double* buffer, int size);
+template TDBImage::TDBImage(double* buffer, long size);
 
 
 TDBImage::TDBImage(TDBImage &tdb) : TDBObject(tdb)
@@ -131,8 +128,9 @@ TDBImage::TDBImage(TDBImage &tdb) : TDBObject(tdb)
     set_image_data_equal(tdb);
 
     if ( tdb.has_data() ) {
-        _raw_data = new unsigned char[_img_size];
-        std::memcpy(_raw_data, tdb._raw_data, _img_size);
+        uint64_t size = _img_height  * _img_width * _img_channels;
+        _raw_data = new unsigned char[size];
+        std::memcpy(_raw_data, tdb._raw_data, size);
     }
 }
 
@@ -156,8 +154,9 @@ void TDBImage::operator=(TDBImage &tdb)
         if (_raw_data != NULL)
             delete [] _raw_data;
 
-        _raw_data = new unsigned char[_img_size];
-        std::memcpy(_raw_data, tdb._raw_data, _img_size);
+        uint64_t array_size = _img_height * _img_width * _img_channels;
+        _raw_data = new unsigned char[array_size];
+        std::memcpy(_raw_data, tdb._raw_data, array_size);
     }
 
     delete temp;
@@ -170,7 +169,6 @@ void TDBImage::set_image_data_equal(const TDBImage &tdb)
     _img_channels = tdb._img_channels;
     _img_size = tdb._img_size;
     _threshold = tdb._threshold;
-    _tile_order = tdb._tile_order;
 }
 
 TDBImage::~TDBImage()
@@ -183,12 +181,14 @@ TDBImage::~TDBImage()
     /*        GET FUNCTIONS     */
     /*  *********************** */
 
-int TDBImage::get_image_size()
+long TDBImage::get_image_size()
 {
-    if (_img_size == 0 && _name == "")
+    if (_img_size == 0 && _name == "") {
         throw VCLException(TileDBNotFound, "No data in TileDB object yet");
-    else if (_img_size == 0 && _name != "")
-        read_metadata();
+    }
+    else if (_img_size == 0 && _name != "") {
+        read_image_metadata();
+    }
 
     return _img_size;
 }
@@ -198,7 +198,7 @@ int TDBImage::get_image_height()
     if (_img_height == 0 && _name == "")
         throw VCLException(TileDBNotFound, "No data in TileDB object yet");
     else if ( _img_height == 0 && _name != "")
-        read_metadata();
+        read_image_metadata();
 
     return _img_height;
 }
@@ -208,7 +208,7 @@ int TDBImage::get_image_width()
     if (_img_width == 0 && _name == "")
         throw VCLException(TileDBNotFound, "No data in TileDB object yet");
     else if ( _img_width == 0 && _name != "")
-        read_metadata();
+        read_image_metadata();
 
     return _img_width;
 }
@@ -218,7 +218,7 @@ int TDBImage::get_image_channels()
     if (_img_channels == 0 && _name == "")
         throw VCLException(TileDBNotFound, "No data in TileDB object yet");
     else if ( _img_channels == 0 && _name != "")
-        read_metadata();
+        read_image_metadata();
 
     return _img_channels;
 }
@@ -230,10 +230,7 @@ cv::Mat TDBImage::get_cvmat()
 
     unsigned char* buffer = new unsigned char[_img_size];
 
-    if ( _tile_order )
-        reorder_buffer(buffer);
-    else
-        std::memcpy(buffer, _raw_data, _img_size);
+    std::memcpy(buffer, _raw_data, _img_size);
 
     cv::Mat img_clone;
 
@@ -251,28 +248,29 @@ cv::Mat TDBImage::get_cvmat()
 }
 
 template <class T>
-void TDBImage::get_buffer(T* buffer, int buffer_size)
+void TDBImage::get_buffer(T* buffer, long buffer_size)
 {
-    if ( buffer_size != get_image_size() )
+    if ( buffer_size != get_image_size() ) {
+        std::cout << "buffer size not equal to image size\n";
+        std::cout << "buffer size: " << buffer_size << std::endl;
+        std::cout << "image size: " << _img_size << std::endl;
         throw VCLException(SizeMismatch, buffer_size + " is not equal to "
-            + get_image_size());
+            + _img_size);
+    }
 
     if ( _raw_data == NULL )
         read();
 
-    if ( _tile_order ) 
-        reorder_buffer(buffer);
-    else
-        std::memcpy(buffer, _raw_data, buffer_size);
+    std::memcpy(buffer, _raw_data, buffer_size);
 }
 
-template void TDBImage::get_buffer(unsigned char* buffer, int buffer_size);
-template void TDBImage::get_buffer(char* buffer, int buffer_size);
-template void TDBImage::get_buffer(unsigned short* buffer, int buffer_size);
-template void TDBImage::get_buffer(short* buffer, int buffer_size);
-template void TDBImage::get_buffer(int* buffer, int buffer_size);
-template void TDBImage::get_buffer(float* buffer, int buffer_size);
-template void TDBImage::get_buffer(double* buffer, int buffer_size);
+template void TDBImage::get_buffer(unsigned char* buffer, long buffer_size);
+template void TDBImage::get_buffer(char* buffer, long buffer_size);
+template void TDBImage::get_buffer(unsigned short* buffer, long buffer_size);
+template void TDBImage::get_buffer(short* buffer, long buffer_size);
+template void TDBImage::get_buffer(int* buffer, long buffer_size);
+template void TDBImage::get_buffer(float* buffer, long buffer_size);
+template void TDBImage::get_buffer(double* buffer, long buffer_size);
 
 
     /*  *********************** */
@@ -297,33 +295,26 @@ void TDBImage::write(const std::string &image_id, bool metadata)
     if ( _raw_data == NULL )
         throw VCLException(ObjectEmpty, "No data to be written");
 
-    std::string array_name = workspace_setup(image_id);
-    int num_values = array_setup(array_name, metadata);
+    std::string array_name = namespace_setup(image_id);
 
-    TileDB_Array* image_array;
+    std::vector<unsigned char> num_values;
+    if ( _num_attributes == 1 && _img_channels == 3)
+        num_values.push_back(3);
+    else
+        num_values.push_back(1);
+    set_schema_dense(array_name, num_values);
 
-    if ( _tile_order ) {
-        Error_Check(
-            tiledb_array_init(_ctx, &image_array, array_name.c_str(),
-                TILEDB_ARRAY_WRITE, NULL, NULL, 0),
-            "TileDB array failed to initialize");
-    }
-    else {
-        Error_Check(
-            tiledb_array_init(_ctx, &image_array, array_name.c_str(),
-                TILEDB_ARRAY_WRITE_SORTED_ROW, NULL, NULL, 0),
-            "TileDB array failed to initialize");
-    }
+    tiledb::Array array(_ctx, array_name, TILEDB_WRITE);
 
+    tiledb::Query write_query(_ctx, array, TILEDB_WRITE);
+
+    write_query.set_layout(TILEDB_ROW_MAJOR);
 
     if ( _num_attributes == 1 ) {
-        // Size of buffers is equal to the number of attributes
-        const void* buffers[] = { _raw_data };
-        size_t buffer_sizes[] = { sizeof(_raw_data) };
-
-        Error_Check(
-            tiledb_array_write(image_array, buffers, buffer_sizes),
-            "TileDB write to array failed");
+        write_image_metadata(array);
+        std::vector<uint64_t> subarray = {1, _img_height, 0, _img_width - 1};
+        write_query.set_subarray(subarray);
+        write_query.set_buffer(_attributes[0], _raw_data, _img_height * _img_width*_img_channels);
     }
     else {
         size_t buffer_size = _img_height*_img_width;
@@ -338,19 +329,14 @@ void TDBImage::write(const std::string &image_id, bool metadata)
             red_buffer[i] = _raw_data[count + 2];
         }
 
-        // Size of buffers is equal to the number of attributes
-        const void* buffers[] = { blue_buffer, green_buffer, red_buffer };
-        size_t buffer_sizes[] = { buffer_size, buffer_size, buffer_size };
-
-        Error_Check(
-            tiledb_array_write(image_array, buffers, buffer_sizes),
-            "TileDB write to array failed");
-
+        write_query.set_buffer(_attributes[0], blue_buffer, buffer_size);
+        write_query.set_buffer(_attributes[1], green_buffer, buffer_size);
+        write_query.set_buffer(_attributes[2], red_buffer, buffer_size);
     }
 
-    Error_Check(
-        tiledb_array_finalize(image_array),
-        "TileDB array failed to finalize");
+    write_query.submit();
+    write_query.finalize();
+    array.close();
 }
 
 
@@ -361,37 +347,42 @@ void TDBImage::write(const cv::Mat &cv_img, bool metadata)
     if ( _name == "" )
         throw VCLException(ObjectNotFound, "Object name is not defined");
 
-    _dimension_values.push_back(cv_img.rows);
-    _dimension_values.push_back(cv_img.cols);
+    std::string array_name = _group + _name;
+    if ( tiledb::Object::object(_ctx, array_name).type() != tiledb::Object::Type::Invalid)
+        tiledb::Object::remove(_ctx, array_name);
+
+    set_dimension_lowerbounds(std::vector<uint64_t>{0, 0});
+    set_dimension_upperbounds(std::vector<uint64_t>{(uint64_t)(cv_img.rows + 1),
+                                                    (uint64_t)(cv_img.cols)});
 
     _img_height = cv_img.rows;
     _img_width = cv_img.cols;
     _img_channels = cv_img.channels();
     _img_size = _img_height * _img_width * _img_channels;
 
-    std::string array_name = workspace_setup(_group + _name);
-    int num_values = array_setup(array_name, metadata);
+    std::vector<unsigned char> num_values;
+    if ( _num_attributes == 1 && _img_channels == 3)
+        num_values.push_back(3);
+    else
+        num_values.push_back(1);
+    set_schema_dense(array_name, num_values);
 
-    TileDB_Array* image_array;
-    Error_Check(
-        tiledb_array_init(_ctx, &image_array, array_name.c_str(),
-            TILEDB_ARRAY_WRITE_SORTED_ROW, NULL, NULL, 0),
-        "TileDB array failed to initialize");
+    tiledb::Array array(_ctx, array_name, TILEDB_WRITE);
+
+    write_image_metadata(array);
+
+    tiledb::Query write_query(_ctx, array);
+    write_query.set_layout(TILEDB_ROW_MAJOR);
+
+    std::vector<uint64_t> subarray = {1, _img_height, 0, _img_width - 1};
+    write_query.set_subarray(subarray);
 
     size_t buffer_size = _img_height * _img_width * _img_channels;
+    _raw_data = new unsigned char[buffer_size];
 
     if ( _num_attributes == 1 ) {
-        _raw_data = new unsigned char[buffer_size];
         std::memcpy(_raw_data, cv_img.data, buffer_size);
-        _tile_order = false;
-
-        // Size of buffers is equal to the number of attributes
-        const void* buffers[] = { _raw_data };
-        size_t buffer_sizes[] = { buffer_size };
-
-        Error_Check(
-            tiledb_array_write(image_array, buffers, buffer_sizes),
-            "TileDB write to array failed");
+        write_query.set_buffer(_attributes[0], _raw_data, buffer_size);
     }
     else {
         std::vector<cv::Mat> channels(3);
@@ -422,26 +413,18 @@ void TDBImage::write(const cv::Mat &cv_img, bool metadata)
             std::memcpy(r, rp, _img_width);
         }
 
-        _raw_data = new unsigned char[buffer_size];
-        std::memcpy(_raw_data, cv_img.data, buffer_size);
-        _tile_order = false;
-
-        // Size of buffers is equal to the number of attributes
-        const void* buffers[] = { blue_buffer, green_buffer, red_buffer };
-        size_t buffer_sizes[] = { size, size, size };
-
-        Error_Check(
-            tiledb_array_write(image_array, buffers, buffer_sizes),
-            "TileDB write to array failed");
+        write_query.set_buffer(_attributes[0], blue_buffer, buffer_size);
+        write_query.set_buffer(_attributes[1], green_buffer, buffer_size);
+        write_query.set_buffer(_attributes[2], red_buffer, buffer_size);
 
         delete [] blue_buffer;
         delete [] green_buffer;
         delete [] red_buffer;
     }
 
-    Error_Check(
-        tiledb_array_finalize(image_array),
-        "TileDB array failed to finalize");
+    write_query.submit();
+    write_query.finalize();
+    array.close();
 }
 
 void TDBImage::read()
@@ -449,15 +432,10 @@ void TDBImage::read()
     if ( _raw_data == NULL )
     {
         if ( _img_height == 0 )
-            read_metadata();
+            read_image_metadata();
 
-        int start_row = 0;
-        int start_column = 0;
-        int end_row = _img_height - 1;
-        int end_column = _img_width - 1;
-
-        int64_t subarray[] = { start_row, end_row, start_column, end_column };
-
+        // {start row, end row, start col, end col}
+        std::vector<uint64_t> subarray = {1, _img_height, 0, _img_width - 1};
         read_from_tdb(subarray);
     }
 }
@@ -466,24 +444,24 @@ void TDBImage::read(const Rectangle &rect)
 {
     if (_raw_data == NULL) {
 
-    if ( _img_height == 0 )
-        read_metadata();
+        if ( _img_height == 0 )
+            read_image_metadata();
 
-    if ( _img_height < rect.height + rect.y || _img_width < rect.width + rect.x )
-        throw VCLException(SizeMismatch, "Requested area is not within the image");
+        if ( _img_height < rect.height + rect.y || _img_width < rect.width + rect.x )
+            throw VCLException(SizeMismatch, "Requested area is not within the image");
 
-    _img_height = rect.height;
-    _img_width = rect.width;
-    _img_size = _img_height * _img_width * _img_channels;
+        _img_height = rect.height;
+        _img_width = rect.width;
+        _img_size = _img_height * _img_width * _img_channels;
 
-    int start_row = rect.x;
-    int start_column = rect.y;
-    int end_row = start_row + rect.height - 1;
-    int end_column = start_column + rect.width - 1;
+        std::vector<uint64_t> subarray;
 
-    int64_t subarray[] = { start_row, end_row, start_column, end_column };
+        subarray.push_back(rect.x); // start row
+        subarray.push_back(rect.x + rect.height); // end row
+        subarray.push_back(rect.y); // start column
+        subarray.push_back(rect.y + rect.width); //end column
 
-    read_from_tdb(subarray);
+        read_from_tdb(subarray);
     }
 }
 
@@ -515,12 +493,11 @@ void TDBImage::resize(const Rectangle &rect)
     _img_height = rect.height;
     _img_width = rect.width;
     _img_size = _img_height * _img_width * _img_channels;
-    std::vector<int> values = {_img_height, _img_width};
-    set_dimension_values(values);
+    std::vector<uint64_t> values = {_img_height + 1, _img_width};
+    set_dimension_upperbounds(values);
 
     _raw_data = new unsigned char[_img_size];
     std::memcpy(_raw_data, image_buffer, _img_size);
-    _tile_order = false;
 
     delete [] image_buffer;
 }
@@ -531,7 +508,6 @@ void TDBImage::threshold(int value)
         _threshold = value;
         read();
     }
-
     else {
         int length = _img_height * _img_width * _img_channels;
 
@@ -560,18 +536,6 @@ void TDBImage::delete_image()
     /*  *********************** */
     /*   PRIVATE GET FUNCTIONS  */
     /*  *********************** */
-std::string TDBImage::get_parent_dir(const std::string &filename) const
-{
-    std::string delimiter = "/";
-    size_t loc = filename.rfind(delimiter);
-    std::string parent_dir = filename.substr(0, loc);
-
-    loc = parent_dir.rfind(delimiter);
-    return parent_dir.substr(0, loc + 1);
-}
-
-
-
 void TDBImage::get_tile_coordinates(int64_t* subarray, int current_row_tile, int current_column_tile)
 {
     int row_start = current_row_tile * _tile_dimension[0];
@@ -609,10 +573,10 @@ void TDBImage::get_index_value(unsigned char* image_buffer, int index,
     if ( row_bottom > _img_height - 1 )
         row_bottom = _img_height - 1;
 
-    int top_left_index = get_index(row_top, column_left) * _img_channels;
-    int top_right_index = get_index(row_top, column_right) * _img_channels;
-    int bottom_left_index = get_index(row_bottom, column_left) * _img_channels;
-    int bottom_right_index = get_index(row_bottom, column_right) * _img_channels;
+    long top_left_index = get_index(row_top, column_left) * _img_channels;
+    long top_right_index = get_index(row_top, column_right) * _img_channels;
+    long bottom_left_index = get_index(row_bottom, column_left) * _img_channels;
+    long bottom_right_index = get_index(row_bottom, column_right) * _img_channels;
 
     for ( int x = 0; x < _img_channels; ++x ) {
         unsigned char top_left = _raw_data[top_left_index + x];
@@ -630,22 +594,22 @@ void TDBImage::get_index_value(unsigned char* image_buffer, int index,
     }
 }
 
-int TDBImage::get_index(int row, int column) const
+long TDBImage::get_index(int row, int column) const
 {
     int tile_width = get_tile_width(column, _img_width / _tile_dimension[1]);
     int tile_height = get_tile_height(row, _img_height / _tile_dimension[0]);
 
-    int tile_size = tile_width * tile_height;
+    long tile_size = tile_width * tile_height;
 
-    int current_tile_row = row % int(_tile_dimension[0]);
-    int current_row_tile = row / int(_tile_dimension[0]);
-    int current_column_tile = column / int(_tile_dimension[1]);
-    int current_tile_column = column % int(_tile_dimension[1]);
+    long current_tile_row = row % long(_tile_dimension[0]);
+    long current_row_tile = row / long(_tile_dimension[0]);
+    long current_column_tile = column / long(_tile_dimension[1]);
+    long current_tile_column = column % long(_tile_dimension[1]);
 
-    int full_row_tile = _img_width * _tile_dimension[0];
+    long full_row_tile = _img_width * _tile_dimension[0];
 
-    int row_index = current_row_tile * full_row_tile + current_tile_row * tile_width;
-    int column_index = current_column_tile * tile_size + current_tile_column;
+    long row_index = current_row_tile * full_row_tile + current_tile_row * tile_width;
+    long column_index = current_column_tile * tile_size + current_tile_column;
 
     return row_index + column_index;
 }
@@ -701,254 +665,112 @@ void TDBImage::set_default_attributes()
     /*  *********************** */
     /*      TDBIMAGE SETUP      */
     /*  *********************** */
-std::string TDBImage::workspace_setup(const std::string &image_id)
+std::string TDBImage::namespace_setup(const std::string &image_id)
 {
     size_t pos = get_path_delimiter(image_id);
 
-    std::string workspace = get_workspace(image_id, pos);
+    _group = get_group(image_id, pos);
+    _name = get_name(image_id, pos);
 
-    std::string parent_dir = get_parent_dir(workspace);
-    std::string group = get_group(image_id, pos);
-
-    return group + get_name(image_id, pos);
+    return _group + _name;
 }
-
-int TDBImage::array_setup(const std::string &image_id, bool metadata)
-{
-    int num_values = 0;
-    if ( _num_attributes == 1 && _img_channels == 3)
-        num_values = 3;
-    else
-        num_values = 1;
-
-    set_schema(num_values, image_id);
-
-    if (metadata) {
-        int64_t buffer[_num_dimensions + 1];
-        size_t buffer_keys[_num_dimensions + 1];
-
-        buffer[0] = _img_height;
-        buffer[1] = _img_width;
-        buffer[2] = _img_channels;
-
-        buffer_keys[0] = 0;
-        buffer_keys[1] = 5;
-        buffer_keys[2] = 13;
-
-        char buffer_var_keys[] = { "rows\0columns\0channels" };
-
-        std::string md_name = image_id + "/metadata";
-
-        write_metadata(md_name, buffer, buffer_var_keys, buffer_keys, sizeof(buffer_var_keys));
-    }
-
-    return num_values;
-}
-
 
     /*  *********************** */
     /*   METADATA INTERACTION   */
     /*  *********************** */
-void TDBImage::read_metadata()
+void TDBImage::write_image_metadata(tiledb::Array &array)
 {
-    if ( tiledb_dir_type(_ctx, _group.c_str()) != TILEDB_GROUP )
-        throw VCLException(TileDBNotFound, "Not a TileDB object");
+    std::vector<unsigned char> metadata;
 
-    const char* attributes[] = { "dimensions" };
-    int attrs = 1;
+    metadata.emplace_back((unsigned char)_img_channels / MAX_UCHAR);
+    metadata.emplace_back((unsigned char)_img_channels % MAX_UCHAR);
+    metadata.emplace_back((unsigned char)(_img_height / MAX_UCHAR));
+    metadata.emplace_back((unsigned char)(_img_height % MAX_UCHAR));
+    metadata.emplace_back((unsigned char)(_img_width / MAX_UCHAR));
+    metadata.emplace_back((unsigned char)(_img_width % MAX_UCHAR));
 
-    TileDB_Metadata* md;
-    std::string md_name = _group + _name + "/metadata";
+    std::vector<uint64_t> subarray = {0, 0, 0, 1};
 
-    if ( tiledb_dir_type(_ctx, md_name.c_str()) != TILEDB_METADATA )
-        throw VCLException(TileDBNotFound, "Not a TileDB object");
+    tiledb::Query md_write(_ctx, array);
+    md_write.set_subarray(subarray);
+    md_write.set_layout(TILEDB_ROW_MAJOR);
+    md_write.set_buffer(_attributes[_num_attributes - 1], metadata);
 
-    Error_Check(
-        tiledb_metadata_init(_ctx, &md, md_name.c_str(),
-            TILEDB_METADATA_READ, attributes, attrs),
-        "TileDB metadata failed to initialize");
+    md_write.submit();
+}
 
-    const char* keys[] = { "rows", "columns", "channels" };
+void TDBImage::read_image_metadata()
+{
+    std::vector<uint64_t> metadata(3);
 
-    int64_t rbuffer[10];
-    void* rbuffers[] = { rbuffer };
-    size_t rbuffer_sizes[] = { sizeof(rbuffer) };
+    std::string md_name = _group + _name;
+    std::vector<uint64_t> subarray = {0, 0, 0, 1};
+    std::string attr = _attributes[_num_attributes - 1];
+    read_metadata(md_name, subarray, metadata, attr);
 
-    Error_Check(
-        tiledb_metadata_read(md, keys[0], rbuffers, rbuffer_sizes),
-        "TileDB metadata read failed");
-    _img_height = static_cast<int64_t*>(rbuffers[0])[0];
-    _dimension_values.push_back(_img_height);
-
-    int64_t cbuffer[10];
-    void* cbuffers[] = { cbuffer };
-    size_t cbuffer_sizes[] = { sizeof(cbuffer) };
-
-    Error_Check(
-        tiledb_metadata_read(md, keys[1], cbuffers, cbuffer_sizes),
-        "TileDB metadata read failed");
-    _img_width = static_cast<int64_t*>(cbuffers[0])[0];
-    _dimension_values.push_back(_img_width);
-
-    int64_t hbuffer[10];
-    void* hbuffers[] = { hbuffer };
-    size_t hbuffer_sizes[] = { sizeof(hbuffer) };
-
-    Error_Check(
-        tiledb_metadata_read(md, keys[2], hbuffers, hbuffer_sizes),
-        "TileDB metadata read failed");
-    _img_channels = static_cast<int64_t*>(hbuffers[0])[0];
+    _img_height = metadata[1];
+    _img_width = metadata[2];
+    _img_channels = metadata[0];
 
     _img_size = _img_height * _img_width * _img_channels;
 
-    Error_Check(
-        tiledb_metadata_finalize(md),
-        "TileDB metadata failed to finalize");
+    set_dimension_lowerbounds(std::vector<uint64_t>{0, 0});
+    set_dimension_upperbounds(std::vector<uint64_t>{(_img_height + 1),
+                                                    (_img_width)});
 }
 
 
     /*  *********************** */
     /*     DATA MANIPULATION    */
     /*  *********************** */
-void TDBImage::read_from_tdb(int64_t* subarray)
+void TDBImage::read_from_tdb(std::vector<uint64_t> subarray)
 {
     std::string array_name = _group + _name;
 
-    size_t buffer_size = _img_size;
-    _raw_data = new unsigned char[buffer_size];
+    set_from_schema(array_name);
 
-    TileDB_Array* tiledb_array;
-    Error_Check(
-        tiledb_array_init(_ctx, &tiledb_array, array_name.c_str(),
-            TILEDB_ARRAY_READ, subarray, NULL, 0),
-        "TileDB array initialization failed");
+    tiledb::Array array(_ctx, array_name, TILEDB_READ);
 
-    set_from_schema(tiledb_array);
+    tiledb::Query read_query(_ctx, array, TILEDB_READ);
+    read_query.set_layout(TILEDB_ROW_MAJOR);
+    read_query.set_subarray(subarray);
 
     if ( _num_attributes == 1 ) {
-        unsigned char* buffer = new unsigned char[buffer_size];
-        void* buffers[] = { buffer }; // Size of buffers is equal to the number of attributes
-        size_t buffer_sizes[] = { buffer_size };
+        int buffer_size = _img_height * _img_width * _img_channels;
+        _raw_data = new unsigned char[buffer_size];
 
-        int overflow = 0;
-        do {
-            Error_Check(
-                tiledb_array_read(tiledb_array, buffers, buffer_sizes),
-                "TileDB read failed");
-            overflow = tiledb_array_overflow(tiledb_array, 0);
-            Error_Check(overflow, "TileDB Array Overflow error");
-        } while ( overflow == 1);
-
-        std::memcpy(_raw_data, buffer, buffer_size);
-
-        Error_Check(
-            tiledb_array_finalize(tiledb_array),
-            "TileDB array failed to finalize");
-
-        _tile_order = true;
-
-        delete [] buffer;
+        read_query.set_buffer(_attributes[0], _raw_data, buffer_size);
+        read_query.submit();
     }
 
     else {
-        size_t size = _img_height * _img_width;
-        unsigned char* blue_buffer = new unsigned char[size];
-        unsigned char* green_buffer = new unsigned char[size];
-        unsigned char* red_buffer = new unsigned char[size];
+        int buffer_size = _img_height * _img_width;
+        _raw_data = new unsigned char[buffer_size * _img_channels];
+        unsigned char* blue_buffer = new unsigned char[buffer_size];
+        unsigned char* green_buffer = new unsigned char[buffer_size];
+        unsigned char* red_buffer = new unsigned char[buffer_size];
 
-        // Size of buffers is equal to the number of attributes
-        void* buffers[] = { blue_buffer, green_buffer, red_buffer };
-        size_t buffer_sizes[] = { size, size, size };
+        read_query.set_buffer(_attributes[0], blue_buffer, buffer_size);
+        read_query.set_buffer(_attributes[1], green_buffer, buffer_size);
+        read_query.set_buffer(_attributes[2], red_buffer, buffer_size);
 
-        int overflow = 0;
-        do {
-            Error_Check(
-                tiledb_array_read(tiledb_array, buffers, buffer_sizes),
-                "TileDB read failed");
-            overflow = tiledb_array_overflow(tiledb_array, 0);
-            Error_Check(overflow, "TileDB Array Overflow error");
-        } while ( overflow == 1);
+        read_query.submit();
 
         int count = 0;
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < buffer_size; ++i) {
             _raw_data[count] = blue_buffer[i];
             _raw_data[count + 1] = green_buffer[i];
             _raw_data[count + 2] = red_buffer[i];
             count += 3;
         }
 
-        Error_Check(
-            tiledb_array_finalize(tiledb_array),
-            "TileDB array failed to finalize");
-
-        _tile_order = true;
-
         delete [] blue_buffer;
         delete [] green_buffer;
         delete [] red_buffer;
-
     }
+
+    array.close();
 }
-
-
-template <class T>
-void TDBImage::reorder_buffer(T* buffer)
-{
-    int i,j;
-    int nRows = _array_dimension[0] / float(_tile_dimension[0]);
-    int nCols = _array_dimension[1] / float(_tile_dimension[1]);
-
-    int buffer_index = 0;
-    int full_row_tile = _img_width * _tile_dimension[0] * _img_channels;
-
-    if ( _array_dimension[1] > _img_width ) {
-        nCols = _img_width / _tile_dimension[1];
-        if ( nCols * _tile_dimension[1] < _img_width )
-            nCols += 1;
-    }
-    if ( _array_dimension[0] > _img_height ) {
-        nRows = _img_height / _tile_dimension[0];
-        if ( nRows * _tile_dimension[0] < _img_height )
-            nRows += 1;
-    }
-
-    for ( i = 0; i < nRows; ++i ) {
-        for ( j = 0; j < nCols; ++j ) {
-            int64_t subarray[4];
-            get_tile_coordinates(subarray, i, j);
-
-            int start = i * full_row_tile + j * _tile_dimension[1] * _img_channels;
-            buffer_index = reorder_tile(buffer, subarray, buffer_index, start);
-        }
-    }
-}
-
-template void TDBImage::reorder_buffer(unsigned char* buffer);
-
-template <class T>
-int TDBImage::reorder_tile(T* buffer, int64_t* subarray, int buffer_index,
-    int start_index)
-{
-    int current_tile_height = subarray[1] - subarray[0];
-    int current_tile_width = subarray[3] - subarray[2];
-
-    int data_index;
-    int x, y;
-
-    for ( x = 0; x < current_tile_height; ++x ) {
-        data_index = start_index + x * _img_width * _img_channels;
-        for ( y = 0; y < current_tile_width * _img_channels; ++y ) {
-            buffer[data_index] = T(_raw_data[buffer_index]);
-            ++data_index;
-            ++buffer_index;
-        }
-    }
-    return buffer_index;
-}
-
-template int TDBImage::reorder_tile(unsigned char* buffer, int64_t* subarray,
-        int buffer_index, int start_index);
-
 
     /*  *********************** */
     /*      MATH FUNCTIONS      */

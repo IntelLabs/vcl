@@ -37,13 +37,15 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <string>
 
 class ImageTest : public ::testing::Test {
  protected:
     virtual void SetUp() {
         img_ = "images/large1.jpg";
-        tdb_img_ = "tdb/images/test_image.tdb";
+        tdb_img_ = "tdb/test_image.tdb";
         cv_img_ = cv::imread(img_, -1);
 
         size_ = cv_img_.rows * cv_img_.cols * cv_img_.channels();
@@ -129,7 +131,7 @@ TEST_F(ImageTest, StringConstructor)
 {
     VCL::Image img(img_);
 
-    EXPECT_EQ(VCL::JPG, img.get_image_format());
+    EXPECT_EQ(VCL::Image::Format::JPG, img.get_image_format());
     EXPECT_EQ(img_, img.get_image_id());
 }
 
@@ -246,7 +248,7 @@ TEST_F(ImageTest, GetMatFromTDB)
     VCL::Image img(tdb_img_);
 
     EXPECT_EQ(tdb_img_, img.get_image_id());
-    EXPECT_EQ(VCL::TDB, img.get_image_format());
+    EXPECT_EQ(VCL::Image::Format::TDB, img.get_image_format());
 
     cv::Mat cv_img = img.get_cvmat();
 
@@ -340,9 +342,9 @@ TEST_F(ImageTest, GetRectangleFromMat)
 TEST_F(ImageTest, WriteMatToJPG)
 {
     VCL::Image img(cv_img_);
-    img.store("image_results/test_image", VCL::JPG);
+    img.store("images/test_image", VCL::Image::Format::JPG);
 
-    cv::Mat test = cv::imread("image_results/test_image.jpg");
+    cv::Mat test = cv::imread("images/test_image.jpg");
 
     EXPECT_FALSE( test.empty() );
 }
@@ -350,13 +352,13 @@ TEST_F(ImageTest, WriteMatToJPG)
 TEST_F(ImageTest, WriteMatToTDB)
 {
     VCL::Image img(cv_img_);
-    img.store("tdb/images/mat_to_tdb", VCL::TDB);
+    img.store("tdb/mat_to_tdb", VCL::Image::Format::TDB);
 }
 
 TEST_F(ImageTest, WriteStringToTDB)
 {
     VCL::Image img(img_);
-    img.store("tdb/images/png_to_tdb.png", VCL::TDB);
+    img.store("tdb/png_to_tdb.png", VCL::Image::Format::TDB);
 }
 
 TEST_F(ImageTest, ResizeMat)
@@ -400,6 +402,91 @@ TEST_F(ImageTest, CropMat)
     EXPECT_EQ(rect_.height, cv_img.rows);
 }
 
+TEST_F(ImageTest, FlipVertical)
+{
+    VCL::Image img(img_);
+    cv::Mat cv_img = img.get_cvmat();
+    cv::Mat cv_img_flipped = cv::Mat(cv_img.rows, cv_img.cols, cv_img.type());
+    cv::flip(cv_img, cv_img_flipped, 0);
+
+    img.flip(0);
+    cv::Mat vcl_img_flipped = img.get_cvmat();
+
+    EXPECT_FALSE(vcl_img_flipped.empty());
+    compare_mat_mat(vcl_img_flipped, cv_img_flipped);
+}
+
+TEST_F(ImageTest, FlipHorizontal)
+{
+    VCL::Image img(img_);
+    cv::Mat cv_img = img.get_cvmat();
+    cv::Mat cv_img_flipped = cv::Mat(cv_img.rows, cv_img.cols, cv_img.type());
+    cv::flip(cv_img, cv_img_flipped, 1);
+
+    img.flip(1);
+    cv::Mat vcl_img_flipped = img.get_cvmat();
+
+    EXPECT_FALSE(vcl_img_flipped.empty());
+    compare_mat_mat(vcl_img_flipped, cv_img_flipped);
+}
+
+TEST_F(ImageTest, FlipBoth)
+{
+    VCL::Image img(img_);
+    cv::Mat cv_img = img.get_cvmat();
+    cv::Mat cv_img_flipped = cv::Mat(cv_img.rows, cv_img.cols, cv_img.type());
+    cv::flip(cv_img, cv_img_flipped, -1);
+
+    img.flip(-1);
+    cv::Mat vcl_img_flipped = img.get_cvmat();
+
+    EXPECT_FALSE(vcl_img_flipped.empty());
+    compare_mat_mat(vcl_img_flipped, cv_img_flipped);
+}
+
+TEST_F(ImageTest, Rotate)
+{
+    float angle = 30;
+    VCL::Image img(img_);
+    cv::Mat cv_img = img.get_cvmat();
+    cv::Mat cv_img_rot = cv::Mat(cv_img.rows, cv_img.cols, cv_img.type());
+
+    cv::Point2f pc(cv_img.cols/2., cv_img.rows/2.);
+    cv::Mat r = cv::getRotationMatrix2D(pc, angle, 1.0);
+    cv::warpAffine(cv_img, cv_img_rot, r, cv_img.size());
+
+    img.rotate(angle, true);
+    cv::Mat vcl_img_rot = img.get_cvmat();
+
+    EXPECT_FALSE(vcl_img_rot.empty());
+    compare_mat_mat(vcl_img_rot, cv_img_rot);
+}
+
+TEST_F(ImageTest, RotateResize)
+{
+    float angle = 30;
+    VCL::Image img(img_);
+    cv::Mat cv_img = img.get_cvmat();
+
+    cv::Point2f im_c((cv_img.cols-1)/2.0, (cv_img.rows-1)/2.0);
+    cv::Mat r = cv::getRotationMatrix2D(im_c, angle, 1.0);
+
+    cv::Rect2f bbox = cv::RotatedRect(cv::Point2f(), cv_img.size(),
+                                      angle).boundingRect2f();
+    // Transformation Matrix
+    r.at<double>(0,2) += bbox.width/2.0  - cv_img.cols/2.0;
+    r.at<double>(1,2) += bbox.height/2.0 - cv_img.rows/2.0;
+
+    cv::Mat cv_img_rot;
+    cv::warpAffine(cv_img, cv_img_rot, r, bbox.size());
+
+    img.rotate(angle, false);
+    cv::Mat vcl_img_rot = img.get_cvmat();
+
+    EXPECT_FALSE(vcl_img_rot.empty());
+    compare_mat_mat(vcl_img_rot, cv_img_rot);
+}
+
 TEST_F(ImageTest, TDBMatThrow)
 {
     VCL::Image img(tdb_img_);
@@ -436,21 +523,21 @@ TEST_F(ImageTest, TDBToPNG)
 {
     VCL::Image img(tdb_img_);
 
-    img.store("image_results/tdb_to_png", VCL::PNG);
+    img.store("images/tdb_to_png", VCL::Image::Format::PNG);
 }
 
 TEST_F(ImageTest, TDBToJPG)
 {
     VCL::Image img(tdb_img_);
 
-    img.store("image_results/tdb_to_jpg", VCL::JPG);
+    img.store("images/tdb_to_jpg", VCL::Image::Format::JPG);
 }
 
 TEST_F(ImageTest, EncodedImage)
 {
     VCL::Image img(tdb_img_);
 
-    std::vector<unsigned char> buffer = img.get_encoded_image(VCL::PNG);
+    std::vector<unsigned char> buffer = img.get_encoded_image(VCL::Image::Format::PNG);
 
     cv::Mat mat = cv::imdecode(buffer, cv::IMREAD_ANYCOLOR);
     compare_mat_mat(cv_img_, mat);
@@ -461,16 +548,16 @@ TEST_F(ImageTest, CreateName)
     VCL::Image img(cv_img_);
 
     for ( int i = 0; i < 10; ++i ) {
-        std::string name = img.create_unique("tdb/images/", VCL::TDB);
-        img.store(name, VCL::TDB);
+        std::string name = VCL::create_unique("tdb/", "tdb");
+        img.store(name, VCL::Image::Format::TDB);
     }
 }
 
 TEST_F(ImageTest, NoMetadata){
     VCL::Image img(cv_img_);
 
-    std::string name = img.create_unique("tdb/images/", VCL::TDB);
-    img.store(name, VCL::TDB, false);
+    std::string name = VCL::create_unique("tdb/", "tdb");
+    img.store(name, VCL::Image::Format::TDB, false);
 
     cv::Size dims = img.get_dimensions();
     int cv_type = img.get_image_type();
