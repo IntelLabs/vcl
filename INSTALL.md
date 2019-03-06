@@ -112,13 +112,16 @@ You may need to change some flags in the CMakeFile depending on
 configurations on your system.
 
 Things that we have needed to change in CMakeLists.txt:
-* If your system doesn't have a GPU, make sure that BUILD_WITH_GPU is OFF
+* If your system doesn't have a GPU, make sure that BUILD_WITH_GPU is OFF and BUILD_TUTORIAL is OFF (some examples require GPU access)
 * You may need to add -msse4 to set(CMAKE_CXX_FLAGS
 * Change the add_library call to be SHARED instead of STATIC
 
 This library does not offer an install. Make sure you move .h files
-to /usr/lib/include/faiss or /usr/local/lib/include/faiss,
-and make sure you make the library (libfaiss.so) is available system-wide
+to /usr/lib/include/faiss or /usr/local/lib/include/faiss:
+    sudo cp /faiss/*.h /usr/local/include/faiss
+and make sure you make the library (libfaiss.so) is available system-wide:
+    sudo cp /faiss/lib/libfaiss.so /usr/local/lib
+    sudo /sbin/ldconfig -v
 Or follow instructions
 [here](https://github.com/facebookresearch/faiss/blob/v1.2.1/INSTALL.md)
 
@@ -127,7 +130,9 @@ Or follow instructions
     cd vcl
     scons
 
-Make sure libvcl is on your LD_LIBRARY_PATH
+Make sure libvcl is on your LD_LIBRARY_PATH:
+    sudo cp libvcl.so /usr/local/lib/
+    sudo /sbin/ldconfig -v
 
 To run the unit tests:
 
