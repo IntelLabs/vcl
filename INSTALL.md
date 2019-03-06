@@ -88,7 +88,7 @@ follow the directions listed
     cd build
     ../bootstrap --prefix=/usr/local/
     make -jX   # substitute X for maximum number of CPUs (or leave it off to use all available)
-    sudo make install
+    sudo make install-tiledb
 
 **Note:** If you have previously installed other version of TileDB
 on your machine, you will need to remove the existing header file
