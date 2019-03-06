@@ -118,10 +118,14 @@ Things that we have needed to change in CMakeLists.txt:
 
 This library does not offer an install. Make sure you move .h files
 to /usr/lib/include/faiss or /usr/local/lib/include/faiss:
+
     sudo cp /faiss/*.h /usr/local/include/faiss
+    
 and make sure you make the library (libfaiss.so) is available system-wide:
+
     sudo cp /faiss/lib/libfaiss.so /usr/local/lib
     sudo /sbin/ldconfig -v
+    
 Or follow instructions
 [here](https://github.com/facebookresearch/faiss/blob/v1.2.1/INSTALL.md)
 
